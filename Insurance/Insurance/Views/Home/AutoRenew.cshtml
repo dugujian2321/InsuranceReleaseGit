@@ -1,0 +1,90 @@
+﻿
+@{
+    ViewData["Title"] = "AutoRenew";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@using System.Data;
+@model Insurance.Models.RenewModel
+@{
+    string currentCompany = string.Empty;
+    <div>
+        <span class="alert-danger" style="font-size:30px">提示：每月最后三天可续保，续保后本月保单将锁定</span>
+        <table class="table table-primary table-bordered">
+            <thead>
+                <tr style="text-align:center">
+                    <th>公司</th>
+                    <th>当前保单月份</th>
+                    <th>续保人数</th>
+                    <th>总保费</th>
+                    <th>1-4类 人数</th>
+                    <th>1-4类 保费</th>
+                    @*<th>4类以上 人数</th>
+                        <th>4类以上 保费</th>*@
+                    <th>续保后到期日</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    if (Model.MonthInfo != null)
+                    {
+                        foreach (DataRow row in Model.MonthInfo.Rows)
+                        {
+                            <tr style="text-align:center">
+                                <td class="td_middle">@row[0]</td>
+                                <td class="td_middle">@row[1]</td>
+                                <td class="td_middle">@row[2]</td>
+                                <td class="td_middle">@row[3]</td>
+                                <td class="td_middle">@row[4]</td>
+                                <td class="td_middle">@row[5]</td>
+                                <td class="td_middle">@row[6]</td>
+                                <td class="td_middle">
+                                    <!-- Button trigger modal -->
+                                    <a class="btn btn-danger" data-toggle="modal" data-target="#autorenew" data-whatever="@row[0]" data-currentmonth="@row[1]" data-enddate="@row[6]" href="#">
+                                        一键续保
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="autorenew" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="autorenewLabel">请您确认</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <span class="alert-danger">续保后将无法提交本月的保单，是否确认继续？</span>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn_autoview" name="comp" data-company="" data-enddate="" data-currentmonth="" type="button" class="btn btn-primary" onclick="AutoRenew(this)">确定</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+<script>
+    $("a.active").removeClass('active');
+    $("#page_3").addClass('active');
+
+    $('#autorenew').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget) // Button that triggered the modal
+        var recipient = button.data('whatever') // Extract info from data-* attributes
+        var date = button.data('enddate') 
+        // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+        // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+        var modal = $(this)
+        $("#btn_autoview").attr('data-company', recipient)
+        $("#btn_autoview").attr('data-enddate', date)
+        $("#btn_autoview").attr('data-currentmonth', button.data('currentmonth'))
+    })
+</script>

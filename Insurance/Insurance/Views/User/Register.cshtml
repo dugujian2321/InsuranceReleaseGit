@@ -1,0 +1,151 @@
+﻿
+@{
+    ViewData["Title"] = "Register";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@model Insurance.Models.NewUserModel
+<script type="text/javascript">
+    $(function () {
+        InitializeRegisterPage();
+        ResetPwd();
+    });
+</script>
+<hr />
+<h4>注册新用户</h4>
+<hr />
+<div>
+    @using (Html.BeginForm(FormMethod.Post, new { @class = "registerForm", id = "id_form", onsubmit = "return isValidSubmit()" }))
+    {
+        @Html.ValidationSummary()
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-default">用户名</span>
+            </div>
+            @Html.TextBoxFor(user => user.UserName, new { @class = "inputBox", placeholder = "请输入用户名..." })
+            <img id="img_loading_username" class="img_loading" src="~/Images/loading.gif" /><span id="userExists" class="warningMessage">@ViewBag.UserNameUsed</span>
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-default">密 码</span>
+            </div>
+            @Html.TextBoxFor(user => user.userPassword, new { @class = "inputBox", id = "pwdBox", type = "password", placeholder = "请输入密码...", autocomplete = "off" })
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-default">确认密码</span>
+            </div>
+            @Html.TextBoxFor(user => user.confirmPassword, new { @class = "inputBox", id = "confirmPwd", type = "password", placeholder = "请再次确认密码...", autocomplete = "off" })
+            <span id="cPwdMsg" class="warningMessage">@ViewBag.PwdNotMatch</span>
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-default">追溯期</span>
+            </div>
+            @Html.TextBoxFor(user => user.DaysBefore, new { @class = "inputBox", id = "daysbefore", type = "text", autocomplete = "off" })
+            <div class="input-group-append">
+                <span class="input-group-text" for="daysbefore">天</span>
+            </div>
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-default">选择方案</span>
+            </div>
+            @Html.DropDownListFor(user => user._Plan, ViewBag.Plans as IEnumerable<SelectListItem>, new { @class = "inputBox", id = "plan", type = "text", autocomplete = "off" })
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-default">方案价格</span>
+            </div>
+            <input class="inputBox" id="unitPrice" type="text" asp-for="UnitPrice" style="width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+            <div class="input-group-append">
+                <span class="input-group-text" for="daysbefore">元/月</span>
+            </div>
+        </div>
+        if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+        {
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="inputGroup-sizing-default">创建账号</span>
+                </div>
+                @Html.DropDownListFor(user => user.AllowCreateAccount, ViewBag.AllowCreateAccount as IEnumerable<SelectListItem>, new { @class = "inputBox", id = "allowCreateAccount", type = "text", autocomplete = "off" })
+            </div>
+        }
+        <div>
+            @{
+                UserInfoModel uim = Context.Session.Get<UserInfoModel>("CurrentUser");
+                if (uim != null && uim.AccessLevel > 0)
+                {
+                    string cn = uim.CompanyName;
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="inputGroup-sizing-default">公司名称</span>
+                        </div>
+                        <input class="inputBox" id="cpName" type="text" asp-for="CompanyName" readonly value="@cn" autocomplete="off" />
+                    </div>
+                }
+                else
+                {
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="inputGroup-sizing-default">公司名称</span>
+                        </div>
+                        @Html.TextBoxFor(user => user.CompanyName, new { @class = "inputBox", id = "cpName", type = "Text", autocomplete = "off" })
+                    </div>
+                }
+            }
+
+        </div>
+        <hr />
+        <label for="message-text" style="font-size:20px" class="col-form-label">开票信息设置</label>
+        <hr />
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-default">开票单位</span>
+            </div>
+            <input type="text" asp-for="RecipeCompany" style="margin-right:5%;width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+            <div class="input-group-prepend">
+                <span class="input-group-text" style="border-radius:0.25rem" id="inputGroup-sizing-default">税号</span>
+            </div>
+            <input type="text" asp-for="TaxNum" style="margin-right:5%;width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-default">开票银行</span>
+            </div>
+            <input type="text" asp-for="RecipeBank" style="margin-right:5%;width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+            <div class="input-group-prepend">
+                <span class="input-group-text" style="border-radius:0.25rem" id="inputGroup-sizing-default">开票账号</span>
+            </div>
+            <input type="text" asp-for="RecipeAccount" style="margin-right:5%;width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" style="border-radius:0.25rem" id="inputGroup-sizing-default">开票地址</span>
+            </div>
+            <input type="text" asp-for="RecipeAddress" style="width:30%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-default">发票类型</span>
+            </div>
+            @Html.DropDownListFor(a => a.RecipeType, new SelectList(new List<String> { "普票", "专票" }), new { @class = "inputBox", id = "recipettype2", type = "text", autocomplete = "off" })
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-default">联系电话</span>
+            </div>
+            <input type="text" asp-for="RecipePhone" style="margin-right:10px;width:15%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+        </div>
+        <div>
+            <p>验证码：</p>
+            <img id="validationImg" src="@ViewBag.ValidationStr" alt="验证码" /><input placeholder="请输入计算结果" onblur="async_Validate(ValidateFields_RegisterView)" id="validationResult" name="validationResult" type="text" />
+            <img id="img_loading_validationcode" class="img_loading" src="~/Images/loading.gif" />
+            <span id="validationMsg" style="visibility:hidden;color:red"></span>
+        </div>
+        <hr />
+        <input id="btnRegister" type="submit" disabled class="btn btn-dark btn-submit" onclick="Encrypt()" style="margin-top:10px" value="注 册" />
+        <p style="color:red">@ViewBag.LoginResult</p>
+    }
+</div>
+
+
