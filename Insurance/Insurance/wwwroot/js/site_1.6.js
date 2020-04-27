@@ -140,7 +140,7 @@ function UpdateAccountInfo() {
 }
 
 function SubmitRecipet(obj) {
-    obj.disabled = true;
+    obj.disabled = !0;
     $.ajax(
         {
             async: true,
