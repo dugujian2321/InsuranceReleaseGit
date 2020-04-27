@@ -148,33 +148,27 @@ namespace Insurance.Services
 
         public void RemoveDuplicate()
         {
+            Dictionary<string, string> dic = new Dictionary<string, string>();
             int idCol = GetColumnIndexByColumnName("身份证");
             int resignDateCol = GetColumnIndexByColumnName("保障结束时间");
             int signDateCol = GetColumnIndexByColumnName("保障开始时间");
             for (int i = 1; i <= m_main.GetLastRow(); i++)
             {
-                for (int j = i + 1; j <= m_main.GetLastRow(); j++)
+                if (!string.IsNullOrEmpty(GetCellText(i, resignDateCol)))
                 {
-                    if (GetCellText(i, idCol) == GetCellText(j, idCol))
-                    {
-                        IRow row_i = m_main.GetRow(i);
-                        IRow row_j = m_main.GetRow(i);
-                        if (GetCellText(i, signDateCol) != GetCellText(j, signDateCol))
-                        {
-                            continue;
-                        }
-                        if (string.IsNullOrWhiteSpace(GetCellText(i,resignDateCol)))
-                        {
-                            RemoveByRowNum(i);
-                            i = i - 1;
-                            break;
-                        }
-                        else if (string.IsNullOrWhiteSpace(GetCellText(j, resignDateCol)))
-                        {
-                            RemoveByRowNum(j);
-                            break;
-                        }
-                    }
+                    IRow row_i = m_main.GetRow(i);
+                    dic.Add(GetCellText(i, idCol), string.Empty);
+                    continue;
+                }
+            }
+
+            for (int i = 1; i <= m_main.GetLastRow(); i++)
+            {
+                string id = GetCellText(i, idCol);
+                if (dic.ContainsKey(id) && string.IsNullOrWhiteSpace(GetCellText(i, resignDateCol)))
+                {
+                    RemoveByRowNum(i);
+                    i = i - 1;
                 }
             }
         }
@@ -185,7 +179,7 @@ namespace Insurance.Services
             IRow row = m_main.GetRow(1);
             for (int i = 0; i < 100; i++)
             {
-                if (GetCellText(0,i).Equals(colName, StringComparison.CurrentCultureIgnoreCase))
+                if (GetCellText(0, i).Equals(colName, StringComparison.CurrentCultureIgnoreCase))
                 {
                     result = i;
                 }
@@ -643,7 +637,7 @@ namespace Insurance.Services
             int rowNum = num;
             if (rowNum == m_main.GetLastRow())
             {
-
+                m_main.RemoveRow(m_main.GetRow(num));
             }
             else
             {

@@ -1183,7 +1183,7 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
-        public FileStreamResult DownloadExcel(string company, string fileName)
+        public FileStreamResult DownloadExcel(string company, string fileName,string date)
         {
             try
             {
@@ -1195,13 +1195,10 @@ namespace VirtualCredit.Controllers
                 {
                     return File(new FileStream(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", "未知错误.txt"), FileMode.Open, FileAccess.Read), "text/plain", "未知错误.txt");
                 }
-
                 FileInfo fi = new FileInfo(fileName);
                 string downloadName = company + "_" + fi.Name.Split("@")[0] + ".xls";
-                string filePath = Path.Combine(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, DateTime.Parse(fileinfo[0]).ToString("yyyy-MM"), fileName));//路径
+                string filePath = Path.Combine(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, DateTime.Parse(date).ToString("yyyy-MM"), fileName));//路径
                 FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-
-
                 return File(fs, "text/plain", downloadName);
             }
             catch (Exception e)

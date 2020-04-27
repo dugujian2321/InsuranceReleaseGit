@@ -59,6 +59,7 @@
                 @{
                     foreach (var item in Model.Excels)
                     {
+                        string month = string.IsNullOrWhiteSpace(item.StartDate) ? item.EndDate : item.StartDate;
                         <tr>
                             <td>@(Model.Excels.IndexOf(item) + 1)</td>
                             <td>@item.UploadDate</td>
@@ -67,7 +68,7 @@
                             <td>@item.HeadCount</td>
                             <td>@item.Mode</td>
                             <td>@Math.Round(item.Cost, 2)</td>
-                            <td><a href="/Home/DownloadExcel?company=@item.Company&fileName=@item.FileName">下载</a></td>
+                            <td><a href="/Home/DownloadExcel?company=@item.Company&fileName=@item.FileName&date=@month">下载</a></td>
                         </tr>
                     }
                 }
