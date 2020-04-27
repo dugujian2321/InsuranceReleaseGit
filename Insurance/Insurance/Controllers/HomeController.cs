@@ -1013,10 +1013,11 @@ namespace VirtualCredit.Controllers
                     {
                         continue;
                     }
-                    string[] excelInfo = file.Split('@');
+                    string[] excelInfo = file.Split('#')[1].Split('@');
+                    string date = file.Split('#')[0];
                     company = excelInfo[7];
-                    string fileName = file.Substring(0, file.Length - company.Length) + ".xls";
-                    string month = DateTime.Parse(excelInfo[0]).ToString("yyyy-MM");
+                    string fileName = file.Split('#')[1].Substring(0, file.Split('#')[1].Length - company.Length) + ".xls";
+                    string month = DateTime.Parse(date).ToString("yyyy-MM");
                     string monthDir = Path.Combine(companyFolder, company, month);
                     excelInfo[6] = excelInfo[1];
                     string newPath = Utility.ArrayToString(excelInfo, 0, 6, "@");

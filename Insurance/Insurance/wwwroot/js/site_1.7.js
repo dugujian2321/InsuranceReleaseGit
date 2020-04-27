@@ -226,7 +226,8 @@ function MarkPaid() {
     var index = 0
     for (i = 0; i < checkBoxes.length; i++) {
         if (checkBoxes[i].id != "cbx_selectAll") {
-            ids[index] = checkBoxes[i].id;
+            var folder = checkBoxes[i].parentNode.parentNode.children[6].innerText;
+            ids[index] =  folder + "#" + checkBoxes[i].id ;
             index++;
         }
     }
