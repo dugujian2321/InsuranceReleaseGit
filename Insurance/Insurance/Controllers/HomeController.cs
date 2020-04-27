@@ -1076,7 +1076,8 @@ namespace VirtualCredit.Controllers
                         excel.Company = name;
                         DateTime dt;
                         string[] fileinfo = fi.Name.Split('@');
-                        DateTime.TryParse(fileinfo[0].Replace(fi.Extension, string.Empty), out dt);
+                        //DateTime.TryParse(fileinfo[0].Replace(fi.Extension, string.Empty), out dt);
+                        DateTime.TryParse(new DirectoryInfo(dir).Name, out dt);
                         excel.EndDate = new DateTime(dt.Year, dt.Month, DateTime.DaysInMonth(dt.Year, dt.Month)).ToShortDateString();
                         headcount += et.GetEmployeeNumber();
                         excel.StartDate = new DateTime(dt.Year, dt.Month, 1).ToShortDateString();

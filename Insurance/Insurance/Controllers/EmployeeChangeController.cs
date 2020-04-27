@@ -93,14 +93,14 @@ namespace Insurance.Controllers
                 }
                 else
                 {
-                    if (startdate.Month != DateTime.Now.Month)
-                    {
-                        List<string> result = new List<string>();
-                        result.Add($"投保失败，{startdate.ToString("yyyy年MM月")}的保单尚未生成");
-                        result.Add(string.Empty);
-                        result.Add(string.Empty);
-                        return Json(result);
-                    }
+                    //if (startdate.Month != DateTime.Now.Month)
+                    //{
+                    //    List<string> result = new List<string>();
+                    //    result.Add($"投保失败，{startdate.ToString("yyyy年MM月")}的保单尚未生成");
+                    //    result.Add(string.Empty);
+                    //    result.Add(string.Empty);
+                    //    return Json(result);
+                    //}
                 }
 
 
@@ -304,7 +304,7 @@ namespace Insurance.Controllers
                 {
                     throw new Exception();
                 }
-                    
+
                 System.IO.File.Copy(Path.Combine(dirPath, temp_file), summary_file_temp, true);
                 ExcelTool summary = new ExcelTool(summary_file_temp, "Sheet1");
                 foreach (string dir in Directory.GetDirectories(dirPath))
