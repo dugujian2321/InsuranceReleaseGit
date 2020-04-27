@@ -1303,4 +1303,3 @@ Parameter name: path3
 2020/4/15 20:24:43	E:\VisualStudioProduct-Self Use\Insurance_Release\Insurance\Insurance\Controllers\HomeController.cs Line:57 Input string was not in a correct format.
 2020/4/15 20:25:05	E:\VisualStudioProduct-Self Use\Insurance_Release\Insurance\Insurance\Controllers\HomeController.cs Line:57 Input string was not in a correct format.
 2020/4/15 20:25:29	E:\VisualStudioProduct-Self Use\Insurance_Release\Insurance\Insurance\Controllers\HomeController.cs Line:57 Input string was not in a correct format.
-2020/4/27 12:35:12	E:\VisualStudioProduct-Self Use\InsuranceRelease\Git\Insurance\Insurance\Controllers\AccountController.cs Line:336 New User wzbf666 Registered
