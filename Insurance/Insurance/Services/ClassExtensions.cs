@@ -39,6 +39,11 @@ namespace Insurance
 {
     public static class NOPIExtension
     {
+        /// <summary>
+        /// 获取最后一行，第一行索引为0
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <returns></returns>
         public static int GetLastRow(this ISheet sheet)
         {
             int lastRow = sheet.LastRowNum;

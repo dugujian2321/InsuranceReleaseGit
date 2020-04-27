@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using Insurance.Services;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -23,7 +24,7 @@ namespace VirtualCredit
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             new Utility().Initial(configuration, hostingEnvironment);
             Task.Factory.StartNew(()=> {
-
+                //new AutoRenewAllCompanies().StartListening();
             });
         }
 

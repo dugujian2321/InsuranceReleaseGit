@@ -94,6 +94,38 @@ namespace VirtualCredit
 
         }
 
+        public static UserInfoModel SelectUserByCompany(string companyname)
+        {
+            UserInfoModel uim = new UserInfoModel();
+            DataTable dt = SelectPropFromTable("UserInfo", "CompanyName", companyname);
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                DataRow row = dt.Rows[0];
+                foreach (DataColumn col in dt.Columns)
+                {
+                    foreach (var prop in uim.GetType().GetProperties())
+                    {
+                        if (prop.Name.Equals(col.ColumnName, StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            object obj = new object();
+                            obj = row[col.ColumnName];
+                            if (row[col.ColumnName] is DBNull)
+                            {
+                                obj = null;
+                            }
+                            prop.SetValue(uim, obj);
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                uim = null;
+            }
+            return uim;
+        }
+
         /// <summary>
         /// 验证用户名密码是否匹配
         /// </summary>

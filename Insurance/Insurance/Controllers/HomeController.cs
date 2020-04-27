@@ -870,17 +870,17 @@ namespace VirtualCredit.Controllers
                 {
                     foreach (string excel in Directory.GetFiles(monthDir))
                     {
-                        DateTime date2;
+                        DateTime uploadDate;
                         FileInfo fi = new FileInfo(excel);
-                        string uploadDate = fi.Name.Split('@')[0];
-                        if (DateTime.TryParse(uploadDate, out date2))
+                        string str_uploadDate = fi.Name.Split('@')[0];
+                        if (DateTime.TryParse(str_uploadDate, out uploadDate))
                         {
-                            if (date2.Date >= exportStart.Date && date2.Date <= exportEnd.Date)
-                                summary.GainData(excel, company);
+                            summary.GainData(excel, company);
                         }
                     }
                 }
             }
+            summary.RemoveDuplicate();
             summary.CreateAndSave(summary_file);
             System.IO.File.Delete(summary_file_temp);
             return File(new FileStream(summary_file, FileMode.Open, FileAccess.Read), "text/plain", $"{company}_{exportStart.ToString("yyyy-MM")}_入离职汇总表格.xls");

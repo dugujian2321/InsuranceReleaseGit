@@ -146,6 +146,53 @@ namespace Insurance.Services
             }
         }
 
+        public void RemoveDuplicate()
+        {
+            int idCol = GetColumnIndexByColumnName("身份证");
+            int resignDateCol = GetColumnIndexByColumnName("保障结束时间");
+            int signDateCol = GetColumnIndexByColumnName("保障开始时间");
+            for (int i = 1; i <= m_main.GetLastRow(); i++)
+            {
+                for (int j = i + 1; j <= m_main.GetLastRow(); j++)
+                {
+                    if (GetCellText(i, idCol) == GetCellText(j, idCol))
+                    {
+                        IRow row_i = m_main.GetRow(i);
+                        IRow row_j = m_main.GetRow(i);
+                        if (GetCellText(i, signDateCol) != GetCellText(j, signDateCol))
+                        {
+                            continue;
+                        }
+                        if (string.IsNullOrWhiteSpace(GetCellText(i,resignDateCol)))
+                        {
+                            RemoveByRowNum(i);
+                            i = i - 1;
+                            break;
+                        }
+                        else if (string.IsNullOrWhiteSpace(GetCellText(j, resignDateCol)))
+                        {
+                            RemoveByRowNum(j);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        private int GetColumnIndexByColumnName(string colName)
+        {
+            int result = -1;
+            IRow row = m_main.GetRow(1);
+            for (int i = 0; i < 100; i++)
+            {
+                if (GetCellText(0,i).Equals(colName, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    result = i;
+                }
+            }
+            return result;
+        }
+
         public void CreateAndSave(string path)
         {
             MemoryStream ms = new MemoryStream();
@@ -586,6 +633,21 @@ namespace Insurance.Services
 
                     break;
                 }
+            }
+        }
+
+        public void RemoveByRowNum(int num)
+        {
+            DataTable source;
+            ExcelToDataTable("Sheet1", true, out source);
+            int rowNum = num;
+            if (rowNum == m_main.GetLastRow())
+            {
+
+            }
+            else
+            {
+                m_main.ShiftRows(rowNum + 1, m_main.GetLastRow(), -1);
             }
         }
 
