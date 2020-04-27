@@ -52,9 +52,7 @@ namespace Insurance.Services
                     row["生效日期"] = new DateTime(dt.Year, dt.Month, 1).ToString("yyyy-MM-dd");
                 }
                 et.DatatableToExcel(tbl_summary);
-                LogService.Log($"开始处理{company}");
                 GenerateNewExcelForRenewAsync(companyName, true);
-                LogService.Log($"{company}处理完毕");
             }
         }
 
