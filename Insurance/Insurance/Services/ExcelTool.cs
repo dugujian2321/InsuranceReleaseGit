@@ -589,8 +589,13 @@ namespace Insurance.Services
             }
         }
 
+        /// <summary>
+        /// 将DataTable中的数据导入当前Excel的m_main Sheet中
+        /// </summary>
+        /// <param name="tbl_summary"></param>
         public void DatatableToExcel(DataTable tbl_summary)
         {
+            int colNum = tbl_summary.Columns.Count;
             ClearAllRows();
             for (int row = 0; row < tbl_summary.Rows.Count; row++)
             {
@@ -598,7 +603,7 @@ namespace Insurance.Services
                 m_main.CreateRow(excel_row);
                 m_main.GetRow(excel_row).CreateCell(0);
                 m_main.GetRow(excel_row).GetCell(0).SetCellValue(excel_row);
-                for (int column = 1; column < 8; column++) // 列：公司，姓名，ID，职业类别，工种，生效日期
+                for (int column = 1; column < colNum; column++) // 列：公司，姓名，ID，职业类别，工种，生效日期
                 {
                     m_main.GetRow(excel_row).CreateCell(column);
                     m_main.GetRow(excel_row).GetCell(column).SetCellValue(tbl_summary.Rows[row][column].ToString());

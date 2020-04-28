@@ -12,6 +12,7 @@ using System.Threading;
 using VirtualCredit;
 using VirtualCredit.LogServices;
 using VirtualCredit.Models;
+using VirtualCredit.Services;
 
 namespace Insurance.Controllers
 {
@@ -267,20 +268,41 @@ namespace Insurance.Controllers
         public JsonResult UpdateEmployees([FromForm]IFormFile newExcel, string mode)
         {
             //TODO: 添加验证格式代码
-            MemoryStream ms = new MemoryStream();
+            //将FormFile中的Sheet1转换成DataTable
+            string template = Path.Combine(Utility.Instance.TemplateFolder, "employee_download.xls");
+            string uploadedExcel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
+            FileStream ms = System.IO.File.Create(uploadedExcel);
             HttpContext.Session.Set("readyToSubmit", "N");
             newExcel.CopyTo(ms);
-            HttpContext.Session.Set("newExcel", ms.ToArray());
+            ExcelTool et = new ExcelTool(ms, "Sheet1");
+            var dt = et.ExcelToDataTable("Sheet1", true);
+            et.Dispose();
+            System.IO.File.Delete(uploadedExcel);
+
+            //将DataTable转成Excel
+            Initialize();
+            string temp_excel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
+            System.IO.File.Copy(template, temp_excel);
+            MemoryStream stream = new MemoryStream();
+            using (FileStream fs = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite))
+            {
+                ExcelTool test = new ExcelTool(fs, "Sheet1");
+                test.DatatableToExcel(dt);
+            }
+
+            FileStream inputStream = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite);
+            inputStream.CopyTo(stream);
+            HttpContext.Session.Set("newExcel", stream.ToArray());
             HttpContext.Session.Set("validationResult", new List<Employee>());
             if (newExcel is null)
             {
                 return null;
             }
-            Initialize();
-            List<Employee> validationResult = ValidateExcel(newExcel, "Sheet1", mode);
-
+            List<Employee> validationResult = ValidateExcel(inputStream, "Sheet1", mode);
             HttpContext.Session.Set("validationResult", validationResult);
-
+            inputStream.Close();
+            inputStream.Dispose();
+            System.IO.File.Delete(temp_excel);
             return Json(validationResult);
         }
 
@@ -369,8 +391,9 @@ namespace Insurance.Controllers
             }
         }
 
-        public List<Employee> ValidateExcel(IFormFile formFile, string sheetName, string mode)
+        public List<Employee> ValidateExcel(FileStream formFile, string sheetName, string mode)
         {
+            formFile.Position = 0;
             ReaderWriterLockSlim r_locker = null;
             string excelsDirectory = GetCompanyFolder();
             var result = new List<Employee>();
