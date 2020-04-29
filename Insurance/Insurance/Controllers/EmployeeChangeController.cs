@@ -287,7 +287,7 @@ namespace Insurance.Controllers
             using (FileStream fs = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite))
             {
                 ExcelTool test = new ExcelTool(fs, "Sheet1");
-                test.DatatableToExcel(dt);
+                test.RawDatatableToExcel(dt);
             }
 
             FileStream inputStream = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite);

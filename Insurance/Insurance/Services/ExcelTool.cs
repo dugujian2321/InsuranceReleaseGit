@@ -611,7 +611,22 @@ namespace Insurance.Services
             }
             Save();
         }
-
+        public void RawDatatableToExcel(DataTable tbl)
+        {
+            int colNum = tbl.Columns.Count;
+            ClearAllRows();
+            for (int row = 0; row < tbl.Rows.Count; row++)
+            {
+                int excel_row = row + 1;
+                m_main.CreateRow(excel_row);
+                for (int column = 0; column < colNum; column++) // 列：公司，姓名，ID，职业类别，工种，生效日期
+                {
+                    m_main.GetRow(excel_row).CreateCell(column);
+                    m_main.GetRow(excel_row).GetCell(column).SetCellValue(tbl.Rows[row][column].ToString());
+                }
+            }
+            Save();
+        }
         public void RemoveById(string id)
         {
             DataTable source;
