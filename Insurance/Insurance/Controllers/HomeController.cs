@@ -1188,13 +1188,16 @@ namespace VirtualCredit.Controllers
             try
             {
                 UserInfoModel currUser = GetCurrentUser();
-
                 string[] fileinfo = new FileInfo(fileName).Name.Split("@");
                 UserInfoModel uploadUser = DatabaseService.SelectUser(fileinfo[2]);
-                if (currUser.AccessLevel != 0 && (currUser.CompanyName != company || (currUser.UserName != uploadUser.UserName && currUser.UserName != uploadUser.Father)))
+                if (!uploadUser.UserName.Equals("期初自动流转"))
                 {
-                    return File(new FileStream(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", "未知错误.txt"), FileMode.Open, FileAccess.Read), "text/plain", "未知错误.txt");
+                    if (currUser.AccessLevel != 0 && (currUser.CompanyName != company || (currUser.UserName != uploadUser.UserName && currUser.UserName != uploadUser.Father)))
+                    {
+                        return File(new FileStream(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", "未知错误.txt"), FileMode.Open, FileAccess.Read), "text/plain", "未知错误.txt");
+                    }
                 }
+
                 FileInfo fi = new FileInfo(fileName);
                 string downloadName = company + "_" + fi.Name.Split("@")[0] + ".xls";
                 string filePath = Path.Combine(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, DateTime.Parse(date).ToString("yyyy-MM"), fileName));//路径

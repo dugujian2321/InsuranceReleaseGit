@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Data;
 using System.IO;
 using System.Threading;
 using VirtualCredit;
+using VirtualCredit.LogServices;
 using VirtualCredit.Models;
 using VirtualCredit.Services;
 
@@ -50,11 +52,13 @@ namespace Insurance.Services
                     row["生效日期"] = new DateTime(dt.Year, dt.Month, 1).ToString("yyyy-MM-dd");
                 }
                 et.DatatableToExcel(tbl_summary);
-                GenerateNewExcelForRenewAsync(companyName);
+                LogService.Log($"开始处理{company}");
+                GenerateNewExcelForRenewAsync(companyName, true);
+                LogService.Log($"{company}处理完毕");
             }
         }
 
-        private bool GenerateNewExcelForRenewAsync(string company)
+        private bool GenerateNewExcelForRenewAsync(string company, bool auto = false)
         {
             string summary_bk = string.Empty;
             try
@@ -78,7 +82,7 @@ namespace Insurance.Services
                 ExcelTool summary = new ExcelTool(summaryPath, "Sheet1");
                 double cost = summary.GetEmployeeNumber() * currUser.UnitPrice;
 
-                string fileName = $"{DateTime.Now.ToString("yyyy-MM-dd")}@{cost}@{currUser.UserName}@Add@{Guid.NewGuid()}@{DateTime.Now.ToString("HH-mm-ss")}@0@.xls";
+                string fileName = $"{DateTime.Now.ToString("yyyy-MM-dd")}@{cost}@期初自动流转@Add@{Guid.NewGuid()}@{DateTime.Now.ToString("HH-mm-ss")}@0@.xls";
                 string template = Path.Combine(rootpath, "templates", "export_employee_download.xls");
                 string newfilepath = Path.Combine(monDir, fileName);
 
@@ -107,10 +111,15 @@ namespace Insurance.Services
             }
         }
 
-        public void StartListening()
+        public void StartListening(IConfiguration configuration)
         {
             do
             {
+                if (configuration["AutoRenew"].ToString().Equals("False",StringComparison.CurrentCultureIgnoreCase))
+                {
+                    Thread.Sleep(1000);
+                    continue;
+                }
                 if (nextEndDate.Year < 2000)
                 {
                     nextEndDate = DateTime.Now;

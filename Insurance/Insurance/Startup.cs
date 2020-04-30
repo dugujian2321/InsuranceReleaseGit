@@ -24,7 +24,7 @@ namespace VirtualCredit
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             new Utility().Initial(configuration, hostingEnvironment);
             Task.Factory.StartNew(()=> {
-                //new AutoRenewAllCompanies().StartListening();
+                new AutoRenewAllCompanies().StartListening(configuration);
             });
         }
 
