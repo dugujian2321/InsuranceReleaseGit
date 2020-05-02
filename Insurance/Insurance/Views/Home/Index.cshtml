@@ -1,0 +1,168 @@
+﻿@using VirtualCredit
+@{
+    ViewData["Title"] = "保单管理";
+}
+@model HomePageModel
+<div class="layui-tab-item layui-show" style="height:auto; position:relative;">
+    @*<span style="font-size:20px;">投保须知：</span><br>
+        <p style="font-size:14px;">甲方员工从事1-4类职业类别，且在附表员工分类表列明范围，年龄在16周岁至60周岁，身体健康、入职体检合格，能够正常工作的员工。如涉及其他工种职业，需向乙方报备，且经同意承保后方能承担保险责任。</p>*@
+    <br><span style="font-size:20px;">保险方案</span><br>
+    <table class="layui-table table">
+        <colgroup>
+            <col width="14%">
+            <col width="26%">
+            <col width="14%">
+            <col width="46%">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>险种</th>
+                <th>保障项目</th>
+                <th>保障</th>
+                <th>保障责任描述</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td rowspan="4">雇主责任险</td>
+                <td>死亡伤残</td>
+                <td>60万</td>
+                <td>
+                    在工作时间和工作岗位，突发疾病死亡或者在48小时之内经抢救无效死亡
+                </td>
+            </tr>
+            <tr>
+                <td>误工费</td>
+                <td>200元/天</td>
+                <td>
+                    无免赔，100%赔付，最多不超过5000元每周，最长不超过365天；
+                </td>
+            </tr>
+            <tr>
+                <td>意外医疗</td>
+                <td>5万</td>
+                <td>
+                    无免赔，100%赔付
+                </td>
+            </tr>
+            <tr>
+                <td>住院津贴</td>
+                <td>100元/天</td>
+                <td>无免赔天数，最长不超过180天</td>
+            </tr>
+            @*<tr>
+                    <td rowspan="4">补充保险</td>
+                    <td>意外身故、伤残（非工伤）</td>
+                    <td>20万</td>
+                    <td>
+                        一次性给付，最高赔偿限额20万
+                    </td>
+                </tr>
+                <tr>
+                    <td>疾病身故（非工伤）</td>
+                    <td>5万</td>
+                    <td>
+                        一次性给付，最高赔偿限额5万
+                    </td>
+                </tr>
+                <tr>
+                    <td>意外医疗（门、急诊+住院）费用补偿金） -- （非工伤）</td>
+                    <td>3万</td>
+                    <td>
+                        社保范围内0免赔，100%赔付
+                    </td>
+                </tr>
+                <tr>
+                    <td>住院津贴（非工伤）</td>
+                    <td>100元/天</td>
+                    <td>
+                        按照实际住院天数，最长180天。
+                    </td>
+                </tr>*@
+        </tbody>
+    </table>
+    <br>
+    <span style="font-size:20px;">注：</span><br>
+    <span style="font-size:16px;">雇主责任险伤残等级赔偿限额比例表：</span><br>
+    <table class="layui-table table">
+        <colgroup>
+            <col width="50%">
+            <col width="50%">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>伤残等级</th>
+                <th>赔付比例</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>一级伤残</td>
+                <td>100%</td>
+            </tr>
+            <tr>
+                <td>二级伤残</td>
+                <td>80%</td>
+            </tr>
+            <tr>
+                <td>三级伤残</td>
+                <td>70%</td>
+            </tr>
+            <tr>
+                <td>四级伤残</td>
+                <td>60%</td>
+            </tr>
+            <tr>
+                <td>五级伤残</td>
+                <td>50%</td>
+            </tr>
+            <tr>
+                <td>六级伤残</td>
+                <td>40%</td>
+            </tr>
+            <tr>
+                <td>七级伤残</td>
+                <td>30%</td>
+            </tr>
+            <tr>
+                <td>八级伤残</td>
+                <td>20%</td>
+            </tr>
+            <tr>
+                <td>九级伤残</td>
+                <td>10%</td>
+            </tr>
+            <tr>
+                <td>十级伤残</td>
+                <td>6%</td>
+            </tr>
+        </tbody>
+    </table>
+    <br>
+    <span style="font-size:20px;">附加条款</span><br>
+    <p style="font-size:14px;">上下班途中条款<br>24小时意外险特别扩展条款（B）<br>附加超额责任保险条款（限额：人民币100万）<br>员工食堂条款<br>社会活动或文娱活动条款<br>及时报案条款<br>不计工伤保险赔偿条款<br>就餐时间扩展条款<br>宿舍责任条款<br></p>
+    <br><span style="font-size:20px;">保障责任</span><br>
+    <span style="font-size:16px;">雇主责任险保障责任</span><br>
+    <p style="font-size:14px;">在保险期间内，甲方的工作人员在中华人民共和国境内因下列情形导致伤残或死亡，依照中华人民共和国法律（不含香港、澳门特别行政区和台湾地区法律）应由甲方承担的经济赔偿责任，按照本协议约定负责赔偿：<br>（一）在工作时间和工作场所内，因工作原因受到事故伤害；						<br>（二）工作时间前后在工作场所内，从事与工作有关的预备性或者收尾性工作受到事故伤害；<br>（三）在工作时间和工作场所内，因履行工作职责受到暴力等意外伤害；			<br>（四）被诊断、鉴定为职业病；						<br>（五）因工外出期间，由于工作原因受到伤害或者发生事故下落不明；			<br>（六）在上下班途中，受到非本人主要责任的交通事故或者城市轨道交通、客运轮渡、火车事故伤害的；					<br>（七）在工作时间和工作岗位，突发疾病死亡或者在 48 小时之内经抢救无效死亡；	<br>（八）在抢险救灾等维护国家利益、公共利益活动中受到伤害；			<br>（九）原在军队服役，因战、因公负伤致残，已取得革命伤残军人证，到现工作岗位后旧伤复发；		<br>（十）法律、行政法规规定应当认定为工伤的其他情形。<br></p>
+    <br><span style="font-size:20px;">免除责任</span><br>
+    <span style="font-size:16px;">雇主责任险免除责任</span><br>
+    <p style="font-size:14px;">下列原因造成的损失、费用和责任，保险人不负责赔偿：<br>（一）被保险人直接或指使他人对其雇员故意实施的骚扰、伤害、性侵犯；<br>（二）战争、敌对行动、军事行为、武装冲突、罢工、骚乱、暴动、恐怖活动；<br>（三）核辐射、核爆炸、核污染及其他放射性污染；<br>（四）行政行为或司法行为；<br>（五）被保险人的雇员自伤、自杀、醉酒、吸毒、打架、斗殴、犯罪及酒后驾驶、无有效驾驶证驾驶各种机动车辆导致其本人的人身伤害；<br>（六）被保险人的雇员由于职业性疾病以外的疾病、传染病、分娩、流产以及因上述原因接受医疗、诊疗；<br>（七）被保险人的雇员因参加被保险人组织的运动、社会、文娱等活动而遭受的人身伤害；<br>（八）任何因石棉产品、石棉纤维、石棉尘的制造、开采、使用、销售、安装、搬移、发送或暴露于石棉产品、石棉纤维、石棉尘而导致的身体伤害；<br>（九）任何因接触、食用、吸入、吸收或暴露于含硅产品、硅石纤维、硅石粉尘或其他以任何形态存在的硅而导致的身体伤害。<br>下列损失、费用和责任，保险人不负责赔偿：<br>（一）罚款、罚金及惩罚性赔偿；<br>（二）精神损害赔偿；<br>（三）投保人、被保险人在投保之前已经知道或可以合理预见的索赔情况；<br>（四）被保险人对其承包商所雇佣的员工的责任；<br>（五）在中华人民共和国境外（包括我国香港、澳门和台湾地区）发生的被保险人雇员的伤、残或死亡；<br>（六）国家基本医疗保险报销范围之外的医疗费用，包括但不限于，安装假肢、矫形器、假眼、假牙和配置轮椅等辅助器具的费用，营养费，挂号费，交通费等；<br>（七）工伤保险基金已支付的医疗费用；<br>（八）本保险合同中载明的免赔额；<br></p>
+    <br>@*<span style="font-size:20px;">理赔</span><br>
+        <p style="font-size:14px;">甲方按照《上海开迈商业保险客户手册》进行投保、加减保及准备理赔材料。<br>3.2 乙方自收到甲方合格的理赔单据（即符合保险公司要求的单据）之日起协助甲方办理理赔手续，理赔款项汇入甲方帐户。<br>3.3预赔款<br>对于理赔金额小于10万的理赔案件，乙方收到甲方合格的理赔后，对属于保险责任无需调查的案件按照100%预赔款，理赔款项汇入甲方帐户<br></p>*@
+    <br><p style="font-size:20px;margin-bottom:0px">附表:</p><br>
+    <span style="font-size:15px;">员工分类表</span>
+    <a asp-action="DownloadJobs" asp-controller="Home"><span style="font-size:16px; color:blue;">下载</span></a><br>   
+    <br />
+    <span style="font-size:15px;">保障方案</span>
+    <a asp-action="DownloadPlan" asp-controller="Home"><span style="font-size:16px; color:blue;">下载</span></a><br><br>
+    <span style="font-size:15px;">理赔材料</span>
+    <a asp-action="DownloadCompensationDocs" asp-controller="Home"><span style="font-size:16px; color:blue;">下载</span></a><br>
+    <br><iframe id="tmp_downloadhelper_iframe" style="display: none;"></iframe>
+</div>
+
+<script>
+    $("a.active").removeClass('active');
+    $("#page_1").addClass('active');
+</script>
+
+

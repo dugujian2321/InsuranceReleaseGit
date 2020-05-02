@@ -1,0 +1,238 @@
+﻿@model VirtualCredit.Models.ViewModelBase
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="nofollow,noindex,noarchive" />
+    <title>@ViewData["Title"]</title>
+    <link href="~/bootstrap-4.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="~/js/jquery-3.4.1.min.js"></script>
+    <script src="~/js/jquery.form.min.js"></script>
+    <script src="~/js/popper.min.js"></script>
+    <script src="~/js/bootstrap.min.js"></script>
+    <environment include="Development">
+        <link rel="stylesheet" href="~/css/site_0.4.css" />
+    </environment>
+    <environment exclude="Development">
+        <link rel="stylesheet" href="~/css/site_0.4.min.css" />
+    </environment>
+    <environment include="Development">
+        <script src="~/js/site_1.8.js" asp-append-version="true"></script>
+    </environment>
+    <environment include="Production">
+        <script src="~/js/site_1.8.min.js"></script>
+    </environment>
+</head>
+<body style="width:95%;overflow-y:scroll;padding-right:0px">
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container">
+                <div style="float:left" class="d-sm-inline-flex flex-sm-row-reverse">
+
+                    @{
+                        var user = Context.Session.Get<UserInfoModel>("CurrentUser");
+                        if (user != null)
+                        {
+                            <h2>@user.CompanyName</h2>
+
+                        }
+                        else
+                        {
+                            <h2>未登录</h2>
+                        }
+                    }
+                </div>
+                <div style="float:right;margin-bottom:0px;text-align:center" class="UBar">
+                    @{
+                        if (Context.Session.Get<bool>("Online"))
+                        {
+                            UserInfoModel userInfoModel = Context.Session.Get<UserInfoModel>("CurrentUser");
+                            <div style="margin-top:20px">
+                                <form method="get">
+                                    <button class="btn btn-info" type="button" data-toggle="modal" onclick="ShowAccountDetail('@userInfoModel.UserName',true)" data-target="#exampleModal" data-whatever="@@mdo">已登录：@userInfoModel.UserName</button>
+                                    <button class="btn btn-info" type="submit" asp-action="Logout" asp-controller="Logout">注销</button>
+                                    @{
+                                        if (!string.IsNullOrEmpty(userInfoModel.AllowCreateAccount) && userInfoModel.AllowCreateAccount == "1")
+                                        {
+                                            <a class="btn btn-info" asp-action="Account" asp-controller="Account">子账户管理</a>
+                                        }
+                                    }
+                                </form>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </nav>
+        <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-xl" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">用户信息</h5>
+                        <button id="modal_close" type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="Form_UserInfo" asp-action="UpdatePersonalInfo" asp-controller="Account" method="get">
+                            <div class="form-group">
+                                <label for="recipient-name" style="font-size:21px" class="col-form-label">用户信息设置</label>
+                                <hr />
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" id="inputGroup-sizing-default">用户名称</span>
+                                    </div>
+                                    <input type="text" asp-for="Name" style="margin-right:5%;width:10%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" style="border-radius:0.25rem" id="inputGroup-sizing-default">手机号码</span>
+                                    </div>
+                                    <input type="text" asp-for="Telephone" style="margin-right:5%;width:25%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" style="border-radius:0.25rem" id="inputGroup-sizing-default">邮箱</span>
+                                    </div>
+                                    <input type="text" asp-for="Mail" style="width:25%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                </div>
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" id="inputGroup-sizing-default">单位名称</span>
+                                    </div>
+                                    <input type="text" asp-for="CompanyName" readonly style="margin-right:5%;width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" style="border-radius:0.25rem" id="inputGroup-sizing-default">单位简称</span>
+                                    </div>
+                                    <input type="text" asp-for="CompanyNameAbb" readonly style="margin-right:5%;width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="message-text" style="font-size:20px" class="col-form-label">开票信息设置</label>
+                                <hr />
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" id="inputGroup-sizing-default">开票单位</span>
+                                    </div>
+                                    <input type="text" asp-for="RecipeCompany" readonly style="margin-right:5%;width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" style="border-radius:0.25rem" id="inputGroup-sizing-default">税号</span>
+                                    </div>
+                                    <input type="text" asp-for="TaxNum" readonly style="margin-right:5%;width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                </div>
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" id="inputGroup-sizing-default">开票银行</span>
+                                    </div>
+                                    <input type="text" asp-for="RecipeBank" readonly style="margin-right:5%;width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" style="border-radius:0.25rem" id="inputGroup-sizing-default">开票账号</span>
+                                    </div>
+                                    <input type="text" asp-for="RecipeAccount" readonly style="margin-right:5%;width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                </div>
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" style="border-radius:0.25rem" id="inputGroup-sizing-default">开票地址</span>
+                                    </div>
+                                    <input type="text" asp-for="RecipeAddress" readonly style="width:30%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                </div>
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" id="inputGroup-sizing-default">发票类型</span>
+                                    </div>
+                                    @Html.DropDownListFor(a => a.RecipeType, new SelectList(new List<String> { "普票", "专票" }), new { @class = "inputBox", id = "recipettype", type = "text", autocomplete = "off" })
+                                </div>
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" id="inputGroup-sizing-default">联系电话</span>
+                                    </div>
+                                    <input type="text" asp-for="RecipePhone" style="margin-right:10px;width:15%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary" onclick="UpdatePersonalInfo()">保 存</button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        @{
+            if (Context.Session.Get<bool>("Online"))
+            {
+                <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                    <ul class="nav nav-pills mb-3" id="myTab" role="tablist">
+                        <li class="nav-item">
+                            <a id="page_1" class="nav-link" asp-action="Index" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">我的方案</a>
+                        </li>
+                        <li class="nav-item">
+                            @{
+                                if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+                                {
+                                    <a id="page_2" class="nav-link" asp-action="HistoricalList" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">保单列表</a>
+                                }
+                                else
+                                {
+                                    string str = Context.Session.Get<UserInfoModel>("CurrentUser").CompanyName;
+                                    <a id="page_2" class="nav-link" href="/Home/CompanyHisitoryByMonth?name=@str" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">保单列表</a>
+                                }
+                            }
+                        </li>
+                        @{
+
+                            if (Context.Session.Get<UserInfoModel>("CurrentUser").CompanyName != string.Empty &&
+                                Context.Session.Get<UserInfoModel>("CurrentUser").CompanyName != "管理员")
+                            {
+                                <li class="nav-item">
+                                    <a id="page_3" class="nav-link" asp-action="AutoRenew" asp-controller="Home">投保/续保</a>
+                                </li>
+                            }
+
+                        }
+
+                        <li class="nav-item">
+                            <a id="page_4" class="nav-link" asp-action="SearchPeople" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">人员查询</a>
+                        </li>
+                        <li class="nav-item">
+                            <a id="page_5" class="nav-link" asp-action="EmployeeChange" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">人员变更</a>
+                        </li>
+                        <li class="nav-item">
+                            @{
+                                if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+                                {
+                                    <a id="page_6" class="nav-link" asp-action="GetAllRecipeSummary" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">保费汇总</a>
+                                }
+                                else
+                                {
+                                    string str = Context.Session.Get<UserInfoModel>("CurrentUser").CompanyName;
+                                    <a id="page_6" class="nav-link" href="/Home/RecipeSummaryByMonth?name=@str" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">保费汇总</a>
+                                }
+                            }
+                        </li>
+                    </ul>
+                </nav>
+            }
+        }
+    </header>
+    <div class="container">
+        <partial name="_CookieConsentPartial" />
+        <main role="main">
+            <div id="content">
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            <div style="width:300px;margin:0 auto; padding:20px 0;">
+                <a target="_blank" href=" " style="display:inline-block;text-decoration:none;height:20px;line-height:20px;">
+                    <img src="~/Images/gongan.png" style="float:left;" /><p style="float:left;height:20px;line-height:20px;margin: 0px 0px 0px 5px; color:#939393;">沪公网安备 31011202012056号</p>
+                </a>
+            </div>
+        </div>
+    </footer>
+    @RenderSection("Scripts", required: false)
+
+</body>
+
+</html>
