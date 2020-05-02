@@ -6,9 +6,9 @@
     ]
   },
   {
-    "outputFileName": "wwwroot/js/site_1.6.min.js",
+    "outputFileName": "wwwroot/js/site_1.8.min.js",
     "inputFiles": [
-      "wwwroot/js/site_1.7.js"
+      "wwwroot/js/site_1.8.js"
     ]
   },
   {
@@ -28,17 +28,17 @@
     "inputFiles": [
       "wwwroot/bootstrap-4.3.1/dist/css/bootstrap-reboot.min.css"
     ]
-  },
-  {
-    "outputFileName": "wwwroot/bootstrap-4.3.1/dist/css/bootstrap-reboot.css",
-    "inputFiles": [
-      "wwwroot/bootstrap-4.3.1/dist/css/bootstrap-reboot.min.css"
-    ]
-  },
-  {
-    "outputFileName": "wwwroot/bootstrap-4.3.1/dist/js/bootstrap.min.js",
-    "inputFiles": [
-      "wwwroot/bootstrap-4.3.1/dist/js/bootstrap.js"
-    ]
   }
+  //{
+  //  "outputFileName": "wwwroot/bootstrap-4.3.1/dist/css/bootstrap-reboot.css",
+  //  "inputFiles": [
+  //    "wwwroot/bootstrap-4.3.1/dist/css/bootstrap-reboot.min.css"
+  //  ]
+  //},
+  //{
+  //  "outputFileName": "wwwroot/bootstrap-4.3.1/dist/js/bootstrap.min.js",
+  //  "inputFiles": [
+  //    "wwwroot/bootstrap-4.3.1/dist/js/bootstrap.js"
+  //  ]
+  //}
 ]

@@ -58,6 +58,7 @@ namespace Insurance.Services
 
         private bool GenerateNewExcelForRenewAsync(string company, bool auto = false)
         {
+            LogService.Log($"{company}开始自动流转");
             string summary_bk = string.Empty;
             try
             {
@@ -100,11 +101,13 @@ namespace Insurance.Services
                     i++;
                 }
                 et.Save();
+                LogService.Log($"{company}自动流转成功");
                 return true;
             }
             catch (Exception e)
             {
                 System.IO.File.Delete(summary_bk);
+                LogService.Log($"{company}自动流转失败");
                 throw new Exception();
             }
         }
@@ -135,9 +138,9 @@ namespace Insurance.Services
                     {
                         locker.RWLocker.EnterWriteLock();
                     }
-
+                    LogService.Log("开始自动流转");
                     RenewAllCompanies();
-
+                    LogService.Log("自动流转完成");
                     foreach (var locker in Utility.LockerList)
                     {
                         if (locker != null && locker.RWLocker.IsWriteLockHeld)
