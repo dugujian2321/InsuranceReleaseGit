@@ -13,6 +13,7 @@
 # Excel
 wwwroot/[Ee]xcel/
 wwwroot/[Tt]emp/
+wwwroot/[Ww]ord/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
