@@ -10,6 +10,10 @@
 *.userosscache
 *.sln.docstates
 
+# Excel
+wwwroot/[Ee]xcel/
+wwwroot/[Tt]emp/
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
