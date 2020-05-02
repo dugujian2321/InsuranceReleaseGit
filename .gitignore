@@ -11,7 +11,7 @@
 *.sln.docstates
 
 #AppLog
-Git/Insurance/AppLog
+AppLog/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
