@@ -3,6 +3,7 @@ using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NPOI.OpenXmlFormats.Wordprocessing;
 using NPOI.XWPF.UserModel;
 using System;
 using System.Collections.Generic;
@@ -919,64 +920,81 @@ namespace VirtualCredit.Controllers
                 }
             }
 
-            foreach (XWPFParagraph paragraph in document.Paragraphs)
+            var ruleTable = document.Tables[0];
+            foreach (var row in ruleTable.Rows)
             {
-                if (paragraph.Text.Contains("生效日期"))
+                if(row.GetCell(2).GetText() == "beibaoxianren")
                 {
-                    int runCount = paragraph.Runs.Count;
-                    for (int i = 0; i < runCount; i++)
-                    {
-                        paragraph.RemoveRun(0);
-                    }
-                    XWPFRun xWPFRun = paragraph.InsertNewRun(0);
-                    xWPFRun.SetText($"生效日期：{DateTime.Parse(date).ToString("yyyy年MM月dd日")}");
-                    xWPFRun.SetFontFamily("宋体", FontCharRange.Ascii);
-                    xWPFRun.IsBold = true;
-                    xWPFRun.FontSize = 9;
-                    continue;
+                    row.GetCell(2).Paragraphs[0].ReplaceText("beibaoxianren",company);
                 }
-                if (paragraph.Text.Contains("附加被保险人"))
+
+                if (row.GetCell(2).GetText() == "shengxiaoriqi")
                 {
-                    int runCount = paragraph.Runs.Count;
-                    for (int i = 0; i < runCount; i++)
-                    {
-                        paragraph.RemoveRun(0);
-                    }
-                    XWPFRun xWPFRun = paragraph.InsertNewRun(0);
-                    xWPFRun.SetText("附加被保险人：" + company);
-                    xWPFRun.SetFontFamily("宋体", FontCharRange.Ascii);
-                    xWPFRun.IsBold = true;
-                    xWPFRun.FontSize = 9;
-                    continue;
+                    row.GetCell(2).Paragraphs[0].ReplaceText("shengxiaoriqi", $"{DateTime.Parse(date).ToString("yyyy年MM月dd日")}");
+                    break;
                 }
             }
+
+
+            //foreach (XWPFParagraph paragraph in document.Paragraphs)
+            //{
+            //    if (paragraph.Text.Contains("生效日期"))
+            //    {
+            //        int runCount = paragraph.Runs.Count;
+            //        for (int i = 0; i < runCount; i++)
+            //        {
+            //            paragraph.RemoveRun(0);
+            //        }
+            //        XWPFRun xWPFRun = paragraph.InsertNewRun(0);
+            //        xWPFRun.SetText($"生效日期：{DateTime.Parse(date).ToString("yyyy年MM月dd日")}");
+            //        xWPFRun.SetFontFamily("宋体", FontCharRange.Ascii);
+            //        xWPFRun.IsBold = true;
+            //        xWPFRun.FontSize = 9;
+            //        continue;
+            //    }
+            //    if (paragraph.Text.Contains("附加被保险人"))
+            //    {
+            //        int runCount = paragraph.Runs.Count;
+            //        for (int i = 0; i < runCount; i++)
+            //        {
+            //            paragraph.RemoveRun(0);
+            //        }
+            //        XWPFRun xWPFRun = paragraph.InsertNewRun(0);
+            //        xWPFRun.SetText("附加被保险人：" + company);
+            //        xWPFRun.SetFontFamily("宋体", FontCharRange.Ascii);
+            //        xWPFRun.IsBold = true;
+            //        xWPFRun.FontSize = 9;
+            //        continue;
+            //    }
+            //}
 
             //读取表格
             UserInfoModel user = GetCurrentUser();
             user.MyLocker.RWLocker.EnterReadLock();
             int index = 1;
             DataTable dt = new ExcelTool(summaryFile, "Sheet1").ExcelToDataTable("Sheet1", true);
-            foreach (XWPFTable table in document.Tables)
+            //foreach (XWPFTable table in document.Tables)
+
+            var table = document.Tables[1];
+            foreach (DataRow row in dt.Rows)
             {
-                foreach (DataRow row in dt.Rows)
-                {
-                    XWPFTableRow newrow = table.CreateRow();
-                    newrow.GetCell(0).SetText(index.ToString());
-                    index++;
-                    newrow.GetCell(1).SetText(companyName_Abb);
-                    newrow.GetCell(2).SetText(row[2].ToString());
-                    newrow.GetCell(3).SetText(row[3].ToString());
-                    newrow.GetCell(4).SetText(row[4].ToString());
-                    newrow.GetCell(5).SetText(row[5].ToString());
-                    newrow.GetCell(6).SetText(row[6].ToString());
-                }
-                table.SetBottomBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-                table.SetTopBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-                table.SetLeftBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-                table.SetRightBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-                table.SetInsideHBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-                table.SetInsideVBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+                XWPFTableRow newrow = table.CreateRow();
+                newrow.GetCell(0).SetText(index.ToString());
+                index++;
+                newrow.GetCell(1).SetText(companyName_Abb);
+                newrow.GetCell(2).SetText(row[2].ToString());
+                newrow.GetCell(3).SetText(row[3].ToString());
+                newrow.GetCell(4).SetText(row[4].ToString());
+                newrow.GetCell(5).SetText(row[5].ToString());
+                newrow.GetCell(6).SetText(row[6].ToString());
             }
+            table.SetBottomBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+            table.SetTopBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+            table.SetLeftBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+            table.SetRightBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+            table.SetInsideHBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+            table.SetInsideVBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+
             GetCurrentUser().MyLocker.RWLocker.ExitReadLock();
             using (FileStream output = new FileStream(newdoc, FileMode.Create, FileAccess.ReadWrite))
             {
@@ -1183,7 +1201,7 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
-        public FileStreamResult DownloadExcel(string company, string fileName,string date)
+        public FileStreamResult DownloadExcel(string company, string fileName, string date)
         {
             try
             {
