@@ -145,7 +145,6 @@ namespace Insurance.Services
                 workbook.Write(fsWrite);
             }
         }
-
         public void RemoveDuplicate()
         {
             Dictionary<string, string> dic = new Dictionary<string, string>();
@@ -156,22 +155,45 @@ namespace Insurance.Services
             {
                 if (!string.IsNullOrEmpty(GetCellText(i, resignDateCol)))
                 {
-                    IRow row_i = m_main.GetRow(i);
-                    dic.Add(GetCellText(i, idCol), string.Empty);
-                    continue;
-                }
-            }
-
-            for (int i = 1; i <= m_main.GetLastRow(); i++)
-            {
-                string id = GetCellText(i, idCol);
-                if (dic.ContainsKey(id) && string.IsNullOrWhiteSpace(GetCellText(i, resignDateCol)))
-                {
-                    RemoveByRowNum(i);
-                    i = i - 1;
+                    string id = GetCellText(i, idCol);
+                    for (int j = 1; j <= m_main.GetLastRow(); j++)
+                    {
+                        if (GetCellText(j, idCol) == id && GetCellText(j, signDateCol) == GetCellText(i, signDateCol) && string.IsNullOrWhiteSpace(GetCellText(j, resignDateCol)))
+                        {
+                            RemoveByRowNum(j);
+                            i--;
+                            break;
+                        }
+                    }
                 }
             }
         }
+        //public void RemoveDuplicate()
+        //{
+        //    Dictionary<string, string> dic = new Dictionary<string, string>();
+        //    int idCol = GetColumnIndexByColumnName("身份证");
+        //    int resignDateCol = GetColumnIndexByColumnName("保障结束时间");
+        //    int signDateCol = GetColumnIndexByColumnName("保障开始时间");
+        //    for (int i = 1; i <= m_main.GetLastRow(); i++)
+        //    {
+        //        if (!string.IsNullOrEmpty(GetCellText(i, resignDateCol)))
+        //        {
+        //            IRow row_i = m_main.GetRow(i);
+        //            dic.Add(GetCellText(i, idCol), string.Empty);
+        //            continue;
+        //        }
+        //    }
+
+        //    for (int i = 1; i <= m_main.GetLastRow(); i++)
+        //    {
+        //        string id = GetCellText(i, idCol);
+        //        if (dic.ContainsKey(id) && string.IsNullOrWhiteSpace(GetCellText(i, resignDateCol)))
+        //        {
+        //            RemoveByRowNum(i);
+        //            i = i - 1;
+        //        }
+        //    }
+        //}
 
         private int GetColumnIndexByColumnName(string colName)
         {
