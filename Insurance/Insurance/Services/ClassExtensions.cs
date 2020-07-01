@@ -51,7 +51,7 @@ namespace Insurance
             while (!found)
             {
                 IRow row = sheet.GetRow(lastRow);
-                if (string.IsNullOrEmpty(row.Cells[0].ToString()))
+                if (row == null || string.IsNullOrEmpty(row.Cells[0].ToString()))
                 {
                     lastRow--;
                 }
