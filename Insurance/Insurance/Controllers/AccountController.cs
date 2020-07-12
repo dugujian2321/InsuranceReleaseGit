@@ -21,7 +21,7 @@ namespace Insurance.Controllers
         public IActionResult Register()
         {
             UserInfoModel currUser = GetCurrentUser();
-            if (currUser is null || currUser.AccessLevel > 1 || currUser.AllowCreateAccount != "1")
+            if (currUser is null || currUser.AllowCreateAccount != "1")
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "当前用户权限不足");
                 return View("../User/AccountManagement");
@@ -36,7 +36,7 @@ namespace Insurance.Controllers
 
         public AccountController(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor.HttpContext)
         {
-
+            
         }
 
         [UserLoginFilters]
@@ -135,7 +135,7 @@ namespace Insurance.Controllers
             UserInfoModel uim = DatabaseService.SelectUser(userName);
             uim.userPassword = string.Empty;
             uim.UserNameEdit = userName;
-            if (currUser.AccessLevel == 0) //管理员账号读取其他公司账号
+            if (currUser.AccessLevel == 0) //超级管理员账号读取其他公司账号
             {
                 uim.AllowEdit = true;
                 return Json(uim);
@@ -148,7 +148,7 @@ namespace Insurance.Controllers
             }
 
             if (currUser.AccessLevel > 0 && uim.Father.Equals(currUser.UserName, StringComparison.CurrentCultureIgnoreCase)
-                && uim.CompanyName.Equals(currUser.CompanyName, StringComparison.CurrentCultureIgnoreCase)) //非管理员账号：可以读取其创建的账号及其自身
+                /*&& uim.CompanyName.Equals(currUser.CompanyName, StringComparison.CurrentCultureIgnoreCase)*/) //非超级管理员账号：可以读取其创建的账号及其自身
             {
                 uim.AllowEdit = true;
                 return Json(uim);
@@ -179,7 +179,7 @@ namespace Insurance.Controllers
         {
             UserInfoModel currUser = GetCurrentUser();
             string user = HttpContext.Session.Get<string>("editUser");
-            if (currUser.AccessLevel != 0 && (currUser.UserName.Equals(user, StringComparison.CurrentCultureIgnoreCase))) //管理员账号读取其他公司账号
+            if (currUser.AccessLevel != 0 && (currUser.UserName.Equals(user, StringComparison.CurrentCultureIgnoreCase))) //非超级管理员账号读取其他公司账号
             {
                 return false;
             }
@@ -188,18 +188,17 @@ namespace Insurance.Controllers
             uim._Plan = model._Plan;
             uim.UnitPrice = model.UnitPrice;
             uim.DaysBefore = model.DaysBefore;
-            uim.AllowCreateAccount = model.AllowCreateAccount;
             if (model.AllowCreateAccount == "1")
             {
-                uim.AccessLevel = 1;
+                uim.AllowCreateAccount = "1";
             }
             else
             {
-                uim.AccessLevel = 2;
+                uim.AllowCreateAccount = "2";
             }
             List<string> paras = new List<string>()
             {
-                "AccessLevel","AllowCreateAccount","DaysBefore","_Plan","UnitPrice"
+                /*"AccessLevel",*/"AllowCreateAccount","DaysBefore","_Plan","UnitPrice"
             };
             if (DatabaseService.UpdateUserInfo(uim, paras))
             {
@@ -217,7 +216,7 @@ namespace Insurance.Controllers
         {
             UserInfoModel currUser = GetCurrentUser();
             string user = HttpContext.Session.Get<string>("editUser");
-            if (currUser.AccessLevel != 0 && (currUser.UserName.Equals(user, StringComparison.CurrentCultureIgnoreCase))) //管理员账号读取其他公司账号
+            if (currUser.AccessLevel != 0 && (currUser.UserName.Equals(user, StringComparison.CurrentCultureIgnoreCase))) //账号不能修改自身信息
             {
                 return false;
             }
@@ -254,18 +253,18 @@ namespace Insurance.Controllers
         public ActionResult Register(NewUserModel user)
         {
             UserInfoModel currUser = GetCurrentUser();
-            if (currUser is null || currUser.AccessLevel > 1 || currUser.AllowCreateAccount == "0")
-            {
+            if (currUser is null || /*currUser.AccessLevel > 1 ||*/ currUser.AllowCreateAccount != "1")
+            {              
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "当前用户权限不足");
                 return View("../User/AccountManagement");
             }
-            if (currUser.AccessLevel == 1)
-            {
-                if (user.CompanyName != currUser.CompanyName)
-                {
-                    return View("Error");
-                }
-            }
+            //if (currUser.AccessLevel == 1) //如果允许创建账号
+            //{
+            //    if (user.CompanyName != currUser.CompanyName)
+            //    {
+            //        return View("Error");
+            //    }
+            //}
             if (!ModelState.IsValid)
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "输入信息不合规范");
@@ -311,15 +310,15 @@ namespace Insurance.Controllers
             long temp = Convert.ToInt64(ts1.TotalSeconds);
             if (user.AllowCreateAccount == "1")
             {
-                user.AccessLevel = 1;
+                user.AllowCreateAccount = "1";
             }
             else
             {
-                user.AccessLevel = 2;
+                user.AllowCreateAccount = "2";
             }
             user.Father = currUser.UserName;
-
-            List<Company> companies = GetAllCompanies(Path.Combine(Utility.Instance.WebRootFolder, "Excel"));
+            user.AccessLevel = currUser.AccessLevel + 1;
+            List<Company> companies = GetAllCompanies();
 
             var t = companies.Where(p => p.Name == user.CompanyName);
 

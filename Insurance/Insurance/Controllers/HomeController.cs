@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using NPOI.OpenXmlFormats.Wordprocessing;
 using NPOI.XWPF.UserModel;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -23,7 +24,6 @@ namespace VirtualCredit.Controllers
         private readonly int nameCol = 2;
         private static bool isSignExpired { get; set; }
         private static long expiredTime { get; set; }
-        private readonly IHostingEnvironment _hostingEnvironment;
         public DataTable SearchResult { get; set; }
 
         public HomeController(IHostingEnvironment hostingEnvironment)
@@ -55,8 +55,8 @@ namespace VirtualCredit.Controllers
         {
             try
             {
-                model.CompanyList = GetAllCompanies(Path.Combine(_hostingEnvironment.WebRootPath, "Excel"));
-                return View(model);
+                model.CompanyList = GetAllChildAccounts();
+                return View("HistoricalList", model);
             }
             catch (Exception e)
             {
@@ -66,47 +66,93 @@ namespace VirtualCredit.Controllers
 
         }
 
+        /// <summary>
+        /// 判断当前用户是否为公司的上级账号
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="companyname"></param>
+        /// <returns></returns>
+        private bool IsAncestor(UserInfoModel user, string companyname)
+        {
+            ConcurrentBag<bool> results = new ConcurrentBag<bool>();
+            foreach (var child in user.ChildAccounts)
+            {
+                if (child.ChildAccounts != null && child.ChildAccounts.Count > 0)
+                {
+                    results.Add(IsAncestor(child, companyname));
+                }
+                if (child.CompanyName.Equals(companyname, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    results.Add(true);
+                }
+            }
+
+            return results.Contains(true);
+        }
+
         [UserLoginFilters]
         public IActionResult CompanyHisitoryByMonth([FromQuery]string name)
         {
             ReaderWriterLockSlim r_locker = null;
+            bool isSelf = false;
+
             try
             {
                 r_locker = GetCurrentUser().MyLocker.RWLocker;
                 r_locker.EnterReadLock();
                 //获取该公司历史表单详细
                 List<NewExcel> allMonthlyExcels = new List<NewExcel>();
-                if (GetCurrentUser().AccessLevel != 0)
+                var currUser = GetCurrentUser();
+                if (currUser.CompanyName == name)
                 {
-                    if (GetCurrentUser().CompanyName != name)
-                    {
-                        return null;
-                    }
+                    isSelf = true;
+                }
+                if (!IsAncestor(currUser, name) && currUser.CompanyName != name)
+                {
+                    return View("Error");
                 }
                 string companyName = name;
-                string targetDirectory = _hostingEnvironment.WebRootPath;
-                foreach (string dir in Directory.GetDirectories(Path.Combine(targetDirectory, "Excel", companyName))) //每月的文件夹
+                string targetCompanyDir;
+
+                string currUserDir = GetCurrentUserRootDir();
+
+                if (isSelf)
                 {
+                    targetCompanyDir = currUserDir;
+                }
+                else
+                {
+                    targetCompanyDir = Directory.GetDirectories(currUserDir, companyName, SearchOption.AllDirectories)[0];
+                }
+
+                for (DateTime date = From; date <= To; date = date.AddMonths(1))
+                {
+                    string dirName = date.ToString("yyyy-MM");
+                    SearchOption so = SearchOption.AllDirectories;
+                    if (isSelf)
+                    {
+                        so = SearchOption.TopDirectoryOnly;
+                    }
+                    var monthDirs = Directory.GetDirectories(targetCompanyDir, dirName, so);
+                    if (monthDirs.Length == 0 || !Directory.Exists(monthDirs[0])) break;
                     NewExcel excel = null;
                     int headcount = 0;
                     double cost = 0;
-                    foreach (string fileName in Directory.GetFiles(dir))
+                    excel = new NewExcel();
+                    excel.Company = name;
+                    DateTime dt = date;
+                    excel.StartDate = new DateTime(dt.Year, dt.Month, 1).ToShortDateString();
+                    excel.EndDate = new DateTime(dt.Year, dt.Month, DateTime.DaysInMonth(dt.Year, dt.Month)).ToShortDateString();
+                    foreach (var monthDir in monthDirs)
                     {
-                        FileInfo fi = new FileInfo(fileName);
-                        if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
-                            continue;
-
-                        DirectoryInfo di = new DirectoryInfo(dir);
-                        ExcelTool et = new ExcelTool(fileName, "Sheet1");
-                        excel = new NewExcel();
-                        excel.Company = name;
-                        DateTime dt;
-                        string[] fileinfo = fi.Name.Split('@');
-                        DateTime.TryParse(di.Name, out dt);
-                        excel.EndDate = new DateTime(dt.Year, dt.Month, DateTime.DaysInMonth(dt.Year, dt.Month)).ToShortDateString();
-                        headcount += et.GetEmployeeNumber();
-                        excel.StartDate = new DateTime(dt.Year, dt.Month, 1).ToShortDateString();
-                        cost += Convert.ToDouble(fileinfo[1]);
+                        foreach (string fileName in Directory.GetFiles(monthDir))
+                        {
+                            FileInfo fi = new FileInfo(fileName);
+                            ExcelTool et = new ExcelTool(fileName, "Sheet1");
+                            string[] fileinfo = fi.Name.Split('@');
+                            headcount += et.GetEmployeeNumber();
+                            cost += Convert.ToDouble(fileinfo[1]);
+                        }
                     }
                     if (excel != null)
                     {
@@ -114,8 +160,9 @@ namespace VirtualCredit.Controllers
                         excel.Cost = cost;
                         allMonthlyExcels.Add(excel);
                     }
-
                 }
+
+
                 DetailModel dm = new DetailModel();
                 dm.Company = name;
                 dm.MonthlyExcel = allMonthlyExcels;
@@ -228,29 +275,38 @@ namespace VirtualCredit.Controllers
         {
             ReaderWriterLockSlim r_locker = null;
             DetailModel dm;
+            UserInfoModel currUser = GetCurrentUser();
+            bool isSelf = false;
+            if (currUser.CompanyName == name) isSelf = true;
             try
             {
-                r_locker = GetCurrentUser().MyLocker.RWLocker;
+                r_locker = currUser.MyLocker.RWLocker;
                 r_locker.EnterReadLock();
                 dm = new DetailModel();
                 //获取该公司历史表单详细
+                string currUserCompany = string.Empty;
+                string currUserRootDir = GetCurrentUserRootDir();
+                currUserCompany = new DirectoryInfo(currUserRootDir).Name;
+
                 List<NewExcel> allexcels = new List<NewExcel>();
-                if (GetCurrentUser().AccessLevel != 0)
-                {
-                    if (GetCurrentUser().CompanyName != name)
-                    {
-                        return null;
-                    }
-                }
+                if (!GetChildrenCompanies(currUserCompany).Contains(name) && currUser.CompanyName != name) return View("Error");
                 //string date = "2020/3/1";
                 DateTime dt1 = DateTime.Parse(date);
                 string month = dt1.ToString("yyyy-MM");
                 string companyName = name;
-                string targetDirectory = _hostingEnvironment.WebRootPath;
-                string[] excels = null;
-                if (Directory.Exists(Path.Combine(targetDirectory, "Excel", companyName, month)))
+                List<string> excels = new List<string>();
+                string companyDir = GetSearchExcelsInDir(companyName);
+                SearchOption so = SearchOption.AllDirectories;
+                if (isSelf) so = SearchOption.TopDirectoryOnly;
+                var monthDirs = Directory.GetDirectories(companyDir, month, so);
+
+                if (monthDirs.Length > 0)
                 {
-                    excels = Directory.GetFiles(Path.Combine(targetDirectory, "Excel", companyName, month));
+                    foreach (string monthDir in monthDirs)
+                    {
+                        var uploadedFiles = Directory.GetFiles(monthDir);
+                        excels.AddRange(uploadedFiles);
+                    }
                 }
                 else
                 {
@@ -267,7 +323,7 @@ namespace VirtualCredit.Controllers
 
                     NewExcel excel = new NewExcel();
                     excel.FileName = fi.Name;
-                    excel.Company = companyName;
+                    excel.Company = Directory.GetParent(Directory.GetParent(fileName).FullName).Name;
                     ExcelTool et = new ExcelTool(fileName, "Sheet1");
                     excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
                     string[] fileinfo = fi.Name.Split('@');
@@ -275,6 +331,7 @@ namespace VirtualCredit.Controllers
                     DateTime.TryParse(fileinfo[0] + " " + fileinfo[5].Replace('-', ':'), out dt);
                     excel.UploadDate = dt.ToString("yyyy-MM-dd HH:mm:ss");
                     excel.HeadCount = et.GetEmployeeNumber();
+                    excel.Uploader = fileinfo[2];
                     if (fileinfo[3].Equals("add", StringComparison.CurrentCultureIgnoreCase)) //若结束日期为空，则为增加人员文档
                     {
                         excel.Mode = "加保";
@@ -284,6 +341,7 @@ namespace VirtualCredit.Controllers
                     else //若结束时间不为空，则为减员文档
                     {
                         excel.Mode = "减保";
+                        excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
                         excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
                         excel.Cost = Convert.ToDouble(fileinfo[1]);
                     }
@@ -353,7 +411,7 @@ namespace VirtualCredit.Controllers
                     DateTime dt = DateTime.Now.Date.AddDays(-1d * advanceDays);
                     model.AllowedStartDate = dt.ToString("yyyy-MM-dd");
                 }
-                model.CompanyList = GetAllCompanies(Path.Combine(Utility.Instance.WebRootFolder, "Excel"));
+                model.CompanyList = GetAllCompanies();
                 return View(model);
             }
             catch (Exception e)
@@ -528,7 +586,7 @@ namespace VirtualCredit.Controllers
                 company = GetCurrentUser().CompanyName;
             }
             RenewModel rm = new RenewModel();
-            string companyDir = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company);
+            string companyDir = GetSearchExcelsInDir(company);
             string summary = Path.Combine(companyDir, company + ".xls");
             ExcelTool et = new ExcelTool(summary, "Sheet1");
             int headcount = et.GetEmployeeNumber(); //总人数
@@ -661,17 +719,18 @@ namespace VirtualCredit.Controllers
         [UserLoginFilters]
         public IActionResult Search(string em_name, string em_id)
         {
+            var currUser = GetCurrentUser();
             SearchPeopleModel model = new SearchPeopleModel();
             model.People = new Employee();
             model.People.Name = em_name;
             model.People.ID = em_id;
             DataTable res = new DataTable();
-            string company = GetCurrentUser().CompanyName;
+            string company = currUser.CompanyName;
 
             try
             {
-                GetCurrentUser().MyLocker.RWLocker.EnterReadLock();
-                if (GetCurrentUser().AccessLevel > 0)
+                currUser.MyLocker.RWLocker.EnterReadLock();
+                if (currUser.AccessLevel > 0)
                 {
                     string path = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, company + ".xls");
                     //res = DatabaseService.SelectPeopleByNameAndID(HttpContext.Session.Get<UserInfoModel>("CurrentUser").CompanyName, em_name, em_id);
@@ -679,11 +738,11 @@ namespace VirtualCredit.Controllers
                     ExcelTool et = new ExcelTool(path, "Sheet1");
                     res = et.SelectPeopleByNameAndID(em_name, nameCol, em_id, idCol);
                 }
-                else if (GetCurrentUser().AccessLevel == 0)
+                else if (currUser.AccessLevel == 0)
                 {
                     DataTable temp = new DataTable();
                     //List<string> companies = DatabaseService.GetAllCompanies();
-                    List<Company> companies = GetAllCompanies(Path.Combine(_hostingEnvironment.WebRootPath, "Excel"));
+                    List<Company> companies = GetAllCompanies();
                     foreach (Company comp in companies)
                     {
                         ExcelTool et = new ExcelTool(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", comp.Name, comp.Name + ".xls"), "Sheet1");
@@ -728,7 +787,7 @@ namespace VirtualCredit.Controllers
             }
             finally
             {
-                GetCurrentUser().MyLocker.RWLocker.ExitReadLock();
+                currUser.MyLocker.RWLocker.ExitReadLock();
             }
         }
 
@@ -756,7 +815,8 @@ namespace VirtualCredit.Controllers
         {
             try
             {
-                model.CompanyList = GetAllCompanies(Path.Combine(_hostingEnvironment.WebRootPath, "Excel"));
+                var currUser = GetCurrentUser();
+                model.CompanyList = GetChildrenCompanies(currUser).ToList();
                 return View("RecipeSummary", model);
             }
             catch (Exception e)
@@ -767,116 +827,164 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
+        [AdminFilters]
+        public IActionResult BanlanceAccount([FromQuery]string companyName)
+        {
+            DateTime now = DateTime.Now;
+            int year = 0;
+            if (now.Month >= 6)
+            {
+                year = now.Year;
+            }
+            else
+            {
+                year = now.Year - 1;
+            }
+            DateTime from = new DateTime(year, 6, 1);
+            DateTime to = new DateTime(year + 1, 5, 31);
+            var allDirs = Directory.GetDirectories(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", companyName));
+            List<string> targetDirs = new List<string>();
+            allDirs.ToList().ForEach(x =>
+            {
+                DirectoryInfo di = new DirectoryInfo(x);
+                var slices = di.Name.Split("-");
+                int folderYear = Convert.ToInt32(slices[0]);
+                int folderMonth = Convert.ToInt32(slices[1]);
+                if ((folderYear > from.Year && folderMonth <= to.Month) ||
+                    (folderYear == from.Year && folderMonth >= from.Month))
+                {
+                    targetDirs.Add(x);
+                }
+            });
+            DetailModel detailModel = new DetailModel();
+            foreach (var dir in targetDirs)
+            {
+                foreach (var file in Directory.GetFiles(dir))
+                {
+                    var excel = GetExcelInfo(file, companyName);
+                    if (excel != null && excel.Cost != excel.Paid)
+                    {
+                        detailModel.Excels.Add(excel);
+                    }
+                }
+            }
+            detailModel.Company = companyName;
+            return View("RecipeSummaryDetail", detailModel);
+        }
+
+        [UserLoginFilters]
         public IActionResult RecipeSummary([FromQuery]string date, [FromQuery]string name)
         {
             //获取该公司历史表单详细
             DetailModel dm = new DetailModel();
             List<NewExcel> allexcels = new List<NewExcel>();
-            if (GetCurrentUser().AccessLevel != 0)
+            bool isSelf = false;
+            var currUser = GetCurrentUser();
+            if (currUser.ChildAccounts.Count == 0)
             {
-                if (GetCurrentUser().CompanyName != name)
+                if (currUser.CompanyName != name)
                 {
-                    return null;
+                    return View("Error");
                 }
             }
+            if (currUser.CompanyName == name) isSelf = true;
             //string date = "2020/3/1";
             DateTime dt1 = DateTime.Parse(date);
             string month = dt1.ToString("yyyy-MM");
             string companyName = name;
-            string targetDirectory = _hostingEnvironment.WebRootPath;
-            string[] excels = null;
-            if (Directory.Exists(Path.Combine(targetDirectory, "Excel", companyName, month)))
+            string targetDirectory = GetSearchExcelsInDir(companyName);
+            List<string> excels = new List<string>();
+
+            SearchOption so = SearchOption.AllDirectories;
+            if (isSelf) so = SearchOption.TopDirectoryOnly;
+
+            string[] monthDirs = Directory.GetDirectories(targetDirectory, month, so);
+
+            foreach (var monthDir in monthDirs)
             {
-                excels = Directory.GetFiles(Path.Combine(targetDirectory, "Excel", companyName, month));
+                excels.AddRange(Directory.GetFiles(monthDir));
             }
-            else
+
+            if (excels == null || excels.Count <= 0)
             {
-                dm.Company = companyName;
-                dm.Excels = new List<NewExcel>();
+                dm.Company = name;
+                dm.Excels = allexcels;
                 return View("RecipeSummaryDetail", dm);
-            }
-
-            ExcelTool summaryFile = new ExcelTool(Path.Combine(targetDirectory, "Excel", companyName, companyName + ".xls"), "Sheet1");
-
-            if (excels == null || excels.Length <= 0)
-            {
-
             }
             foreach (string fileName in excels)
             {
-                FileInfo fi = new FileInfo(fileName);
-                if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
-                    continue;
-
-                NewExcel excel = new NewExcel();
-                excel.FileName = fi.Name;
-                excel.Company = companyName;
-
-                ExcelTool et = new ExcelTool(fileName, "Sheet1");
-                excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
-                string[] fileinfo = fi.Name.Split('@');
-                excel.Submitter = fileinfo[2];
-                DateTime dt;
-                DateTime.TryParse(fileinfo[0] + " " + fileinfo[5].Replace('-', ':'), out dt);
-                excel.UploadDate = dt.ToString("yyyy-MM-dd HH:mm:ss");
-                excel.HeadCount = et.GetEmployeeNumber();
-                if (fileinfo[3].Equals("add", StringComparison.CurrentCultureIgnoreCase))
+                NewExcel excel = GetExcelInfo(fileName, companyName);
+                if (excel != null)
                 {
-                    excel.Mode = "加保";
-                    excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
-                    excel.Cost = Convert.ToDouble(fileinfo[1]);
+                    allexcels.Add(excel);
                 }
-                else
-                {
-                    excel.Mode = "减保";
-                    excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
-                    excel.Cost = Convert.ToDouble(fileinfo[1]);
-                }
-                excel.Paid = Convert.ToDouble(fileinfo[6]);
-                allexcels.Add(excel);
             }
             dm.Company = name;
             dm.Excels = allexcels;
             return View("RecipeSummaryDetail", dm);
         }
 
+        private NewExcel GetExcelInfo(string fileName, string companyName)
+        {
+            FileInfo fi = new FileInfo(fileName);
+            if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
+                return null;
+
+            NewExcel excel = new NewExcel();
+            excel.FileName = fi.Name;
+            excel.Company = companyName;
+
+            ExcelTool et = new ExcelTool(fileName, "Sheet1");
+            excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
+            string[] fileinfo = fi.Name.Split('@');
+            excel.Submitter = fileinfo[2];
+            DateTime dt;
+            DateTime.TryParse(fileinfo[0] + " " + fileinfo[5].Replace('-', ':'), out dt);
+            excel.UploadDate = dt.ToString("yyyy-MM-dd HH:mm:ss");
+            excel.HeadCount = et.GetEmployeeNumber();
+            if (fileinfo[3].Equals("add", StringComparison.CurrentCultureIgnoreCase))
+            {
+                excel.Mode = "加保";
+                excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
+                excel.Cost = Convert.ToDouble(fileinfo[1]);
+            }
+            else
+            {
+                excel.Mode = "减保";
+                excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
+                excel.Cost = Convert.ToDouble(fileinfo[1]);
+            }
+            excel.Paid = Convert.ToDouble(fileinfo[6]);
+            return excel;
+        }
+
         [UserLoginFilters]
         public FileStreamResult ExportStaffsByMonth(string date, string company)
         {
-            string ExcelDirectory = _hostingEnvironment.WebRootPath;
             DateTime exportStart = DateTime.Parse(date);
             DateTime exportEnd = new DateTime(exportStart.Year, exportStart.Month, DateTime.DaysInMonth(exportStart.Year, exportStart.Month));
             if (exportStart.Year == 1 || exportEnd.Year == 1)
                 return null;
-            string dirPath = Path.Combine(ExcelDirectory, "Excel");
-            string temperayDir = Path.Combine(ExcelDirectory, "Temp");
-            string templateDir = Path.Combine(ExcelDirectory, "templates");
+            string temperaryDir = Path.Combine(Utility.Instance.WebRootFolder, "Temp");
+            string templateDir = Path.Combine(Utility.Instance.WebRootFolder, "templates");
             string temp_file = "export_employee_download.xls";
-            string summary_file = Path.Combine(temperayDir, DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss") + Guid.NewGuid() + ".xls");
-            string summary_file_temp = Path.Combine(temperayDir, DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss") + Guid.NewGuid() + "_temp.xls");
+            string summary_file = Path.Combine(temperaryDir, DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss") + Guid.NewGuid() + ".xls");
+            string summary_file_temp = Path.Combine(temperaryDir, DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss") + Guid.NewGuid() + "_temp.xls");
             System.IO.File.Copy(Path.Combine(templateDir, temp_file), summary_file_temp);
 
             ExcelTool summary = new ExcelTool(summary_file_temp, "Sheet1");
-            foreach (string dir in Directory.GetDirectories(dirPath))
+            string companyDir = GetSearchExcelsInDir(company);
+            foreach (string monthDir in Directory.GetDirectories(companyDir, Convert.ToDateTime(date).ToString("yyyy-MM"), SearchOption.AllDirectories))
             {
-                if (!string.IsNullOrEmpty(company))
-                {
-                    if (new DirectoryInfo(dir).Name != company)
-                    {
-                        continue;
-                    }
-                }
-                string monthDir = Path.Combine(dir, exportStart.ToString("yyyy-MM"));
                 if (Directory.Exists(monthDir))
                 {
                     foreach (string excel in Directory.GetFiles(monthDir))
                     {
-                        DateTime uploadDate;
                         FileInfo fi = new FileInfo(excel);
                         string str_uploadDate = fi.Name.Split('@')[0];
-                        if (DateTime.TryParse(str_uploadDate, out uploadDate))
+                        if (DateTime.TryParse(str_uploadDate, out DateTime uploadDate))
                         {
-                            summary.GainData(excel, company);
+                            summary.GainData(excel);
                         }
                     }
                 }
@@ -895,7 +1003,15 @@ namespace VirtualCredit.Controllers
             UserInfoModel currUser = GetCurrentUser();
             string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
             string template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", "Insurance_recipet.docx");
-            string summaryFile = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, company + ".xls");
+            string companyDir = GetSearchExcelsInDir(company);
+            List<string> childCompanies = GetChildrenCompanies(company).ToList();
+            childCompanies.Add(company);
+            List<string> summaries = new List<string>();
+            foreach (var comp in childCompanies)
+            {
+                string compDir = GetSearchExcelsInDir(comp);
+                summaries.Add(Path.Combine(compDir, comp + ".xls"));
+            }
             string newdoc = Path.Combine(_hostingEnvironment.WebRootPath, "Word", company + DateTime.Now.ToString("yyyy-MM-dd-HH-hh-ss-mm") + ".docx");
 
             string companyName_Abb = string.Empty;
@@ -923,9 +1039,9 @@ namespace VirtualCredit.Controllers
             var ruleTable = document.Tables[0];
             foreach (var row in ruleTable.Rows)
             {
-                if(row.GetCell(2).GetText() == "beibaoxianren")
+                if (row.GetCell(2).GetText() == "beibaoxianren")
                 {
-                    row.GetCell(2).Paragraphs[0].ReplaceText("beibaoxianren",company);
+                    row.GetCell(2).Paragraphs[0].ReplaceText("beibaoxianren", company);
                 }
 
                 if (row.GetCell(2).GetText() == "shengxiaoriqi")
@@ -935,52 +1051,22 @@ namespace VirtualCredit.Controllers
                 }
             }
 
-
-            //foreach (XWPFParagraph paragraph in document.Paragraphs)
-            //{
-            //    if (paragraph.Text.Contains("生效日期"))
-            //    {
-            //        int runCount = paragraph.Runs.Count;
-            //        for (int i = 0; i < runCount; i++)
-            //        {
-            //            paragraph.RemoveRun(0);
-            //        }
-            //        XWPFRun xWPFRun = paragraph.InsertNewRun(0);
-            //        xWPFRun.SetText($"生效日期：{DateTime.Parse(date).ToString("yyyy年MM月dd日")}");
-            //        xWPFRun.SetFontFamily("宋体", FontCharRange.Ascii);
-            //        xWPFRun.IsBold = true;
-            //        xWPFRun.FontSize = 9;
-            //        continue;
-            //    }
-            //    if (paragraph.Text.Contains("附加被保险人"))
-            //    {
-            //        int runCount = paragraph.Runs.Count;
-            //        for (int i = 0; i < runCount; i++)
-            //        {
-            //            paragraph.RemoveRun(0);
-            //        }
-            //        XWPFRun xWPFRun = paragraph.InsertNewRun(0);
-            //        xWPFRun.SetText("附加被保险人：" + company);
-            //        xWPFRun.SetFontFamily("宋体", FontCharRange.Ascii);
-            //        xWPFRun.IsBold = true;
-            //        xWPFRun.FontSize = 9;
-            //        continue;
-            //    }
-            //}
-
             //读取表格
             UserInfoModel user = GetCurrentUser();
             user.MyLocker.RWLocker.EnterReadLock();
             int index = 1;
-            DataTable dt = new ExcelTool(summaryFile, "Sheet1").ExcelToDataTable("Sheet1", true);
+            DataTable dt = new DataTable();
+            foreach (var summary in summaries)
+            {
+                dt.Merge(new ExcelTool(summary, "Sheet1").ExcelToDataTable("Sheet1", true));
+            }
             //foreach (XWPFTable table in document.Tables)
 
             var table = document.Tables[1];
             foreach (DataRow row in dt.Rows)
             {
                 XWPFTableRow newrow = table.CreateRow();
-                newrow.GetCell(0).SetText(index.ToString());
-                index++;
+                newrow.GetCell(0).SetText(index++.ToString());
                 newrow.GetCell(1).SetText(companyName_Abb);
                 newrow.GetCell(2).SetText(row[2].ToString());
                 newrow.GetCell(3).SetText(row[3].ToString());
@@ -1057,60 +1143,54 @@ namespace VirtualCredit.Controllers
         public IActionResult RecipeSummaryByMonth([FromQuery]string name)
         {
             ReaderWriterLockSlim r_locker = null;
+            bool isSelf = false;
+            var currUser = GetCurrentUser();
+            if (currUser.CompanyName == name) isSelf = true;
             try
             {
-                r_locker = GetCurrentUser().MyLocker.RWLocker;
+                r_locker = currUser.MyLocker.RWLocker;
                 r_locker.EnterReadLock();
                 //获取该公司历史表单详细
                 List<NewExcel> allMonthlyExcels = new List<NewExcel>();
-                if (GetCurrentUser().AccessLevel != 0)
+                if (currUser.ChildAccounts.Count == 0)
                 {
-                    if (GetCurrentUser().CompanyName != name)
+                    if (currUser.CompanyName != name)
                     {
-                        return null;
+                        return View("Error");
                     }
                 }
                 string companyName = name;
-                string targetDirectory = _hostingEnvironment.WebRootPath;
+                string targetCompDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories).FirstOrDefault();
 
-                foreach (string dir in Directory.GetDirectories(Path.Combine(targetDirectory, "Excel", companyName))) //每月的文件夹
+                for (DateTime date = From; date <= To; date = date.AddMonths(1))
                 {
-                    if (Directory.GetFiles(dir).Length <= 0)
+                    string monthDir = date.ToString("yyyy-MM");
+                    SearchOption so = SearchOption.AllDirectories;
+                    if (isSelf)
                     {
-                        break;
+                        so = SearchOption.TopDirectoryOnly;
                     }
-                    NewExcel excel = null;
-                    int headcount = 0;
-                    double cost = 0;
-                    double unpaid = 0;
-                    double paid = 0;
-                    foreach (string fileName in Directory.GetFiles(dir))
+                    var dirs = Directory.GetDirectories(targetCompDir, monthDir, so);
+                    if (dirs.Length == 0) continue;
+                    NewExcel excel = new NewExcel();
+                    excel.Company = companyName;
+                    foreach (string month in dirs)
                     {
-                        FileInfo fi = new FileInfo(fileName);
-                        if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
-                            continue;
-
-                        ExcelTool et = new ExcelTool(fileName, "Sheet1");
-                        excel = new NewExcel();
-                        excel.Company = name;
-                        DateTime dt;
-                        string[] fileinfo = fi.Name.Split('@');
-                        //DateTime.TryParse(fileinfo[0].Replace(fi.Extension, string.Empty), out dt);
-                        DateTime.TryParse(new DirectoryInfo(dir).Name, out dt);
-                        excel.EndDate = new DateTime(dt.Year, dt.Month, DateTime.DaysInMonth(dt.Year, dt.Month)).ToShortDateString();
-                        headcount += et.GetEmployeeNumber();
-                        excel.StartDate = new DateTime(dt.Year, dt.Month, 1).ToShortDateString();
-                        paid += Convert.ToDouble(fileinfo[6]);
-                        unpaid += Convert.ToDouble(fileinfo[1]) - Convert.ToDouble(fileinfo[6]);
-                        cost += Convert.ToDouble(fileinfo[1]);
+                        var tempexcel = GetMonthlyDetail(month, name);
+                        excel.StartDate = tempexcel.StartDate;
+                        excel.EndDate = tempexcel.EndDate;
+                        excel.Cost += tempexcel.Cost;
+                        excel.HeadCount += tempexcel.HeadCount;
+                        excel.Paid += tempexcel.Paid;
+                        excel.Unpaid += tempexcel.Unpaid;
+                        excel.UploadDate = tempexcel.UploadDate;
                     }
-                    excel.UploadDate = new DirectoryInfo(dir).Name;
-                    excel.HeadCount = headcount;
-                    excel.Cost = cost;
-                    excel.Unpaid = unpaid;
-                    excel.Paid = paid;
-                    allMonthlyExcels.Add(excel);
+                    if (excel != null)
+                    {
+                        allMonthlyExcels.Add(excel);
+                    }
                 }
+
                 DetailModel dm = new DetailModel();
                 dm.Company = name;
                 dm.MonthlyExcel = allMonthlyExcels;
@@ -1133,6 +1213,44 @@ namespace VirtualCredit.Controllers
 
         }
 
+        private NewExcel GetMonthlyDetail(string dir, string companyName)
+        {
+            if (Directory.GetFiles(dir).Length <= 0)
+            {
+                return null;
+            }
+            NewExcel excel = null;
+            int headcount = 0;
+            double cost = 0;
+            double unpaid = 0;
+            double paid = 0;
+            foreach (string fileName in Directory.GetFiles(dir))
+            {
+                FileInfo fi = new FileInfo(fileName);
+                if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
+                    continue;
+
+                ExcelTool et = new ExcelTool(fileName, "Sheet1");
+                excel = new NewExcel();
+                excel.Company = companyName;
+                DateTime dt;
+                string[] fileinfo = fi.Name.Split('@');
+                //DateTime.TryParse(fileinfo[0].Replace(fi.Extension, string.Empty), out dt);
+                DateTime.TryParse(new DirectoryInfo(dir).Name, out dt);
+                excel.EndDate = new DateTime(dt.Year, dt.Month, DateTime.DaysInMonth(dt.Year, dt.Month)).ToShortDateString();
+                headcount += et.GetEmployeeNumber();
+                excel.StartDate = new DateTime(dt.Year, dt.Month, 1).ToShortDateString();
+                paid += Convert.ToDouble(fileinfo[6]);
+                unpaid += Convert.ToDouble(fileinfo[1]) - Convert.ToDouble(fileinfo[6]);
+                cost += Convert.ToDouble(fileinfo[1]);
+            }
+            excel.UploadDate = new DirectoryInfo(dir).Name;
+            excel.HeadCount = headcount;
+            excel.Cost = cost;
+            excel.Unpaid = unpaid;
+            excel.Paid = paid;
+            return excel;
+        }
         public FileStreamResult EmployeeDownload()
         {
             try
@@ -1210,15 +1328,22 @@ namespace VirtualCredit.Controllers
                 UserInfoModel uploadUser = DatabaseService.SelectUser(fileinfo[2]);
                 if (!uploadUser.UserName.Equals("期初自动流转"))
                 {
-                    if (currUser.AccessLevel != 0 && (currUser.CompanyName != company || (currUser.UserName != uploadUser.UserName && currUser.UserName != uploadUser.Father)))
-                    {
+                    if (!IsChildCompany(currUser, company) && company != currUser.CompanyName)
                         return File(new FileStream(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", "未知错误.txt"), FileMode.Open, FileAccess.Read), "text/plain", "未知错误.txt");
-                    }
                 }
 
                 FileInfo fi = new FileInfo(fileName);
                 string downloadName = company + "_" + fi.Name.Split("@")[0] + ".xls";
-                string filePath = Path.Combine(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, DateTime.Parse(date).ToString("yyyy-MM"), fileName));//路径
+                string companyDir = string.Empty;
+                if (currUser.AccessLevel == 0)
+                {
+                    companyDir = ExcelRoot;
+                }
+                else
+                {
+                    companyDir = GetSearchExcelsInDir(company);
+                }
+                string filePath = Directory.GetFiles(companyDir, fileName, SearchOption.AllDirectories).FirstOrDefault();//路径
                 FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
                 return File(fs, "text/plain", downloadName);
             }
@@ -1229,6 +1354,173 @@ namespace VirtualCredit.Controllers
                 return null;
             }
         }
+        [UserLoginFilters]
+        public JsonResult PreviewTable(string company, string fileName, string date)
+        {
+            try
+            {
+                UserInfoModel currUser = GetCurrentUser();
+                string[] fileinfo = new FileInfo(fileName).Name.Split("@");
+                UserInfoModel uploadUser = DatabaseService.SelectUser(fileinfo[2]);
+                if (!uploadUser.UserName.Equals("期初自动流转"))
+                {
+                    if (!IsChildCompany(currUser, company) && company != currUser.CompanyName)
+                        return null;
+                }
+
+                FileInfo fi = new FileInfo(fileName);
+                string downloadName = company + "_" + fi.Name.Split("@")[0] + ".xls";
+                string companyDir = string.Empty;
+                companyDir = GetCurrentUserRootDir();
+                string filePath = Directory.GetFiles(companyDir, fileName, SearchOption.AllDirectories)[0];//路径
+
+
+                // string filePath = Path.Combine(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, DateTime.Parse(date).ToString("yyyy-MM"), fileName));//路径
+                ExcelTool excelTool = new ExcelTool(filePath, "Sheet1");
+                return Json(excelTool.ExcelToDataTable("Sheet1", false));
+            }
+            catch (Exception e)
+            {
+                LogServices.LogService.Log(e.Message);
+                LogServices.LogService.Log(e.StackTrace);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 删除所有月份文件夹及文件
+        /// 删除该公司汇总表中的所有人员信息
+        /// 删除赔付信息
+        /// </summary>
+        /// <param name="accountName"></param>
+        [UserLoginFilters]
+        [AdminFilters]
+        public IActionResult RemoveAccountData([FromQuery]string accountName)
+        {
+            string targetDir = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", accountName);
+
+            foreach (string directory in Directory.GetDirectories(targetDir))
+            {
+                Directory.Delete(directory, true);
+            }
+
+            string summaryFile = Path.Combine(targetDir, accountName + ".xls");
+            System.IO.File.Delete(summaryFile);
+            string template = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", "SummaryTemplate.xls");
+            System.IO.File.Copy(template, summaryFile, true);
+            var file = Directory.GetFiles(targetDir).Where(x => new FileInfo(x).Extension.Contains("txt"));
+            string txtPath = Path.Combine(targetDir, accountName + "_0.txt");
+            System.IO.File.Delete(file.First());
+            using (System.IO.File.Create(txtPath))
+            {
+
+            }
+            return Json(true);
+        }
+
+        [AdminFilters]
+        [UserLoginFilters]
+        public IActionResult DeleteReceipt(string company, string fileName, string startDate)
+        {
+            var locker = GetCurrentUser().MyLocker.RWLocker;
+            try
+            {
+                if (fileName.Contains("期初自动流转"))
+                {
+                    return Json("该保单为期初自动流转保单，无法删除");
+                }
+
+
+                if (!locker.IsWriteLockHeld)
+                {
+                    locker.EnterWriteLock();
+                }
+
+                string[] fileinfo = fileName.Split("@");
+                string companyDir = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company);
+                DateTime start = Convert.ToDateTime(startDate);
+                string targetFilePath = Path.Combine(companyDir, start.ToString("yyyy-MM"), fileName);
+                ExcelTool targetExcel = new ExcelTool(targetFilePath, "Sheet1");
+                ExcelTool summary = new ExcelTool(Path.Combine(companyDir, company + ".xls"), "sheet1");
+                DataTable targetExcelTable = targetExcel.ExcelToDataTable("Sheet1", true);
+                DataTable summaryTable = summary.ExcelToDataTable("Sheet1", true);
+                DateTime summaryStartDate = new DateTime();
+                if (summaryTable.Rows.Count > 1)
+                {
+                    summaryStartDate = Convert.ToDateTime(summaryTable.Rows[1][6].ToString());
+                }
+                else
+                {
+                    return Json("当前无人员参保，无法删除");
+                }
+
+                if (start.Year != summaryStartDate.Year || (start.Year == summaryStartDate.Year && start.Month != summaryStartDate.Month))
+                {
+                    return Json("仅能删除当月保单");
+                }
+
+                List<int> rowsToRemove = new List<int>();
+                if (fileinfo[3] == "Add")
+                {
+                    foreach (DataRow row in targetExcelTable.Rows)
+                    {
+                        foreach (DataRow summaryrow in summaryTable.Rows)
+                        {
+                            if (summaryrow[3].ToString() == row[1].ToString())
+                            {
+                                rowsToRemove.Add(summaryTable.Rows.IndexOf(summaryrow));
+                                break;
+                            }
+                        }
+                    }
+
+                    if (rowsToRemove.Count > 0)
+                    {
+                        var sortedlist = rowsToRemove.OrderByDescending(x => x);
+                        foreach (var item in sortedlist)
+                        {
+                            summaryTable.Rows.RemoveAt(item);
+                        }
+                    }
+
+                }
+                else if (fileinfo[3] == "Sub")
+                {
+                    //TODO: Add removed employees back to summary table
+                    //之前月份的保单是否允许删除，因为已归档l;;l;;
+                    foreach (DataRow row in targetExcelTable.Rows)
+                    {
+                        DataRow newrow = summaryTable.NewRow();
+                        newrow[0] = summaryTable.Rows.Count + 1;
+                        newrow[1] = company;
+                        newrow[2] = row[0];
+                        newrow[3] = row[1];
+                        newrow[4] = row[2];
+                        newrow[5] = row[3];
+                        newrow[6] = row[4];
+                        summaryTable.Rows.Add(newrow);
+                    }
+                }
+                summary.DatatableToExcel(summaryTable);
+                targetExcel.Dispose();
+                System.IO.File.Delete(targetFilePath);
+
+                return Json(true);
+            }
+            catch
+            {
+                return NotFound();
+            }
+            finally
+            {
+                if (locker.IsWriteLockHeld)
+                {
+                    locker.ExitWriteLock();
+                }
+            }
+        }
+
+
         public IActionResult Privacy()
         {
             return View();

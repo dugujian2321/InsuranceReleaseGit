@@ -52,9 +52,6 @@ html {
     text-align:center;
 }
 
-tr>td {
-    vertical-align:middle;
-}
 
 #btnSubmit {
     width: 100px;
@@ -70,6 +67,10 @@ tr>td {
 
 td.td_middle{
     vertical-align:middle;
+}
+
+tbody tr td{
+    vertical-align: middle;
 }
 
 .resultTable {

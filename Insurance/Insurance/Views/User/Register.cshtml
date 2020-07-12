@@ -76,11 +76,13 @@
                 if (uim != null && uim.AccessLevel > 0)
                 {
                     string cn = uim.CompanyName;
+                    string cnAbb = uim.CompanyNameAbb;
                     <div class="input-group mb-3">
                         <div class="input-group-prepend">
                             <span class="input-group-text" id="inputGroup-sizing-default">公司名称</span>
                         </div>
                         <input class="inputBox" id="cpName" type="text" asp-for="CompanyName" readonly value="@cn" autocomplete="off" />
+                        <input class="inputBox" id="cpName" type="text" asp-for="CompanyNameAbb" readonly value="@cnAbb" autocomplete="off" />
                     </div>
                 }
                 else
@@ -90,6 +92,7 @@
                             <span class="input-group-text" id="inputGroup-sizing-default">公司名称</span>
                         </div>
                         @Html.TextBoxFor(user => user.CompanyName, new { @class = "inputBox", id = "cpName", type = "Text", autocomplete = "off" })
+                        @Html.TextBoxFor(user => user.CompanyNameAbb, new { @class = "inputBox", id = "cpNameAbb", type = "Text", autocomplete = "off" })
                     </div>
                 }
             }

@@ -157,7 +157,7 @@ namespace VirtualCredit
             {
                 string cmd = string.Empty;
                 DataTable temp = new DataTable();
-                if (currUser.AccessLevel == 0)
+                if (currUser.AccessLevel == 0) //如果是超管
                 {
                     cmd = "select * from UserInfo where userName=@userName";
                     SqlParameter sp = new SqlParameter("@userName", currUser.UserName);
@@ -176,7 +176,7 @@ namespace VirtualCredit
                 }
                 else
                 {
-                    cmd = $"select * from UserInfo where (CompanyName = '{currUser.CompanyName}' and Father = @Father and userName <> '{currUser.UserName}')";
+                    cmd = $"select * from UserInfo where (Father = @Father and userName <> '{currUser.UserName}')";
                     SqlParameter sp1 = new SqlParameter("@Father", currUser.UserName);
                     temp = SQLServerHelper.ExecuteReader(cmd, sp1);
                     if (temp != null && temp.Rows.Count > 0)
@@ -291,7 +291,7 @@ namespace VirtualCredit
                 string cmd = $"select * from {tableName} where userName=@userName";
                 SqlParameter userNamePara = new SqlParameter("@userName", userName);
                 dt = SQLServerHelper.ExecuteReader(cmd, userNamePara);
-                if (dt.Rows.Count > 0)
+                if (dt != null && dt.Rows.Count > 0)
                 {
                     DataRow row = dt.Rows[0];
                     UserInfoModel uim = new UserInfoModel();
@@ -400,6 +400,7 @@ namespace VirtualCredit
                     uim.RecipeCompany = row["RecipeCompany"].ToString();
                     uim.RecipePhone = row["RecipePhone"].ToString();
                     uim.RecipeType = row["RecipeType"].ToString();
+                    uim.ChildAccounts = new List<UserInfoModel>();
                     if (!string.IsNullOrEmpty(row["UnitPrice"].ToString()))
                     {
                         uim.UnitPrice = Convert.ToInt32(row["UnitPrice"].ToString());
@@ -417,7 +418,7 @@ namespace VirtualCredit
                     {
                         uim.DaysBefore = 0;
                     }
-                    
+
                     return uim;
                 }
                 else

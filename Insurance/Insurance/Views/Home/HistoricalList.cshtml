@@ -7,12 +7,13 @@
 <div>
     @{
         UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
-        if (currentUser.AccessLevel == 0)
+        if (currentUser.ChildAccounts.Count > 0)
         {
             <a class="btn btn-warning" style="margin:10px" asp-action="ExportAllEmployees" asp-controller="Home">导出所有在保人员名单</a>
             <table class="table">
                 <thead>
                     <tr>
+                        <th>操作</th>
                         <th scope="col">公司名称</th>
                         <th scope="col">人数</th>
                         <th scope="col">累积保费</th>
@@ -22,17 +23,31 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <tr>
+                        <td></td>
+                        <td style="color:blue"><strong>合计</strong></td>
+                        <td style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.EmployeeNumber)</strong></td>
+                        <td style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.TotalCost)</strong></td>
+                        <td style="color:blue"><strong>@Model.CompanyList.FirstOrDefault().StartDate.ToString("yyyy/M/d")</strong></td>
+                        <td style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.PaidCost)</strong></td>
+                        <td>详细</td>
+                    </tr>
                     @if (Model.CompanyList != null && Model.CompanyList.Count > 0)
                     {
                         @foreach (Company item in Model.CompanyList)
                         {
                             <tr>
-                                <td>@item.Name</td>
-                                <td>@item.EmployeeNumber</td>
-                                <td>@item.TotalCost</td>
-                                <td>@item.StartDate.ToShortDateString()</td>
-                                <td><input type="text" value="@item.PaidCost" onchange="SaveCost('@item.Name',this)"/></td>
-                                <td><a href="/Home/CompanyHisitoryByMonth?name=@item.Name" class="btn btn-primary">详细</a></td>
+                                <td>
+                                    <button type="button" class="btn btn-danger" data-toggle="modal" data-company="@item.Name" data-target="#confirmDeleteCompany">
+                                        删除
+                                    </button>
+                                </td>
+                                <td class="td_middle">@item.Name</td>
+                                <td class="td_middle">@item.EmployeeNumber</td>
+                                <td class="td_middle">@item.TotalCost</td>
+                                <td class="td_middle">@item.StartDate.ToShortDateString()</td>
+                                <td class="td_middle"><input type="text" value="@item.PaidCost" onchange="SaveCost('@item.Name',this)" /></td>
+                                <td class="td_middle"><a href="/Home/CompanyHisitoryByMonth?name=@item.Name" class="btn btn-primary">详细</a></td>
                             </tr>
                         }
                     }
@@ -42,7 +57,29 @@
     }
 
 </div>
+
+<div class="modal fade" id="confirmDeleteCompany" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">确认删除</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                ...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button id="btn_ok" class="btn btn-danger">确认删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+    $(RegisterEvents);
     $("a.active").removeClass('active');
     $("#page_2").addClass('active');
 </script>

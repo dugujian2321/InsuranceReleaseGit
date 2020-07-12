@@ -3,9 +3,13 @@ using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Storage;
+using NPOI.HSSF.EventUserModel.DummyRecord;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using VirtualCredit.LogServices;
 using VirtualCredit.Models;
 using VirtualCredit.Services;
@@ -14,8 +18,9 @@ namespace VirtualCredit
 {
     public class VC_ControllerBase : Controller
     {
-        protected IHostingEnvironment _hostingenvironment;
+        protected IHostingEnvironment _hostingEnvironment;
         public static long CustomersCount = 0;
+        public static string ExcelRoot = Utility.Instance.ExcelRoot;
         protected ImageTool _imageTool;
         public string RoleId
         {
@@ -28,26 +33,33 @@ namespace VirtualCredit
                 HttpContext.Session.Set<string>("RoleId", value);
             }
         }
-        public string GameName
-        {
-            get
-            {
-                return HttpContext.Session.Get<string>("GlobalGameName");
-            }
-            set
-            {
-                HttpContext.Session.Set<string>("GlobalGameName", value);
-            }
-        }
+
+        public static DateTime From { get; set; }
+        public static DateTime To { get; set; }
         public double ScreenWidth { get; set; }
         public double ScreenHeight { get; set; }
-        public VC_ControllerBase()
+        public VC_ControllerBase() : this(null)
         {
 
         }
         public VC_ControllerBase(HttpContext context)
         {
-            _imageTool = new ImageTool(context);
+
+            if (context != null)
+                _imageTool = new ImageTool(context);
+
+
+            int y = DateTime.Now.Year;
+            if (DateTime.Now.Month < 6)
+            {
+                From = new DateTime(y - 1, 6, 1);
+                To = new DateTime(y, 5, 31);
+            }
+            else
+            {
+                From = new DateTime(y, 6, 1);
+                To = new DateTime(y + 1, 5, 31);
+            }
         }
 
         public override ViewResult View(string viewName)
@@ -102,15 +114,163 @@ namespace VirtualCredit
             return Math.Round(result, 2);
         }
 
-        public List<Company> GetAllCompanies(string companiesDirectory)
+        public string GetSearchExcelsInDir(string companyName)
+        {
+            var currUser = GetCurrentUser();
+            if (currUser.CompanyName == companyName)
+            {
+                return GetCurrentUserRootDir();
+            }
+            else
+            {
+                return Directory.GetDirectories(GetCurrentUserRootDir(), companyName, SearchOption.AllDirectories).FirstOrDefault();
+            }
+        }
+
+        /// <summary>
+        /// Check if company is the child of user
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="company"></param>
+        /// <returns></returns>
+        public bool IsChildCompany(UserInfoModel user, string company)
+        {
+            var children = GetChildrenCompanies(user.CompanyName);
+            return children.Contains(company);
+        }
+
+        public string GetCurrentUserRootDir()
+        {
+            var currUser = GetCurrentUser();
+
+            string result = Directory.GetDirectories(ExcelRoot, currUser.CompanyName, SearchOption.AllDirectories)[0];
+            return result;
+
+        }
+
+        public List<Company> GetAllChildAccounts()
+        {
+            UserInfoModel currUser = GetCurrentUser();
+            string companiesDirectory = GetCurrentUserRootDir();
+            List<Company> result = new List<Company>();
+            List<string> subDirs = Directory.GetDirectories(companiesDirectory).ToList();
+            foreach (string account in subDirs)
+            {
+                var dirInfo = new DirectoryInfo(account);
+                if (DateTime.TryParse(dirInfo.Name, out DateTime dateTime))
+                {
+                    continue;
+                }
+                if (!System.IO.File.Exists(Path.Combine(account, dirInfo.Name + ".xls")))
+                {
+                    continue;
+                }
+                Company company = new Company();
+                company.Name = Path.GetFileName(account);
+                ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year);
+                company.EmployeeNumber = edr.GetEmployeeNumber();
+                company.StartDate = From;
+                company.PaidCost = edr.GetPaidCost();
+                company.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
+                company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
+                company.TotalCost = edr.GetTotalCost();
+                result.Add(company);
+            }
+            Company self = new Company();
+            self.Name = currUser.CompanyName;
+            string thisSummary = Path.Combine(companiesDirectory, currUser.CompanyName + ".xls");
+
+            if (System.IO.File.Exists(thisSummary))
+            {
+                ExcelTool et = new ExcelTool(thisSummary, "Sheet1");
+                self.EmployeeNumber = et.GetEmployeeNumber();
+                self.StartDate = From;
+                self.PaidCost = et.GetPaidCost();
+                self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
+                self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
+                self.TotalCost = et.GetCostFromJuneToMay(companiesDirectory, From.Year);
+                result.Add(self);
+            }
+
+
+
+            return result;
+        }
+
+        public IEnumerable<string> GetChildrenCompanies(string companyName)
+        {
+            ConcurrentBag<string> result = new ConcurrentBag<string>();
+            string targetDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories)[0];
+
+            foreach (var dir in Directory.GetDirectories(targetDir))
+            {
+                var dirInfo = new DirectoryInfo(dir);
+                if (!DateTime.TryParse(dirInfo.Name, out DateTime date))
+                {
+                    result.Add(dirInfo.Name);
+                    GetChildrenCompanies(dirInfo.Name).ToList().ForEach(_ => result.Add(new DirectoryInfo(_).Name));
+                }
+            }
+            return result;
+        }
+
+        public IEnumerable<Company> GetChildrenCompanies(UserInfoModel user)
         {
             List<Company> result = new List<Company>();
+            string companyName = user.CompanyName;
+            string targetDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories).FirstOrDefault();
+            List<string> companies = Directory.GetDirectories(targetDir).ToList();
+            companies.Add(targetDir);
+            foreach (var dir in companies)
+            {
+                var dirInfo = new DirectoryInfo(dir);
+                if (dirInfo.Name == "管理员") continue;
+                if (dir == targetDir)
+                {
+                    Company com = new Company();
+                    com.Name = dirInfo.Name;
+                    string summary = Path.Combine(dirInfo.FullName, dirInfo.Name + ".xls");
+                    if (!new FileInfo(summary).Exists) continue;
+                    ExcelTool edr = new ExcelTool(summary, "Sheet1");
+                    com.PaidCost = edr.GetPaidCost();
+                    com.TotalCost = edr.GetCostFromJuneToMay(dirInfo.FullName, From.Year);
+                    com.EmployeeNumber = edr.GetEmployeeNumber();
+                    com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(dirInfo.FullName, From.Year);
+                    com.StartDate = From;
+                    com.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
+                    result.Add(com);
+                }
+                else
+                {
+                    if (!DateTime.TryParse(dirInfo.Name, out DateTime date))
+                    {
+                        Company com = new Company();
+                        com.Name = dirInfo.Name;
+                        ExcelDataReader edr = new ExcelDataReader(dirInfo.Name, From.Year);
+                        com.PaidCost = edr.GetPaidCost();
+                        com.TotalCost = edr.GetTotalCost();
+                        com.EmployeeNumber = edr.GetEmployeeNumber();
+                        com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
+                        com.StartDate = From;
+                        com.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
+                        result.Add(com);
+                    }
+                }
+            }
+            return result;
+        }
+
+        public List<Company> GetAllCompanies()
+        {
+            List<Company> result = new List<Company>();
+            string companiesDirectory = GetSearchExcelsInDir("管理员");
             foreach (string comp in Directory.GetDirectories(companiesDirectory))
             {
-                ExcelTool et;
+                DirectoryInfo di = new DirectoryInfo(comp);
+                ExcelDataReader edr;
                 if (System.IO.File.Exists(Path.Combine(comp, new DirectoryInfo(comp).Name + ".xls")))
                 {
-                    et = new ExcelTool(Path.Combine(comp, new DirectoryInfo(comp).Name + ".xls"), "Sheet1");
+                    edr = new ExcelDataReader(di.Name, From.Year);
                 }
                 else
                 {
@@ -118,11 +278,12 @@ namespace VirtualCredit
                 }
                 Company company = new Company();
                 company.Name = Path.GetFileName(comp);
-                company.EmployeeNumber = et.GetEmployeeNumber();
+                company.EmployeeNumber = edr.GetEmployeeNumber();
                 company.StartDate = new DateTime(DateTime.Now.Date.Year, DateTime.Now.Date.Month, 1);
-                company.PaidCost = et.GetPaidCost();
+                company.PaidCost = edr.GetPaidCost();
+                company.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
                 company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
-                company.TotalCost = et.GetTotalCost(Path.Combine(companiesDirectory, company.Name));
+                company.TotalCost = edr.GetTotalCost();
                 result.Add(company);
             }
             return result;
@@ -165,6 +326,11 @@ namespace VirtualCredit
             user.userPassword = HttpContext.Session.Get<UserInfoModel>("CurrentUser").userPassword;
             UserInfoModel uim = DatabaseService.UserMatchUserNamePassword(user);
             uim.MyLocker = Utility.GetCompanyLocker(uim.CompanyName);
+            var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
+            foreach (var item in children)
+            {
+                uim.ChildAccounts.Add(DatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
+            }
             return uim;
         }
 

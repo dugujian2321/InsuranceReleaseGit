@@ -227,7 +227,7 @@ function MarkPaid() {
     for (i = 0; i < checkBoxes.length; i++) {
         if (checkBoxes[i].id != "cbx_selectAll") {
             var folder = checkBoxes[i].parentNode.parentNode.children[6].innerText;
-            ids[index] =  folder + "#" + checkBoxes[i].id ;
+            ids[index] = folder + "#" + checkBoxes[i].id;
             index++;
         }
     }
@@ -252,6 +252,140 @@ function MarkPaid() {
     );
 }
 
+
+function DeleteReceipt(name, file, date) {
+    $.ajax(
+        {
+            url: "/Home/DeleteReceipt?company=" + name + "&filename=" + file + "&startdate=" + date,
+            async: true,
+            processData: false,
+            type: 'get',
+            dataType: 'JSON',
+            success: function (data) {
+                if (data == true) {
+                    alert("删除成功！");
+                    window.location.reload();
+                } else {
+                    alert(data);
+                }
+            },
+            fail: function (data) {
+                alert("删除失败");
+            },
+            error: function (data) {
+                alert("错误");
+            }
+        }
+    );
+}
+
+function DeleteCompanyData(company) {
+    $.ajax(
+        {
+            url: "/Home/RemoveAccountData?accountName=" + company,
+            async: true,
+            processData: false,
+            type: 'get',
+            dataType: 'JSON',
+            success: function (data) {
+                if (data == true) {
+                    alert("删除成功！");
+                    window.location.reload();
+                } else {
+                    alert(data);
+                }
+            },
+            fail: function (data) {
+                alert("删除失败");
+            },
+            error: function (data) {
+                alert("错误");
+            }
+        }
+    );
+}
+
+function RegisterEvents() {
+    $('#confirmDeleteExcel').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        var company = button.data('company');
+        var filename = button.data('filename');
+        var uploaddate = button.data('uploaddate');
+        var startdate = button.data('startdate');
+        var modal = document.getElementById('confirmDeleteExcel');
+        modal.getElementsByClassName('modal-body')[0].innerHTML = "是否确认删除于 " + uploaddate + " 上传的保单?";
+        document.getElementById('btn_deletereceipt').onclick = function () { DeleteReceipt(company, filename, startdate) };
+    });
+
+    $('#confirmDeleteCompany').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        var company = button.data('company');
+        var modal = document.getElementById('confirmDeleteCompany');
+        modal.getElementsByClassName('modal-body')[0].innerHTML = "是否确认删除 " + company + " 的所有保单数据?";
+        document.getElementById('btn_ok').onclick = function () { DeleteCompanyData(company) };
+    });
+
+
+    $('#dataPreview').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget) // Button that triggered the modal
+        var company = button.data('company') // Extract info from data-* attributes
+        var filename = button.data('fn') // Extract info from data-* attributes
+        var date = button.data('date') // Extract info from data-* attributes
+        // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+        // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+        var modal = $(this)
+        modal.find('.modal-title').text('数据预览')
+        var table = document.getElementById('previewTable');
+        var table_header = table.getElementsByTagName('thead')[0];
+        var table_body = table.getElementsByTagName('tbody')[0];
+        table_header.innerHTML = '';
+        table_body.innerHTML = '';
+        document.getElementById('download').href = "/Home/DownloadExcel?company=" + company + "&fileName=" + filename + "&date=" + date;
+        $.ajax(
+            {
+                async: true,
+                processData: false,
+                type: 'get',
+                dataType: 'json',
+                url: '/Home/PreviewTable?company=' + company + "&fileName=" + filename + "&date=" + date,
+                success: function (data) {
+                    if (data) {
+
+                        var tr = document.createElement('tr');
+                        var theaderRow = table_header.appendChild(tr);
+                        for (var i = 0; i < Object.values(data[0]).length; i++) {
+                            var th = document.createElement('th');
+                            th.innerHTML = Object.values(data[0])[i];
+                            theaderRow.appendChild(th);
+                        }
+                        for (var j = 1; j < data.length; j++) {
+                            var tr = document.createElement('tr');
+                            for (var k = 0; k < Object.values(data[j]).length; k++) {
+                                var td = document.createElement('td');
+                                td.innerHTML = Object.values(data[j])[k];
+                                tr.appendChild(td);
+                            }
+
+                            table_body.appendChild(tr);
+                        }
+                    }
+                },
+                fail: function (data) {
+                    alert("保存失败");
+                },
+                error: function (data) {
+                    alert("错误");
+                }
+            }
+        )
+
+        modal.find('.modal-body input').val("test")
+        modal.find('#download').href = "/Home/DownloadExcel?company=" + company + "&fileName=" + filename + "&date=" + date
+    });
+}
+
+
+
 function SaveCost(company, obj) {
     if (!paidmoney_pattern.test(obj.value) && !paidmoney_pattern2.test(obj.value)) {
         alert("赔付金额不正确");
@@ -266,8 +400,9 @@ function SaveCost(company, obj) {
             dataType: 'json',
             url: '/Home/SaveCost?cost=' + obj.value + '&company=' + company,
             success: function (data) {
-                if (data = true) {
+                if (data == true) {
                     alert("保存成功");
+                    location.reload();
                 }
             },
             fail: function (data) {

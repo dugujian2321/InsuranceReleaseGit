@@ -1,4 +1,5 @@
-﻿using VirtualCredit.Services;
+﻿using System.Collections.Generic;
+using VirtualCredit.Services;
 
 namespace VirtualCredit.Models
 {
@@ -49,6 +50,8 @@ namespace VirtualCredit.Models
 
         [DatabaseProp]
         public string Father { get; set; }
+
+        public List<UserInfoModel> ChildAccounts { get; set; }
 
         public int StartDate { get; set; }
         public bool AllowEdit { get; set; }

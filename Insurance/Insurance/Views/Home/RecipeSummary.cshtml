@@ -7,12 +7,15 @@
 <div>
     @{
         UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
-        if (currentUser.AccessLevel == 0)
+        if (currentUser.ChildAccounts.Count > 0)
         {
             <table class="table">
                 <thead>
                     <tr>
                         <th scope="col">公司名称</th>
+                        <th>合计保费</th>
+                        <th>合计已结保费</th>
+                        <th>合计未结保费</th>
                         <th>操作</th>
                     </tr>
                 </thead>
@@ -21,9 +24,13 @@
                     {
                         @foreach (Company item in Model.CompanyList)
                         {
+                            double unpaid = @item.TotalCost - @item.CustomerAlreadyPaid;
                             <tr>
-                                <td>@item.Name</td>
-                                <td><a href="/Home/RecipeSummaryByMonth?name=@item.Name" class="btn btn-primary">详细</a></td>
+                                <td class="td_middle">@item.Name</td>
+                                <td class="td_middle">@item.TotalCost</td>
+                                <td class="td_middle">@item.CustomerAlreadyPaid</td>
+                                <td class="td_middle">@Math.Round(unpaid,2)</td>
+                                <td class="td_middle"><a href="/Home/RecipeSummaryByMonth?name=@item.Name" class="btn btn-primary">详细</a></td>
                             </tr>
                         }
                     }

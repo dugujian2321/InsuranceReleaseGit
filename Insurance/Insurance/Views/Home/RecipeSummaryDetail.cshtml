@@ -22,20 +22,38 @@
             </thead>
             <tbody>
                 @{
+                    UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
                     foreach (var item in Model.MonthlyExcel)
                     {
                         if (item != null)
                         {
                             <tr>
-                                <td>@item.UploadDate</td>
-                                <td>@item.HeadCount</td>
-                                <td>@item.Cost</td>
-                                <td>@item.Paid</td>
-                                <td>@item.Unpaid</td>
-                                <td><a href="/Home/RecipeSummary?date=@item.StartDate&name=@item.Company">详细</a></td>
+                                <td class="td_middle">@item.UploadDate</td>
+                                <td class="td_middle">@item.HeadCount</td>
+                                <td class="td_middle">@item.Cost</td>
+                                <td class="td_middle">@item.Paid</td>
+                                <td class="td_middle">@item.Unpaid</td>
+                                <td><a href="/Home/RecipeSummary?date=@item.StartDate&name=@item.Company" class="btn btn-primary">详细</a></td>
                             </tr>
                         }
                     }
+
+                    <tr>
+                        <td class="td_middle">合计</td>
+                        <td></td>
+                        <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Cost)</td>
+                        <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Paid)</td>
+                        <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Unpaid)</td>
+                        @if (currentUser.AccessLevel == 0)
+                        {
+                            <td><a href="/Home/BanlanceAccount?companyName=@Model.Company" class="btn btn-primary">结算</a></td>
+                        }
+                        else
+                        {
+                            <td></td>
+                        }
+
+                    </tr>
                 }
             </tbody>
         </table>

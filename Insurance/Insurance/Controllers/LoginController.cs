@@ -77,6 +77,11 @@ namespace VirtualCredit.Controllers
                 user.CompanyName = uim.CompanyName;
                 user.IsOnline = HttpContext.Session.Id;
                 user.IPAddress = ip;
+                if (!DatabaseService.UpdateUserInfo(user, new List<string>() { "IPAddress", "IsOnline" }))
+                {
+                    LogServices.LogService.Log($"Failed updating userinfo.{user.CompanyName} {user.UserName}");
+                    return View();
+                }
                 user.AccessLevel = uim.AccessLevel;
                 user.CompanyNameAbb = uim.CompanyNameAbb;
                 user.Mail = uim.Mail;
@@ -93,12 +98,12 @@ namespace VirtualCredit.Controllers
                 user.RecipePhone = uim.RecipePhone;
                 user.userPassword = uim.userPassword;
                 user.RecipeType = uim.RecipeType;
-                if (!DatabaseService.UpdateUserInfo(user, new List<string>() { "IPAddress", "IsOnline" }))
+                user.ChildAccounts = new List<UserInfoModel>();
+                var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
+                foreach (var item in children)
                 {
-                    LogServices.LogService.Log($"Failed updating userinfo.{user.CompanyName} {user.UserName}");
-                    return View();
+                    user.ChildAccounts.Add(DatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
                 }
-
                 HttpContext.Session.Set("CurrentUser", user);
                 HttpContext.Session.Set<string>("Frontend", null);
                 SessionService.UserOnline(HttpContext);

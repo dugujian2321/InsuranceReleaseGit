@@ -1,4 +1,5 @@
 ﻿using Insurance.Models;
+using Microsoft.AspNetCore.Mvc;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -230,6 +231,41 @@ namespace Insurance.Services
             return GetCellText(1, 6);
         }
 
+        public double GetCostFromJuneToMay(string companyDir, int year)
+        {
+            DateTime now = DateTime.Now;
+            DateTime from = new DateTime();
+            DateTime to = new DateTime();
+
+            from = new DateTime(year, 6, 1);
+            to = new DateTime(year + 1, 5, 31, 23, 59, 59);
+
+
+            double cost = 0;
+            if (Directory.Exists(companyDir))
+            {
+                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                {
+                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    {
+                        continue;
+                    }
+                    DateTime dirDate = Convert.ToDateTime(new DirectoryInfo(monthDir).Name);
+                    dirDate = new DateTime(dirDate.Year, dirDate.Month, 1);
+                    if (dirDate >= from && dirDate <= to)
+                    {
+                        foreach (string file in Directory.GetFiles(monthDir))
+                        {
+                            string[] excelinfo = file.Split('@');
+                            cost += Convert.ToDouble(excelinfo[1]);
+                        }
+                    }
+                }
+            }
+
+            return Math.Round(cost, 2);
+        }
+
 
         /// <summary>
         /// 计算公司所有月份所有上传保单的费用
@@ -243,6 +279,10 @@ namespace Insurance.Services
             {
                 foreach (string monthDir in Directory.GetDirectories(companyDir))
                 {
+                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    {
+                        continue;
+                    }
                     foreach (string file in Directory.GetFiles(monthDir))
                     {
                         string[] excelinfo = file.Split('@');
@@ -254,6 +294,56 @@ namespace Insurance.Services
             return Math.Round(cost, 2);
         }
 
+        public double GetCustomerAlreadyPaid(string companyDir)
+        {
+            double cost = 0;
+            if (Directory.Exists(companyDir))
+            {
+                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                {
+                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    {
+                        continue;
+                    }
+                    foreach (string file in Directory.GetFiles(monthDir))
+                    {
+                        string[] excelinfo = file.Split('@');
+                        cost += Convert.ToDouble(excelinfo[6]);
+                    }
+                }
+            }
+
+            return Math.Round(cost, 2);
+        }
+
+        public double GetCustomerAlreadyPaidFromJuneToMay(string companyDir, int year)
+        {
+            double cost = 0; DateTime now = DateTime.Now;
+            DateTime from = new DateTime();
+            DateTime to = new DateTime();
+
+            from = new DateTime(year, 6, 1);
+            to = new DateTime(year + 1, 5, 31, 23, 59, 59);
+
+            if (Directory.Exists(companyDir))
+            {
+                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                {
+                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    {
+                        continue;
+                    }
+                    if (dateTime < from || dateTime > to) continue;
+                    foreach (string file in Directory.GetFiles(monthDir))
+                    {
+                        string[] excelinfo = file.Split('@');
+                        cost += Convert.ToDouble(excelinfo[6]);
+                    }
+                }
+            }
+
+            return Math.Round(cost, 2);
+        }
         public double GetPaidCost()
         {
             string path = new FileInfo(fileName).DirectoryName;
@@ -266,7 +356,7 @@ namespace Insurance.Services
             return 0;
         }
 
-        public bool GainData(string sourceFile, string companyName)
+        public bool GainData(string sourceFile)
         {
             bool result = true;
             try
@@ -364,7 +454,6 @@ namespace Insurance.Services
 
                 if (isFirstRowColumn)
                 {
-
                     for (int i = firstRow.FirstCellNum; i < cellCount; ++i)
                     {
                         ICell cell = firstRow.GetCell(i);
@@ -382,6 +471,19 @@ namespace Insurance.Services
                 }
                 else
                 {
+                    for (int i = firstRow.FirstCellNum; i < cellCount; ++i)
+                    {
+                        ICell cell = firstRow.GetCell(i);
+                        if (cell != null)
+                        {
+                            string cellValue = cell.StringCellValue;
+                            if (cellValue != null)
+                            {
+                                DataColumn column = new DataColumn(cellValue);
+                                data.Columns.Add(column);
+                            }
+                        }
+                    }
                     startRow = sheet.FirstRowNum;
                 }
 

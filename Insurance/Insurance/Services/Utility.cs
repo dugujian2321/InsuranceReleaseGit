@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using VirtualCredit.Models;
 
@@ -23,6 +24,8 @@ namespace VirtualCredit.Services
             DatabaseService.ConnStr = configuration["ConnectionStrings:Insurance"];
             myOwn.TemplateFolder = configuration["TemplatesFolder"];
             myOwn.WebRootFolder = environment.WebRootPath;
+            myOwn.ExcelRoot = Path.Combine(myOwn.WebRootFolder, "Excel");
+            
             _instance = myOwn;
             LockerList = new List<ReaderWriterLockerWithName>();
         }

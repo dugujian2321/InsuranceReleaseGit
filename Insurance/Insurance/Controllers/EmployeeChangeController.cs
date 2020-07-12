@@ -490,11 +490,12 @@ namespace Insurance.Controllers
 
         public double CalculatePrice([FromForm]DateTime startdate)
         {
+            var currUser = GetCurrentUser();
             if (startdate.Year > DateTime.Now.Year)
             {
                 return -9999997;
             }
-            if (GetCurrentUser() != null && GetCurrentUser().AccessLevel != 0)
+            if (currUser != null && currUser.AccessLevel != 0)
             {
                 int offset = GetCurrentUser().DaysBefore;
                 if (DateTime.Now.Date.AddDays(offset * -1) > startdate.Date)
