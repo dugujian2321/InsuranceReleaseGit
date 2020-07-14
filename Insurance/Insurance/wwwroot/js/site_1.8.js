@@ -597,6 +597,38 @@ function AutoRenew(obj) {
     );
 }
 
+function personDetail(detail) {
+    var histories = detail.split('+');
+    var body = document.getElementById('info');
+    body.innerHTML = '';
+    for (i = 0; i < histories.length; i++) {
+        var detail = histories[i].split('%');
+        var tr = document.createElement('tr');
+        var td1 = document.createElement('td');
+        var td2 = document.createElement('td');
+        var td3 = document.createElement('td');
+        var td4 = document.createElement('td');
+        var td5 = document.createElement('td');
+        var td6 = document.createElement('td');
+
+        td1.innerText = detail[1];
+
+        td2.innerText = detail[0];
+        td3.innerText = detail[2];
+        td4.innerText = detail[3];
+        td5.innerText = detail[4];
+        td6.innerText = detail[5];
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tr.appendChild(td3);
+        tr.appendChild(td4);
+        tr.appendChild(td5);
+        tr.appendChild(td6);
+        body.appendChild(tr);
+    }
+}
+
+
 function showPersonalInfo(company, id) {
     $.ajax({
         type: 'get',
@@ -608,26 +640,7 @@ function showPersonalInfo(company, id) {
         success: function (data) {
             var body = document.getElementById('info');
             body.innerHTML = '';
-            for (i = 0; i < data.length; i++) {
-                var tr = document.createElement('tr');
-                var td1 = document.createElement('td');
-                var td2 = document.createElement('td');
-                var td3 = document.createElement('td');
-                var td4 = document.createElement('td');
-                if (data[i].mode == 'Add') {
-                    td1.innerText = "加保";
-                } else {
-                    td1.innerText = "减保";
-                }
-                td2.innerText = data[i].uploadDate;
-                td3.innerText = data[i].start;
-                td4.innerText = data[i].end;
-                tr.appendChild(td1);
-                tr.appendChild(td2);
-                tr.appendChild(td3);
-                tr.appendChild(td4);
-                body.appendChild(tr);
-            }
+
         },
         fail: function (data) {
             alert('fail');

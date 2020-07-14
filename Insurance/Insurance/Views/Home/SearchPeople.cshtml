@@ -28,7 +28,6 @@
     <table class="table">
         <thead>
             <tr>
-                <th scope="col">所属公司</th>
                 <th scope="col">姓名</th>
                 <th scope="col">身份证</th>
                 <th scope="col">工种</th>
@@ -44,15 +43,14 @@
                     foreach (DataRow row in Model.Result.Rows)
                     {
                         <tr>
-                            <td>@row["company"]</td>
-                            <td>@row["name"]</td>
-                            <td>@row["id"]</td>
-                            <td>@row["job"]</td>
-                            <td>@row["type"]</td>
+                            <td class="td_middle">@row["name"]</td>
+                            <td class="td_middle">@row["id"]</td>
+                            <td class="td_middle">@row["job"]</td>
+                            <td class="td_middle">@row["type"]</td>
                             @{
                                 if (row["name"].ToString() != "未找到符合条件的人员")
                                 {
-                                    <td><button class="btn btn-primary" data-toggle="modal" data-whatever="@row["name"]" data-target="#personalInfo" type="button" onclick="showPersonalInfo('@row["company"]','@row["id"]')">详细</button></td>
+                                    <td class="td_middle"><button class="btn btn-primary" data-toggle="modal" data-whatever="@row["name"]" data-target="#personalInfo" type="button" onclick="personDetail('@row["History"]')">详细</button></td>
                                 }
                             }
                         </tr>
@@ -77,6 +75,8 @@
                             <th scope="col">操作时间</th>
                             <th scope="col">保障开始时间</th>
                             <th scope="col">保障结束时间</th>
+                            <th scope="col">所属公司</th>
+                            <th scope="col">操作账号</th>
                         </tr>
                     </thead>
                     <tbody id="info">

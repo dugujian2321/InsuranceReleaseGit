@@ -859,9 +859,9 @@ namespace Insurance.Services
                         newRow["id"] = row["身份证"];
                         newRow["job"] = row["工种"];
                         newRow["type"] = row["职业类别"];
-                        newRow["start_date"] = row["生效日期"];
-                        newRow["end_date"] = row["离职日期"];
-                        newRow["company"] = Path.GetFileNameWithoutExtension(fileName);
+                        newRow["start_date"] = row["保障开始时间"];
+                        newRow["end_date"] = row["保障结束时间"];
+                        newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
                         result.Rows.Add(newRow);
                     }
                 }
@@ -877,9 +877,9 @@ namespace Insurance.Services
                         newRow["id"] = id;
                         newRow["job"] = row["工种"];
                         newRow["type"] = row["职业类别"];
-                        newRow["start_date"] = row["生效日期"];
-                        newRow["end_date"] = row["离职日期"];
-                        newRow["company"] = Path.GetFileNameWithoutExtension(fileName);
+                        newRow["start_date"] = row["保障开始时间"];
+                        newRow["end_date"] = row["保障结束时间"];
+                        newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
                         result.Rows.Add(newRow);
                     }
                 }

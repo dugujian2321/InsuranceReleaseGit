@@ -726,56 +726,57 @@ namespace VirtualCredit.Controllers
             model.People.ID = em_id;
             DataTable res = new DataTable();
             string company = currUser.CompanyName;
-
+            string debug = "";
             try
             {
                 currUser.MyLocker.RWLocker.EnterReadLock();
-                if (currUser.AccessLevel > 0)
+                string targetDir = GetSearchExcelsInDir(company);
+                foreach (var file in Directory.GetFiles(targetDir, "*", SearchOption.AllDirectories))
                 {
-                    string path = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, company + ".xls");
-                    //res = DatabaseService.SelectPeopleByNameAndID(HttpContext.Session.Get<UserInfoModel>("CurrentUser").CompanyName, em_name, em_id);
-
-                    ExcelTool et = new ExcelTool(path, "Sheet1");
-                    res = et.SelectPeopleByNameAndID(em_name, nameCol, em_id, idCol);
-                }
-                else if (currUser.AccessLevel == 0)
-                {
+                    debug = file;
+                    FileInfo fi = new FileInfo(file);
+                    if (!DateTime.TryParse(fi.Directory.Name, out DateTime date)) continue;
                     DataTable temp = new DataTable();
-                    //List<string> companies = DatabaseService.GetAllCompanies();
-                    List<Company> companies = GetAllCompanies();
-                    foreach (Company comp in companies)
+                    string[] excelInfo = fi.Name.Split("@");
+                    string mode = excelInfo[3].Equals("Add", StringComparison.CurrentCultureIgnoreCase) ? "加保" : "减保";
+                    string uploadtime = excelInfo[0] + " " + excelInfo[5].Replace('-', ':');
+                    string comp = fi.Directory.Parent.Name;
+                    string uploader = excelInfo[2];
+                    ExcelTool et = new ExcelTool(file, "Sheet1");
+                    temp = et.SelectPeopleByNameAndID(em_name, nameCol, em_id, idCol);
+                    if (temp != null && temp.Rows.Count > 0)
                     {
-                        ExcelTool et = new ExcelTool(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", comp.Name, comp.Name + ".xls"), "Sheet1");
-                        temp = et.SelectPeopleByNameAndID(em_name, nameCol, em_id, idCol);
-                        if (temp != null && temp.Rows.Count > 0)
+                        if (res.Columns.Count <= 0)
                         {
-                            if (res.Columns.Count <= 0)
+                            res = temp.Clone(); //拷贝表结构
+                            DataColumn dc = new DataColumn("History");
+                            res.Columns.Add(dc);
+                        }
+                        if (temp.Rows[0][1].ToString() == "未找到符合条件的人员")
+                        {
+                            continue;
+                        }
+                        foreach (DataRow row in temp.Rows)
+                        {
+                            string history = string.Join('%', uploadtime, mode, row["start_date"], row["end_date"], comp, uploader);
+                            DataRow[] t = res.Select($"id = '{row["id"]}'");
+                            if (t != null && t.Length > 0)
                             {
-                                res = temp.Clone(); //拷贝表结构
+                                t[0]["History"] = string.Join("+", t[0]["History"], history);
                             }
-                            if (temp.Rows.Count > 0 && temp.Rows[0][1].ToString() == "未找到符合条件的人员")
-                            {
-                                continue;
-                            }
-                            foreach (DataRow row in temp.Rows)
+                            else
                             {
                                 DataRow newRow = res.NewRow();
                                 newRow.ItemArray = row.ItemArray;
+                                newRow["History"] = history;
                                 res.Rows.Add(newRow);
                             }
+
                         }
                     }
-                    if (res.Rows.Count == 0)
-                    {
-                        DataRow newRow = res.NewRow();
-                        newRow[1] = "未找到符合条件的人员";
-                        res.Rows.Add(newRow);
-                    }
+
                 }
-                else
-                {
-                    throw new Exception("Access Error");
-                }
+
                 model.Result = res;
                 CacheSearchResult(res);
                 return View("SearchPeople", model);
