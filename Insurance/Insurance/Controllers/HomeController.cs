@@ -842,19 +842,22 @@ namespace VirtualCredit.Controllers
                 year = now.Year - 1;
             }
             DateTime from = new DateTime(year, 6, 1);
-            DateTime to = new DateTime(year + 1, 5, 31);
-            var allDirs = Directory.GetDirectories(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", companyName));
+            DateTime to = new DateTime(year + 1, 5, 31, 23, 59, 59);
+            var allDirs = Directory.GetDirectories(GetSearchExcelsInDir(companyName), "*", SearchOption.AllDirectories);
             List<string> targetDirs = new List<string>();
             allDirs.ToList().ForEach(x =>
             {
                 DirectoryInfo di = new DirectoryInfo(x);
-                var slices = di.Name.Split("-");
-                int folderYear = Convert.ToInt32(slices[0]);
-                int folderMonth = Convert.ToInt32(slices[1]);
-                if ((folderYear > from.Year && folderMonth <= to.Month) ||
-                    (folderYear == from.Year && folderMonth >= from.Month))
+                if (DateTime.TryParse(di.Name, out DateTime date))
                 {
-                    targetDirs.Add(x);
+                    var slices = di.Name.Split("-");
+                    int folderYear = Convert.ToInt32(slices[0]);
+                    int folderMonth = Convert.ToInt32(slices[1]);
+                    if ((folderYear > from.Year && folderMonth <= to.Month) ||
+                        (folderYear == from.Year && folderMonth >= from.Month))
+                    {
+                        targetDirs.Add(x);
+                    }
                 }
             });
             DetailModel detailModel = new DetailModel();
@@ -1096,6 +1099,7 @@ namespace VirtualCredit.Controllers
         public bool MarkAsPaid([FromForm]string ids)
         {
             string company = string.Empty;
+            List<string> changedFiles = new List<string>();
             if (ids is null)
             {
                 return false;
@@ -1103,7 +1107,7 @@ namespace VirtualCredit.Controllers
             try
             {
                 string[] info = ids.Split(',');
-                string companyFolder = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company);
+
                 foreach (string file in info)
                 {
                     string[] excelInfo = file.Split('@');
@@ -1121,20 +1125,32 @@ namespace VirtualCredit.Controllers
                     string[] excelInfo = file.Split('#')[1].Split('@');
                     string date = file.Split('#')[0];
                     company = excelInfo[7];
+                    string companyFolder = GetSearchExcelsInDir(company);
                     string fileName = file.Split('#')[1].Substring(0, file.Split('#')[1].Length - company.Length) + ".xls";
                     string month = DateTime.Parse(date).ToString("yyyy-MM");
-                    string monthDir = Path.Combine(companyFolder, company, month);
+                    string monthDir = Path.Combine(companyFolder, month);
                     excelInfo[6] = excelInfo[1];
                     string newPath = Utility.ArrayToString(excelInfo, 0, 6, "@");
                     newPath += ".xls";
                     newPath = Path.Combine(monthDir, newPath);
                     string oldFile = Path.Combine(monthDir, fileName);
                     System.IO.File.Move(oldFile, newPath);
+                    changedFiles.Add(newPath);
                 }
                 return true;
             }
             catch (Exception e)
             {
+                foreach (var file in changedFiles)
+                {
+                    var fileInfo = new FileInfo(file);
+                    string fileName = fileInfo.Name;
+                    string dirPath = fileInfo.Directory.FullName;
+                    string[] excelInfo = fileName.Split('@');
+                    excelInfo[6] = "0";
+                    string oldPath = Path.Combine(dirPath, Utility.ArrayToString(excelInfo, 0, 6, "@") + ".xls");
+                    System.IO.File.Move(file, oldPath);
+                }
                 return false;
             }
 

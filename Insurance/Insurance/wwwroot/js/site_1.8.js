@@ -245,7 +245,10 @@ function MarkPaid() {
             success: function (data) {
                 if (data == true) {
                     window.location.reload();
-                    alert("操作成功");
+                    alert("结算成功");
+                } else {
+                    alert("结算失败");
+                    window.location.reload();
                 }
             },
         }

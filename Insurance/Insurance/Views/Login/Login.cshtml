@@ -13,25 +13,27 @@
 <div>
     @using (Html.BeginForm(FormMethod.Post))
     {
-        @Html.ValidationSummary()
+        <div>
+            @Html.ValidationSummary()
 
-        <p>用户名：</p>@Html.TextBoxFor(user => user.UserName, new { @class = "inputBox", onblur = "ValidateFields_LoginView()", id = "UserName", placeholder = "请输入用户名...", autocomplete = "on" })
-        <p></p>
-        <p>密码：</p>@Html.TextBoxFor(user => user.userPassword, new { @class = "inputBox pwdBox", onblur = "ValidateFields_LoginView()", id = "pwdBox", type = "password", placeholder = "请输入密码...", autocomplete = "off" })
+            <p>用户名：</p>@Html.TextBoxFor(user => user.UserName, new { @class = "inputBox", onblur = "ValidateFields_LoginView()", id = "UserName", placeholder = "请输入用户名...", autocomplete = "on" })
+            <p></p>
+            <p>密码：</p>@Html.TextBoxFor(user => user.userPassword, new { @class = "inputBox pwdBox", onblur = "ValidateFields_LoginView()", id = "pwdBox", type = "password", placeholder = "请输入密码...", autocomplete = "off" })
 
-        <p></p>
-        <p>验证码：</p>
-        <img id="validationImg" src="@ViewBag.ValidationStr" alt="验证码" />
-        <input placeholder="请输入计算结果" onblur="async_Validate(ValidateFields_LoginView)" id="validationResult" name="validationResult" type="text" />
-        <img id="img_loading_validationcode" class="img_loading" src="~/Images/loading.gif" />
-        <span id="validationMsg" style="visibility:hidden;color:red"></span>
-        if (ViewBag.LoginResult != null)
-        {
-            <p class="warningMessage">@ViewBag.LoginResult</p>
-        }
-        <hr />
-        <div style="width:60%;max-width:300px;">
-            <input class="btn btn-outline-info" id="btnSubmit" type="submit" disabled onclick="LoginValidate()" value="登 录" />
+            <p></p>
+            <p>验证码：</p>
+            <img id="validationImg" src="@ViewBag.ValidationStr" alt="验证码" />
+            <input placeholder="请输入计算结果" onblur="async_Validate(ValidateFields_LoginView)" id="validationResult" name="validationResult" type="text" />
+            <img id="img_loading_validationcode" class="img_loading" src="~/Images/loading.gif" />
+            <span id="validationMsg" style="visibility:hidden;color:red"></span>
+            @if (ViewBag.LoginResult != null)
+            {
+                <p class="warningMessage">@ViewBag.LoginResult</p>
+            }
+            <hr />
+            <div style="width:60%;max-width:300px;">
+                <input class="btn btn-outline-info" id="btnSubmit" type="submit" disabled onclick="LoginValidate()" value="登 录" />
+            </div>
         </div>
     }
 </div>
