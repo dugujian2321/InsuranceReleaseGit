@@ -3,6 +3,7 @@ using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing.Constraints;
 using NPOI.OpenXmlFormats.Wordprocessing;
 using NPOI.XWPF.UserModel;
 using System;
@@ -1404,6 +1405,36 @@ namespace VirtualCredit.Controllers
             }
         }
 
+        private void RemoveCompanyFiles(string companyName)
+        {
+            string targetDir = GetSearchExcelsInDir(companyName);
+
+            foreach (string directory in Directory.GetDirectories(targetDir))
+            {
+                DirectoryInfo di = new DirectoryInfo(directory);
+                if (!DateTime.TryParse(di.Name, out DateTime dateTime))
+                {
+                    RemoveCompanyFiles(di.Name);
+                }
+                else
+                {
+                    Directory.Delete(directory, true);
+                }
+            }
+
+            string summaryFile = Path.Combine(targetDir, companyName + ".xls");
+            System.IO.File.Delete(summaryFile);
+            string template = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", "SummaryTemplate.xls");
+            System.IO.File.Copy(template, summaryFile, true);
+            var file = Directory.GetFiles(targetDir).Where(x => new FileInfo(x).Extension.Contains("txt"));
+            string txtPath = Path.Combine(targetDir, companyName + "_0.txt");
+            System.IO.File.Delete(file.First());
+            using (System.IO.File.Create(txtPath))
+            {
+
+            }
+        }
+
         /// <summary>
         /// 删除所有月份文件夹及文件
         /// 删除该公司汇总表中的所有人员信息
@@ -1414,23 +1445,25 @@ namespace VirtualCredit.Controllers
         [AdminFilters]
         public IActionResult RemoveAccountData([FromQuery]string accountName)
         {
-            string targetDir = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", accountName);
-
-            foreach (string directory in Directory.GetDirectories(targetDir))
+            var locker = GetCurrentUser().MyLocker.RWLocker;
+            try
             {
-                Directory.Delete(directory, true);
+                if (!locker.IsWriteLockHeld)
+                {
+                    locker.EnterWriteLock();
+                }
+                RemoveCompanyFiles(accountName);
             }
-
-            string summaryFile = Path.Combine(targetDir, accountName + ".xls");
-            System.IO.File.Delete(summaryFile);
-            string template = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", "SummaryTemplate.xls");
-            System.IO.File.Copy(template, summaryFile, true);
-            var file = Directory.GetFiles(targetDir).Where(x => new FileInfo(x).Extension.Contains("txt"));
-            string txtPath = Path.Combine(targetDir, accountName + "_0.txt");
-            System.IO.File.Delete(file.First());
-            using (System.IO.File.Create(txtPath))
+            catch
             {
-
+                return Json(false);
+            }
+            finally
+            {
+                if (locker.IsWriteLockHeld)
+                {
+                    locker.ExitWriteLock();
+                }
             }
             return Json(true);
         }
@@ -1454,7 +1487,7 @@ namespace VirtualCredit.Controllers
                 }
 
                 string[] fileinfo = fileName.Split("@");
-                string companyDir = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company);
+                string companyDir = GetSearchExcelsInDir(company);
                 DateTime start = Convert.ToDateTime(startDate);
                 string targetFilePath = Path.Combine(companyDir, start.ToString("yyyy-MM"), fileName);
                 ExcelTool targetExcel = new ExcelTool(targetFilePath, "Sheet1");

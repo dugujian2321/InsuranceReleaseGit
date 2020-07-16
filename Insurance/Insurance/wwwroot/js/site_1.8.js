@@ -221,6 +221,7 @@ function GetSelectedCost(obj, value) {
 }
 
 function MarkPaid() {
+    document.getElementById('btn_balance').disabled = true;
     var checkBoxes = $('input[type="checkbox"]:checked');
     var ids = new Array();
     var index = 0
@@ -257,6 +258,7 @@ function MarkPaid() {
 
 
 function DeleteReceipt(name, file, date) {
+    document.getElementById('btn_deletereceipt').disabled = true;
     $.ajax(
         {
             url: "/Home/DeleteReceipt?company=" + name + "&filename=" + file + "&startdate=" + date,
@@ -283,6 +285,7 @@ function DeleteReceipt(name, file, date) {
 }
 
 function DeleteCompanyData(company) {
+    document.getElementById('btn_ok').disabled = true;
     $.ajax(
         {
             url: "/Home/RemoveAccountData?accountName=" + company,
