@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using VirtualCredit.Services;
 
 namespace VirtualCredit.Models
@@ -51,7 +52,26 @@ namespace VirtualCredit.Models
         [DatabaseProp]
         public string Father { get; set; }
 
-        public List<UserInfoModel> ChildAccounts { get; set; }
+        private List<UserInfoModel> childAccounts;
+
+        public List<UserInfoModel> ChildAccounts
+        {
+            get
+            {
+                if (childAccounts != null) return childAccounts;
+                var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == UserName);
+                childAccounts = new List<UserInfoModel>();
+                foreach (var item in children)
+                {
+                    childAccounts.Add(DatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
+                }
+                return childAccounts;
+            }
+            set
+            {
+                childAccounts = value;
+            }
+        }
 
         public int StartDate { get; set; }
         public bool AllowEdit { get; set; }

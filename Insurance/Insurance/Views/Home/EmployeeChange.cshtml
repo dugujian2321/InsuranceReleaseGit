@@ -11,8 +11,11 @@
                 if (currentUser != null && currentUser.AccessLevel > 0)
                 {
                     <span class="input-group-text">公司名称：</span>
-                    <select class="custom-select" id="companyGroup">
-                        <option selected>@currentUser.CompanyName</option>
+                    <select class="custom-select" id="companyGroup" onchange="UpdateAllowedStartDate()">
+                        @foreach (var company in Model.CompanyList)
+                        {
+                            <option selected>@company.Name</option>
+                        }
                     </select>
                 }
                 else if (currentUser != null && currentUser.AccessLevel == 0)

@@ -21,10 +21,10 @@ namespace Insurance.Controllers
         private readonly int idCol = 1;
         private readonly int jobCol = 2;
         public static string ExcelDirectory;
-        private readonly IHostingEnvironment _hostingEnvironment;
         string companyFolder;
         string summaryFileName;
         string summaryFilePath;
+        string targetCompany;
         private static readonly object summaryLocker = new object();
 
         public EmployeeChangeController(IHostingEnvironment hostingEnvironment)
@@ -33,10 +33,12 @@ namespace Insurance.Controllers
             ExcelDirectory = _hostingEnvironment.WebRootPath;
         }
 
-        private void Initialize()
+        private void Initialize(string company)
         {
-            companyFolder = GetCompanyFolder();
-            summaryFileName = GetCurrentUser().CompanyName + ".xls";
+            if (string.IsNullOrEmpty(company)) company = HttpContext.Session.Get<string>("company");
+            companyFolder = GetSearchExcelsInDir(company);
+            targetCompany = company;
+            summaryFileName = company + ".xls";
             summaryFilePath = Path.Combine(companyFolder, summaryFileName);
         }
 
@@ -51,9 +53,10 @@ namespace Insurance.Controllers
                     return Json("NotCalculated");
                 }
                 string summary_backup = string.Empty;
+                string targetcompany = HttpContext.Session.Get<string>("company");
                 //验证前后端价格计算是否一致
                 double price = HttpContext.Session.Get<double>("price");
-                double calculatedprice = CalculatePrice(startdate);
+                double calculatedprice = CalculatePrice(startdate, targetcompany);
                 if (price != calculatedprice)
                 {
                     return Json("NotCalculated");
@@ -67,17 +70,17 @@ namespace Insurance.Controllers
                 //===================================================//
                 if (string.IsNullOrEmpty(summaryFilePath))
                 {
-                    Initialize();
+                    Initialize(targetcompany);
                 }
                 string mode = HttpContext.Session.Get<string>("mode");
-                string excelsDirectory = GetCompanyFolder();
+                string excelsDirectory = GetSearchExcelsInDir(targetCompany);
                 string monthDir = GetMonthFolder(startdate);
+                GetCurrentUser().MyLocker.RWLocker.EnterWriteLock(); //进入写锁
                 if (!Directory.Exists(Path.Combine(excelsDirectory, monthDir)))
                 {
                     Directory.CreateDirectory(Path.Combine(excelsDirectory, monthDir));
                 }
                 //=========================================================================================================//
-                GetCurrentUser().MyLocker.RWLocker.EnterWriteLock(); //进入写锁
 
                 ExcelTool summary = new ExcelTool(summaryFilePath, "Sheet1");
                 DateTime currentMonth;
@@ -156,8 +159,7 @@ namespace Insurance.Controllers
                         string endDate = (new DateTime(startdate.Year, startdate.Month, DateTime.DaysInMonth(startdate.Year, startdate.Month))).ToString("yyyy/MM/dd 23:59:59");
                         result.Add(kickoffDate);
                         result.Add(endDate);
-                        HttpContext.Session.Set<List<Employee>>("validationResult", null);
-                        HttpContext.Session.Set<string>("readyToSubmit", "N");
+                        ClearSession();
                         return Json(result);
 
                     }
@@ -219,8 +221,7 @@ namespace Insurance.Controllers
                         string endDate = startdate.ToString("yyyy/MM/dd 23:59:59");
                         result.Add(kickoffDate);
                         result.Add(endDate);
-                        HttpContext.Session.Set<List<Employee>>("validationResult", null);
-                        HttpContext.Session.Set<string>("readyToSubmit", "N");
+                        ClearSession();
                         return Json(result);
                     }
                     catch (Exception e)
@@ -254,6 +255,13 @@ namespace Insurance.Controllers
             }
         }
 
+        private void ClearSession()
+        {
+            HttpContext.Session.Set<List<Employee>>("validationResult", null);
+            HttpContext.Session.Set<string>("readyToSubmit", "N");
+            HttpContext.Session.Set<string>("company", string.Empty);
+        }
+
         private void RevertSummaryFile(string path, string backup)
         {
             //删除原文件，重命名备份文件
@@ -264,8 +272,16 @@ namespace Insurance.Controllers
             }
         }
 
+        public JsonResult UserDaysBefore([FromQuery] string company)
+        {
+            var user = DatabaseService.SelectUserByCompany(company);
+            int days = user.DaysBefore;
+            DateTime dt = DateTime.Now.Date.AddDays(-1 * days);
+            return Json(dt.ToString("yyyy-MM-dd"));
+        }
+
         [UserLoginFilters]
-        public JsonResult UpdateEmployees([FromForm]IFormFile newExcel, string mode)
+        public JsonResult UpdateEmployees([FromForm]IFormFile newExcel, string mode, string company)
         {
             //TODO: 添加验证格式代码
             //将FormFile中的Sheet1转换成DataTable
@@ -280,7 +296,7 @@ namespace Insurance.Controllers
             System.IO.File.Delete(uploadedExcel);
 
             //将DataTable转成Excel
-            Initialize();
+            Initialize(company);
             string temp_excel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
             System.IO.File.Copy(template, temp_excel);
             MemoryStream stream = new MemoryStream();
@@ -298,8 +314,9 @@ namespace Insurance.Controllers
             {
                 return null;
             }
-            List<Employee> validationResult = ValidateExcel(inputStream, "Sheet1", mode);
+            List<Employee> validationResult = ValidateExcel(inputStream, "Sheet1", mode, company);
             HttpContext.Session.Set("validationResult", validationResult);
+            HttpContext.Session.Set("company", company);
             inputStream.Close();
             inputStream.Dispose();
             System.IO.File.Delete(temp_excel);
@@ -391,28 +408,29 @@ namespace Insurance.Controllers
             }
         }
 
-        public List<Employee> ValidateExcel(FileStream formFile, string sheetName, string mode)
+        public List<Employee> ValidateExcel(FileStream formFile, string sheetName, string mode, string companyName)
         {
             formFile.Position = 0;
             ReaderWriterLockSlim r_locker = null;
-            string excelsDirectory = GetCompanyFolder();
+            string companyDir = GetSearchExcelsInDir(companyName);
+            var currUser = GetCurrentUser();
             var result = new List<Employee>();
             try
             {
-                r_locker = GetCurrentUser().MyLocker.RWLocker;
+                r_locker = currUser.MyLocker.RWLocker;
                 r_locker.EnterReadLock();
-                ExcelTool summary = new ExcelTool(Path.Combine(excelsDirectory, GetCurrentUser().CompanyName + ".xls"), sheetName);
+                ExcelTool summary = new ExcelTool(Path.Combine(companyDir, companyName + ".xls"), sheetName);
                 DataTable sourceDT = summary.ExcelToDataTable("Sheet1", true);
                 r_locker.ExitReadLock();
 
                 string fileName = Guid.NewGuid().ToString() + ".xls";
 
-                using (FileStream fs = System.IO.File.Create(Path.Combine(excelsDirectory, fileName)))
+                using (FileStream fs = System.IO.File.Create(Path.Combine(companyDir, fileName)))
                 {
                     formFile.CopyTo(fs);
                     fs.Flush();
                 }
-                ExcelTool et = new ExcelTool(Path.Combine(excelsDirectory, fileName), sheetName);
+                ExcelTool et = new ExcelTool(Path.Combine(companyDir, fileName), sheetName);
 
                 result = et.ValidateIDs(idCol); // 验证身份证号码
                 for (int i = 0; i < result.Count - 1; i++)
@@ -430,7 +448,7 @@ namespace Insurance.Controllers
                 }
                 MergeList(et.CheckJobType(jobCol), result); //验证岗位类型
 
-                if (!System.IO.File.Exists(summaryFilePath))
+                if (!System.IO.File.Exists(summaryFilePath)) //如果汇总表格不存在，则新建一个
                 {
                     string source = Path.Combine(ExcelDirectory, "templates", "recipe.xls");
                     System.IO.File.Copy(source, summaryFilePath);
@@ -440,7 +458,7 @@ namespace Insurance.Controllers
                 MergeList(temp, result);
                 HttpContext.Session.Set("mode", mode);
                 HttpContext.Session.Set("newTable", et.ExcelToDataTable("Sheet1", true));
-                System.IO.File.Delete(Path.Combine(excelsDirectory, fileName));
+                System.IO.File.Delete(Path.Combine(companyDir, fileName));
                 return result;
             }
             catch
@@ -488,21 +506,25 @@ namespace Insurance.Controllers
             }
         }
 
-        public double CalculatePrice([FromForm]DateTime startdate)
+        public double CalculatePrice([FromForm]DateTime startdate, string company)
         {
             var currUser = GetCurrentUser();
+            if (string.IsNullOrEmpty(summaryFilePath))
+            {
+                Initialize(company);
+            }
+            var targetUser = DatabaseService.SelectUserByCompany(targetCompany);
             if (startdate.Year > DateTime.Now.Year)
             {
                 return -9999997;
             }
-            if (currUser != null && currUser.AccessLevel != 0)
+
+            int offset = targetUser.DaysBefore;
+            if (DateTime.Now.Date.AddDays(offset * -1) > startdate.Date)
             {
-                int offset = GetCurrentUser().DaysBefore;
-                if (DateTime.Now.Date.AddDays(offset * -1) > startdate.Date)
-                {
-                    return -9999999;
-                }
+                return -9999999;
             }
+
             HttpContext.Session.Set("price", 0);
             var validationResult = HttpContext.Session.Get<List<Employee>>("validationResult");
             var mode = HttpContext.Session.Get<string>("mode");
@@ -512,16 +534,13 @@ namespace Insurance.Controllers
                 return -9999998; //存在invalid信息
             }
             DataTable dt = new DataTable();
-            if (string.IsNullOrEmpty(summaryFilePath))
-            {
-                Initialize();
-            }
+
             var locker = GetCurrentUser().MyLocker.RWLocker;
             locker.EnterReadLock();
             try
             {
                 string dateTime = startdate.ToShortDateString();
-                using (FileStream fs = System.IO.File.Open(summaryFilePath, FileMode.OpenOrCreate))
+                using (FileStream fs = System.IO.File.Open(summaryFilePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite))
                 {
                     lock (fs)
                     {
@@ -566,7 +585,8 @@ namespace Insurance.Controllers
             }
             finally
             {
-                locker.ExitReadLock();
+                if (locker.IsReadLockHeld)
+                    locker.ExitReadLock();
             }
 
         }

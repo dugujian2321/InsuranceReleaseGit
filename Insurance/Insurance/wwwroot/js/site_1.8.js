@@ -139,6 +139,25 @@ function UpdateAccountInfo() {
     $("#modal_close").click();
 }
 
+function UpdateAllowedStartDate() {
+    var selectedCompany = document.getElementById('companyGroup');
+    var company = selectedCompany.value;
+    $.ajax(
+        {
+            async: true,
+            url: '/EmployeeChange/UserDaysBefore?company=' + company,
+            data: company,
+            datatype: 'json',
+            contentType: false,
+            processData: false,
+            success: function (data) {
+                var dateControl = document.getElementById('startdate');
+                dateControl.min = data;
+            }
+        }
+    );
+}
+
 function SubmitRecipet(obj) {
     obj.disabled = !0;
     $.ajax(
@@ -451,6 +470,8 @@ function SubmitAdd(obj) {
         alert('文件格式不正确，请上传Excel文件')
     }
     var _formData = new FormData();
+    var selected = document.getElementById('companyGroup');
+    _formData.append('company', selected.value);
     _formData.append('mode', obj.id);
     for (var i = 0; i < obj.files.length; i++) {
         _formData.append('newExcel', obj.files[0]);

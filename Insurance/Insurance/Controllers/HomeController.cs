@@ -80,11 +80,18 @@ namespace VirtualCredit.Controllers
             {
                 if (child.ChildAccounts != null && child.ChildAccounts.Count > 0)
                 {
-                    results.Add(IsAncestor(child, companyname));
+                    var isChild = IsAncestor(child, companyname);
+                    if (isChild)
+                    {
+                        results.Add(isChild);
+                        break;
+                    }
+
                 }
                 if (child.CompanyName.Equals(companyname, StringComparison.CurrentCultureIgnoreCase))
                 {
                     results.Add(true);
+                    break;
                 }
             }
 
@@ -135,7 +142,7 @@ namespace VirtualCredit.Controllers
                         so = SearchOption.TopDirectoryOnly;
                     }
                     var monthDirs = Directory.GetDirectories(targetCompanyDir, dirName, so);
-                    if (monthDirs.Length == 0 || !Directory.Exists(monthDirs[0])) break;
+                    if (monthDirs.Length == 0 || !Directory.Exists(monthDirs[0])) continue;
                     NewExcel excel = null;
                     int headcount = 0;
                     double cost = 0;
@@ -404,15 +411,13 @@ namespace VirtualCredit.Controllers
         [UserLoginFilters]
         public IActionResult EmployeeChange(EmployeeChangeModel model)
         {
+            var currUser = GetCurrentUser();
             try
             {
-                if (GetCurrentUser().AccessLevel != 0)
-                {
-                    int advanceDays = GetCurrentUser().DaysBefore;
-                    DateTime dt = DateTime.Now.Date.AddDays(-1d * advanceDays);
-                    model.AllowedStartDate = dt.ToString("yyyy-MM-dd");
-                }
-                model.CompanyList = GetAllCompanies();
+                int advanceDays = currUser.DaysBefore;
+                DateTime dt = DateTime.Now.Date.AddDays(-1d * advanceDays);
+                model.AllowedStartDate = dt.ToString("yyyy-MM-dd");
+                model.CompanyList = GetAllChildAccounts();
                 return View(model);
             }
             catch (Exception e)
