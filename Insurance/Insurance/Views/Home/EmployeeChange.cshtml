@@ -5,21 +5,12 @@
 @model Insurance.Models.EmployeeChangeModel
 <form id="employeeChange" method="post" enctype="multipart/form-data" asp-controller="EmployeeChange" asp-action="UpdateSummary">
     <div>
-        <div style="margin:10px" class="input-group-prepend">
+        <div class="input-group-prepend">
             @{
                 UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
-                if (currentUser != null && currentUser.AccessLevel > 0)
+                if (currentUser != null && currentUser.ChildAccounts.Count > 0)
                 {
-                    <span class="input-group-text">公司名称：</span>
-                    <select class="custom-select" id="companyGroup" onchange="UpdateAllowedStartDate()">
-                        @foreach (var company in Model.CompanyList)
-                        {
-                            <option selected>@company.Name</option>
-                        }
-                    </select>
-                }
-                else if (currentUser != null && currentUser.AccessLevel == 0)
-                {
+
                     <div class="input-group mb-3">
                         <div class="input-group-prepend">
                             <span class="input-group-text">开始时间</span>
@@ -32,30 +23,34 @@
                         <input class="btn btn-info" type="submit" asp-action="ExportUploadedFiles" asp-controller="EmployeeChange" value="导出名单汇总" />
                     </div>
                 }
-                else
-                {
-                    <select class="custom-select" id="companyGroup"></select>
-                }
             }
+        </div>
+        <div class="input-group mb-3">
+            <span class="input-group-text">公司名称</span>
+            <select class="custom-select" id="companyGroup" onchange="UpdateAllowedStartDate()">
+                @foreach (var company in Model.CompanyList)
+                {
+                    <option selected>@company.Name</option>
+                }
+            </select>
         </div>
     </div>
     @{
-        if (currentUser.AccessLevel != 0)
-        {
-            <div class="input-group mb-3 justify-content-between" style="margin-top:10px">
-                <button onclick="Add()" type="button" class="btn btn-primary btn-custom">批量加保</button>
-                <input onchange="SubmitAdd(this)" id="add" type="file" accept=".xlsx,.xls,.xlsm" style="visibility:collapse;width:0px;margin:0px;padding:0px" class="btn btn-primary btn-custom" />
-                <button onclick="Sub()" type="button" class="btn btn-secondary btn-custom">批量减保</button>
-                <input onchange="SubmitAdd(this)" id="sub" type="file" accept=".xlsx,.xls,.xlsm" style="visibility:collapse;width:0px;margin:0px;padding:0px" class="btn btn-success btn-custom" />
-                <a class="btn btn-info btn-custom" asp-action="EmployeeDownload" asp-controller="Home">加减保模板下载</a>
-                <div style="margin-left:10px" class="input-group-prepend">
-                    <span class="input-group-text">生效日期：</span>
-                    <input id="startdate" name="startdate" min="@Model.AllowedStartDate" type="date" style="width:200px">
-                </div>
-                <button type="button" onclick="Calculate()" class="btn btn-primary btn-custom">计算保费</button>
-                <button type="button" style="margin-right:5px" class="btn btn-warning btn-custom" onclick="SubmitRecipet(this)">立即投保</button>
+
+        <div class="input-group mb-3 justify-content-between" style="margin-top:10px">
+            <button onclick="Add()" type="button" class="btn btn-primary btn-custom">批量加保</button>
+            <input onchange="SubmitAdd(this)" id="add" type="file" accept=".xlsx,.xls,.xlsm" style="visibility:collapse;width:0px;margin:0px;padding:0px" class="btn btn-primary btn-custom" />
+            <button onclick="Sub()" type="button" class="btn btn-secondary btn-custom">批量减保</button>
+            <input onchange="SubmitAdd(this)" id="sub" type="file" accept=".xlsx,.xls,.xlsm" style="visibility:collapse;width:0px;margin:0px;padding:0px" class="btn btn-success btn-custom" />
+            <a class="btn btn-info btn-custom" asp-action="EmployeeDownload" asp-controller="Home">加减保模板下载</a>
+            <div style="margin-left:10px" class="input-group-prepend">
+                <span class="input-group-text">生效日期：</span>
+                <input id="startdate" name="startdate" min="@Model.AllowedStartDate" type="date" style="width:200px">
             </div>
-        }
+            <button type="button" onclick="Calculate()" class="btn btn-primary btn-custom">计算保费</button>
+            <button type="button" style="margin-right:5px" class="btn btn-warning btn-custom" onclick="SubmitRecipet(this)">立即投保</button>
+        </div>
+
     }
 
 </form>

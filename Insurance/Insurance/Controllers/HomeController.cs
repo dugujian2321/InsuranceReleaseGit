@@ -1131,10 +1131,11 @@ namespace VirtualCredit.Controllers
                     string[] excelInfo = file.Split('#')[1].Split('@');
                     string date = file.Split('#')[0];
                     company = excelInfo[7];
-                    string companyFolder = GetSearchExcelsInDir(company);
+                    string userFolder = GetSearchExcelsInDir(company);
                     string fileName = file.Split('#')[1].Substring(0, file.Split('#')[1].Length - company.Length) + ".xls";
-                    string month = DateTime.Parse(date).ToString("yyyy-MM");
-                    string monthDir = Path.Combine(companyFolder, month);
+                    string monthDir = Directory.GetDirectories(userFolder, "*", SearchOption.AllDirectories)
+                        .Where(_ => Directory.GetFiles(_, fileName, SearchOption.TopDirectoryOnly).Length > 0)
+                        .FirstOrDefault();
                     excelInfo[6] = excelInfo[1];
                     string newPath = Utility.ArrayToString(excelInfo, 0, 6, "@");
                     newPath += ".xls";
