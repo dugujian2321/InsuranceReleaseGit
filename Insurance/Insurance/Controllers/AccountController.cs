@@ -36,7 +36,7 @@ namespace Insurance.Controllers
 
         public AccountController(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor.HttpContext)
         {
-            
+
         }
 
         [UserLoginFilters]
@@ -254,7 +254,7 @@ namespace Insurance.Controllers
         {
             UserInfoModel currUser = GetCurrentUser();
             if (currUser is null || /*currUser.AccessLevel > 1 ||*/ currUser.AllowCreateAccount != "1")
-            {              
+            {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "当前用户权限不足");
                 return View("../User/AccountManagement");
             }
@@ -320,15 +320,14 @@ namespace Insurance.Controllers
             user.AccessLevel = currUser.AccessLevel + 1;
             List<Company> companies = GetAllCompanies();
 
-            var t = companies.Where(p => p.Name == user.CompanyName);
+            //var t = companies.Where(p => p.Name == user.CompanyName); //是否已有同名公司
 
-            if (t.Count() == 0)
+
+            if (!ExcelTool.CreateNewCompanyTable(user))
             {
-                if (!ExcelTool.CreateNewCompanyTable(user.CompanyName))
-                {
-                    return View("Error");
-                }
+                return View("Error");
             }
+
 
             if (DatabaseService.InsertStory("UserInfo", user))
             {

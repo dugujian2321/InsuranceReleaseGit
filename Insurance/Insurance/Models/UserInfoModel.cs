@@ -49,21 +49,18 @@ namespace VirtualCredit.Models
         [DatabaseProp]
         public string _Plan { get; set; }
 
-        [DatabaseProp]
-        public string Father { get; set; }
-
         private List<UserInfoModel> childAccounts;
 
         public List<UserInfoModel> ChildAccounts
         {
             get
             {
-                if (childAccounts != null) return childAccounts;
-                var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == UserName);
+                if (childAccounts != null && childAccounts.Count > 0) return childAccounts;
+                var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(Father)].ToString() == UserName);
                 childAccounts = new List<UserInfoModel>();
                 foreach (var item in children)
                 {
-                    childAccounts.Add(DatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
+                    childAccounts.Add(DatabaseService.SelectUser(item[nameof(UserName)].ToString()));
                 }
                 return childAccounts;
             }

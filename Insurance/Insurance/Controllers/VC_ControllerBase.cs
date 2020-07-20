@@ -3,8 +3,6 @@ using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Storage;
-using NPOI.HSSF.EventUserModel.DummyRecord;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -19,6 +17,7 @@ namespace VirtualCredit
     public class VC_ControllerBase : Controller
     {
         protected IHostingEnvironment _hostingEnvironment;
+        public static List<string> Plans = new List<string> { "30万", "60万", "80万" };
         public static long CustomersCount = 0;
         public static string ExcelRoot = Utility.Instance.ExcelRoot;
         protected ImageTool _imageTool;
@@ -148,25 +147,25 @@ namespace VirtualCredit
 
         }
 
-        public List<Company> GetAllChildAccounts()
+        public List<Company> GetChildAccountsCompany()
         {
             UserInfoModel currUser = GetCurrentUser();
             string companiesDirectory = GetCurrentUserRootDir();
             List<Company> result = new List<Company>();
-            List<string> subDirs = Directory.GetDirectories(companiesDirectory).ToList();
-            foreach (string account in subDirs)
+            var children = currUser.ChildAccounts;
+            foreach (var account in children)
             {
-                var dirInfo = new DirectoryInfo(account);
-                if (DateTime.TryParse(dirInfo.Name, out DateTime dateTime))
+                var companyName = account.CompanyName;
+                if (result.Any(_ => _.Name == companyName))
                 {
                     continue;
                 }
-                if (!System.IO.File.Exists(Path.Combine(account, dirInfo.Name + ".xls")))
-                {
-                    continue;
-                }
+                var companyDir = Path.Combine(companiesDirectory, companyName);
+                if (string.IsNullOrEmpty(companyDir)) continue;
+                if (!Directory.Exists(companyDir)) continue;
+                var dirInfo = new DirectoryInfo(companyDir);
                 Company company = new Company();
-                company.Name = Path.GetFileName(account);
+                company.Name = dirInfo.Name;
                 ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year);
                 company.EmployeeNumber = edr.GetEmployeeNumber();
                 company.StartDate = From;
@@ -191,8 +190,6 @@ namespace VirtualCredit
                 self.TotalCost = et.GetCostFromJuneToMay(companiesDirectory, From.Year);
                 result.Add(self);
             }
-
-
 
             return result;
         }
@@ -326,12 +323,58 @@ namespace VirtualCredit
             user.userPassword = HttpContext.Session.Get<UserInfoModel>("CurrentUser").userPassword;
             UserInfoModel uim = DatabaseService.UserMatchUserNamePassword(user);
             uim.MyLocker = Utility.GetCompanyLocker(uim.CompanyName);
-            var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
-            foreach (var item in children)
+            if (uim.ChildAccounts == null || uim.ChildAccounts.Count == 0)
             {
-                uim.ChildAccounts.Add(DatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
+                var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
+                foreach (var item in children)
+                {
+                    uim.ChildAccounts.Add(DatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
+                }
             }
+
             return uim;
+        }
+
+
+        public bool HasAuthority(string companyname)
+        {
+            var currUser = GetCurrentUser();
+            if (!IsAncestor(currUser, companyname) && currUser.CompanyName != companyname)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 判断当前用户是否为公司的上级账号
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="companyname"></param>
+        /// <returns></returns>
+        public bool IsAncestor(UserInfoModel user, string companyname)
+        {
+            ConcurrentBag<bool> results = new ConcurrentBag<bool>();
+            foreach (var child in user.ChildAccounts)
+            {
+                if (child.ChildAccounts != null && child.ChildAccounts.Count > 0)
+                {
+                    var isChild = IsAncestor(child, companyname);
+                    if (isChild)
+                    {
+                        results.Add(isChild);
+                        break;
+                    }
+
+                }
+                if (child.CompanyName.Equals(companyname, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    results.Add(true);
+                    break;
+                }
+            }
+
+            return results.Contains(true);
         }
 
         [HttpGet]

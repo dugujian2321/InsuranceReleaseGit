@@ -158,6 +158,19 @@ function UpdateAllowedStartDate() {
     );
 }
 
+function UpdatePlan() {
+    var selectedPlan = document.getElementById('planGroup');
+    var plan = selectedPlan.value;
+    var add = document.getElementById('add');
+    var sub = document.getElementById('sub');
+    if (add.files.length == 1) {
+        SubmitAdd(add);
+    }
+    if (sub.files.length == 1) {
+        SubmitAdd(sub);
+    }
+}
+
 function SubmitRecipet(obj) {
     obj.disabled = !0;
     $.ajax(
@@ -473,6 +486,7 @@ function SubmitAdd(obj) {
     var selected = document.getElementById('companyGroup');
     _formData.append('company', selected.value);
     _formData.append('mode', obj.id);
+    _formData.append('plan', document.getElementById('planGroup').value);
     for (var i = 0; i < obj.files.length; i++) {
         _formData.append('newExcel', obj.files[0]);
     }
@@ -569,6 +583,8 @@ function Calculate() {
         return;
     }
     fd.append('startDate', document.getElementById('startdate').value);
+    fd.append('company', document.getElementById('companyGroup').value);
+    fd.append('plan', document.getElementById('planGroup').value);
     $.ajax({
         type: 'post',
         url: '/EmployeeChange/CalculatePrice',
@@ -586,6 +602,9 @@ function Calculate() {
                 alert("所选月份的表单不存在");
             } else if (data == -9999995) {
                 alert("生效日期不正确，该月保单可能已被锁定");
+            }
+            else if (data == -9999996) {
+                alert("所选方案不存在或您无权投保该方案");
             }
             else {
                 document.getElementById('price').innerText = data;

@@ -99,6 +99,8 @@ namespace VirtualCredit.Controllers
                 user.userPassword = uim.userPassword;
                 user.RecipeType = uim.RecipeType;
                 user.ChildAccounts = new List<UserInfoModel>();
+                user._Plan = uim._Plan;
+                user.Father = uim.Father;
                 var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
                 foreach (var item in children)
                 {

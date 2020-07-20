@@ -10,6 +10,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using VirtualCredit;
+using VirtualCredit.Models;
 using VirtualCredit.Services;
 
 namespace Insurance.Services
@@ -19,6 +21,7 @@ namespace Insurance.Services
         private string fileName = null; //文件名
         private IWorkbook workbook = null;
         public ISheet m_main;
+        UserInfoModel User;
         ICellStyle style0;
         public ExcelTool(string fileName, string sheetName)
         {
@@ -35,6 +38,7 @@ namespace Insurance.Services
             m_main = workbook.GetSheet(sheetName);
             InitializeStyle();
         }
+
 
         public ExcelTool(Stream stream, string sheetName)
         {
@@ -894,12 +898,14 @@ namespace Insurance.Services
             return result;
         }
 
-        public static bool CreateNewCompanyTable(string name)
+        public static bool CreateNewCompanyTable(IUser user)
         {
             bool result = true;
+            string name = user.CompanyName;
             try
             {
-                string dir = Path.Combine(Utility.Instance.WebRootFolder, "Excel", name);
+                string fatherDir = Directory.GetDirectories(Utility.Instance.ExcelRoot, user.Father, SearchOption.AllDirectories).FirstOrDefault();
+                string dir = Path.Combine(fatherDir, name);
                 Directory.CreateDirectory(dir);
                 File.Copy(Path.Combine(Utility.Instance.WebRootFolder, "Excel", "SummaryTemplate.xls"), Path.Combine(dir, name + ".xls"), true); //创建 公司名.xls
                 File.CreateText(Path.Combine(dir, name + "_0.txt"));

@@ -63,6 +63,7 @@
                     <th scope="col">保费</th>
                     <th scope="col">公司</th>
                     <th scope="col">上传账号</th>
+                    <th scope="col">保额</th>
                     <th scope="col" colspan="2">操作</th>
                 </tr>
             </thead>
@@ -80,6 +81,7 @@
                     <td class="td_middle">@Math.Round(item.Cost, 2)</td>
                     <td class="td_middle">@item.Company</td>
                     <td class="td_middle">@item.Uploader</td>
+                    <td class="td_middle">@item.Plan</td>
                     <td class="td_middle">
                         <!-- Button trigger modal -->
                         <button type="button" class="btn btn-primary" data-toggle="modal" data-company="@item.Company" data-fn="@item.FileName" data-date="@month" data-target="#dataPreview">

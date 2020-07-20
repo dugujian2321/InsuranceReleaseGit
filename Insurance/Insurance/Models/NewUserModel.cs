@@ -19,9 +19,6 @@ namespace Insurance.Models
         public int AccessLevel { get; set; }
 
         [DatabaseProp]
-        public string Father { get; set; }
-
-        [DatabaseProp]
         public int DaysBefore { get; set; }
 
         [DatabaseProp]

@@ -56,7 +56,7 @@ namespace VirtualCredit.Controllers
         {
             try
             {
-                model.CompanyList = GetAllChildAccounts();
+                model.CompanyList = GetChildAccountsCompany();
                 return View("HistoricalList", model);
             }
             catch (Exception e)
@@ -67,36 +67,7 @@ namespace VirtualCredit.Controllers
 
         }
 
-        /// <summary>
-        /// 判断当前用户是否为公司的上级账号
-        /// </summary>
-        /// <param name="user"></param>
-        /// <param name="companyname"></param>
-        /// <returns></returns>
-        private bool IsAncestor(UserInfoModel user, string companyname)
-        {
-            ConcurrentBag<bool> results = new ConcurrentBag<bool>();
-            foreach (var child in user.ChildAccounts)
-            {
-                if (child.ChildAccounts != null && child.ChildAccounts.Count > 0)
-                {
-                    var isChild = IsAncestor(child, companyname);
-                    if (isChild)
-                    {
-                        results.Add(isChild);
-                        break;
-                    }
 
-                }
-                if (child.CompanyName.Equals(companyname, StringComparison.CurrentCultureIgnoreCase))
-                {
-                    results.Add(true);
-                    break;
-                }
-            }
-
-            return results.Contains(true);
-        }
 
         [UserLoginFilters]
         public IActionResult CompanyHisitoryByMonth([FromQuery]string name)
@@ -115,9 +86,9 @@ namespace VirtualCredit.Controllers
                 {
                     isSelf = true;
                 }
-                if (!IsAncestor(currUser, name) && currUser.CompanyName != name)
+                if (!HasAuthority(name))
                 {
-                    return View("Error");
+                    return Json("权限不足");
                 }
                 string companyName = name;
                 string targetCompanyDir;
@@ -331,7 +302,8 @@ namespace VirtualCredit.Controllers
 
                     NewExcel excel = new NewExcel();
                     excel.FileName = fi.Name;
-                    excel.Company = Directory.GetParent(Directory.GetParent(fileName).FullName).Name;
+                    excel.Company = Directory.GetParent(Directory.GetParent(fileName).Parent.FullName).Name;
+                    excel.Plan = Directory.GetParent(fileName).Parent.Name;
                     ExcelTool et = new ExcelTool(fileName, "Sheet1");
                     excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
                     string[] fileinfo = fi.Name.Split('@');
@@ -417,7 +389,8 @@ namespace VirtualCredit.Controllers
                 int advanceDays = currUser.DaysBefore;
                 DateTime dt = DateTime.Now.Date.AddDays(-1d * advanceDays);
                 model.AllowedStartDate = dt.ToString("yyyy-MM-dd");
-                model.CompanyList = GetAllChildAccounts();
+                model.CompanyList = GetChildAccountsCompany();
+                model.Plans = currUser.AccessLevel == 0 ? "all" : currUser._Plan;
                 return View(model);
             }
             catch (Exception e)
@@ -824,7 +797,7 @@ namespace VirtualCredit.Controllers
             {
                 var currUser = GetCurrentUser();
                 model.CompanyList = GetChildrenCompanies(currUser).ToList();
-                return View("RecipeSummary", model);
+                return View("RecieptPlans", model);
             }
             catch (Exception e)
             {

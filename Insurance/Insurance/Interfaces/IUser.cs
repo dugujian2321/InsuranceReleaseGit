@@ -19,5 +19,7 @@ namespace VirtualCredit
         //[MinLength(7, ErrorMessage = "密码最短为7个字符")]
         //[MaxLength(20, ErrorMessage = "2密码最长为20个字符")]
         public string userPassword { get; set; }
+        [DatabaseProp]
+        public string Father { get; set; }
     }
 }

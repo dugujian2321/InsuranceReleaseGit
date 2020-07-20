@@ -26,6 +26,7 @@ namespace Insurance.Models
 
         public double Unpaid { get; set; }
         public string Uploader { get; set; }
+        public string Plan { get; set; }
     }
 
 

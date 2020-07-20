@@ -6,7 +6,7 @@ using VirtualCredit.Models;
 
 namespace Insurance.Models
 {
-    public class EmployeeChangeModel:ViewModelBase
+    public class EmployeeChangeModel : ViewModelBase
     {
         public List<Company> CompanyList { get; set; }
 
@@ -17,5 +17,6 @@ namespace Insurance.Models
         public int DaysBefore { get; set; }
 
         public string AllowedStartDate { get; set; }
+        public string Plans { get; set; }
     }
 }

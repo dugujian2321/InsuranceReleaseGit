@@ -93,7 +93,39 @@ namespace VirtualCredit
             }
 
         }
-
+        public static UserInfoModel SelectUserByCompanyAndPlan(string companyname, string plan)
+        {
+            UserInfoModel uim = new UserInfoModel();
+            string[] cols = new string[] { "CompanyName", "_Plan" };
+            string[] values = new string[] { companyname, plan };
+            DataTable dt = SelectMultiPropFromTable("UserInfo", cols, values);
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                DataRow row = dt.Rows[0];
+                foreach (DataColumn col in dt.Columns)
+                {
+                    foreach (var prop in uim.GetType().GetProperties())
+                    {
+                        if (prop.Name.Equals(col.ColumnName, StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            object obj = new object();
+                            obj = row[col.ColumnName];
+                            if (row[col.ColumnName] is DBNull)
+                            {
+                                obj = null;
+                            }
+                            prop.SetValue(uim, obj);
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                uim = null;
+            }
+            return uim;
+        }
         public static UserInfoModel SelectUserByCompany(string companyname)
         {
             UserInfoModel uim = new UserInfoModel();
@@ -400,6 +432,8 @@ namespace VirtualCredit
                     uim.RecipeCompany = row["RecipeCompany"].ToString();
                     uim.RecipePhone = row["RecipePhone"].ToString();
                     uim.RecipeType = row["RecipeType"].ToString();
+                    uim.Father = row["Father"].ToString();
+                    uim._Plan = row["_Plan"].ToString();
                     uim.ChildAccounts = new List<UserInfoModel>();
                     if (!string.IsNullOrEmpty(row["UnitPrice"].ToString()))
                     {
@@ -563,6 +597,31 @@ namespace VirtualCredit
             string cmdText = $"select * from {tableName} where {colName}= @value";
             SqlParameter parameter = new SqlParameter("@value", colValue);
             return SQLServerHelper.ExecuteReader(cmdText, parameter);
+        }
+        public static DataTable SelectMultiPropFromTable(string tableName, string[] colNames, string[] colValues)
+        {
+            if (colNames == null || colNames.Length <= 0)
+            {
+                return null;
+            }
+            if (string.IsNullOrEmpty(SQLServerHelper.ConnectionString) || SQLServerHelper.ConnectionString != ConnStr)
+            {
+                SQLServerHelper.ConnectionString = ConnStr;
+            }
+
+            string cmdText = $"select * from {tableName} where 1=1";
+            List<string> colNamesList = new List<string>(colNames);
+            foreach (var item in colNames)
+            {
+                cmdText += $" and {item}=@{item}";
+            }
+            List<SqlParameter> sqlParameters = new List<SqlParameter>();
+            foreach (var item in colNamesList)
+            {
+                var para = new SqlParameter($"@{item}", colValues[colNamesList.IndexOf(item)]);
+                sqlParameters.Add(para);
+            }
+            return SQLServerHelper.ExecuteReader(cmdText, sqlParameters.ToArray());
         }
 
         public static DataTable SelectPeopleByNameAndID(string tableName, string name, string id)

@@ -34,6 +34,22 @@
                 }
             </select>
         </div>
+        <div class="input-group mb-3">
+            <span class="input-group-text">保单方案</span>
+            <select class="custom-select" id="planGroup" name="plan" onchange="UpdatePlan()">
+                @if (Model.Plans.Equals("all", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    @foreach (var item in VC_ControllerBase.Plans)
+                    {
+                        <option>@item</option>
+                    }
+                }
+                else
+                {
+                    <option>@Model.Plans</option>
+                }
+            </select>
+        </div>
     </div>
     @{
 
