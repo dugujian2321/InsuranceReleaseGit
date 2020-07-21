@@ -791,13 +791,33 @@ namespace VirtualCredit.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         [UserLoginFilters]
-        public IActionResult GetAllRecipeSummary(RecipeSummaryModel model)
+        public IActionResult GetAllRecipeSummary()
         {
             try
             {
+                return View("RecieptPlans");
+            }
+            catch (Exception e)
+            {
+                LogServices.LogService.Log(e.Message);
+                return View("Error");
+            }
+        }
+
+        /// <summary>
+        /// 列出所有公司的保费汇总信息
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        [UserLoginFilters]
+        public IActionResult GetTargetPlanData(string plan)
+        {
+            try
+            {
+                RecipeSummaryModel model = new RecipeSummaryModel();
                 var currUser = GetCurrentUser();
-                model.CompanyList = GetChildrenCompanies(currUser).ToList();
-                return View("RecieptPlans", model);
+                model.CompanyList = GetChildrenCompanies(currUser, plan).ToList();
+                return View("RecipeSummary", model);
             }
             catch (Exception e)
             {

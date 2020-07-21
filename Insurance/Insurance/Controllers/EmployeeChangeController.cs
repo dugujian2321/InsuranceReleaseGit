@@ -188,7 +188,7 @@ namespace Insurance.Controllers
                 else if (mode == "sub")
                 {
                     string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{GetCurrentUser().UserName}@Sub@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + "@0@.xls"; //命名规则： 上传日期_保费_上传账号_加/减保_GUID_时间_已结保费_.xls
-                    string newfilepath = Path.Combine(excelsDirectory, month, fileName);
+                    string newfilepath = Path.Combine(excelsDirectory,plan, month, fileName);
                     try
                     {
                         //1 - 新表中添加离职信息，并保存文件

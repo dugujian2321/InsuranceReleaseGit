@@ -7,5 +7,7 @@ namespace Insurance.Models
     {
         public string Company { get; set; } 
         public List<Company> CompanyList { get; set; }
+
+
     }
 }

@@ -166,7 +166,7 @@ namespace VirtualCredit
                 var dirInfo = new DirectoryInfo(companyDir);
                 Company company = new Company();
                 company.Name = dirInfo.Name;
-                ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year);
+                ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, "");
                 company.EmployeeNumber = edr.GetEmployeeNumber();
                 company.StartDate = From;
                 company.PaidCost = edr.GetPaidCost();
@@ -211,47 +211,52 @@ namespace VirtualCredit
             return result;
         }
 
-        public IEnumerable<Company> GetChildrenCompanies(UserInfoModel user)
+        /// <summary>
+        /// 获取用户的直接子公司及自身公司的信息
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="plan"></param>
+        /// <returns></returns>
+        public IEnumerable<Company> GetChildrenCompanies(UserInfoModel user, string plan)
         {
             List<Company> result = new List<Company>();
             string companyName = user.CompanyName;
             string targetDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories).FirstOrDefault();
-            List<string> companies = Directory.GetDirectories(targetDir).ToList();
+            List<string> companies = Directory.GetDirectories(targetDir).Where(_ => !Plans.Contains(new DirectoryInfo(_).Name)).ToList();
             companies.Add(targetDir);
-            foreach (var dir in companies)
+
+            foreach (var company in companies)
             {
-                var dirInfo = new DirectoryInfo(dir);
-                if (dirInfo.Name == "管理员") continue;
-                if (dir == targetDir)
+                var companyDir = new DirectoryInfo(company);
+                if (companyDir.Name == "管理员") continue;
+                if (companyDir.Name == targetDir) //若该文件夹为当前账号文件夹
                 {
                     Company com = new Company();
-                    com.Name = dirInfo.Name;
-                    string summary = Path.Combine(dirInfo.FullName, dirInfo.Name + ".xls");
+                    com.Name = companyDir.Name;
+                    string summary = Path.Combine(companyDir.FullName, companyDir.Name + ".xls");
                     if (!new FileInfo(summary).Exists) continue;
                     ExcelTool edr = new ExcelTool(summary, "Sheet1");
                     com.PaidCost = edr.GetPaidCost();
-                    com.TotalCost = edr.GetCostFromJuneToMay(dirInfo.FullName, From.Year);
+                    com.TotalCost = edr.GetCostFromJuneToMay(companyDir.FullName, From.Year);
                     com.EmployeeNumber = edr.GetEmployeeNumber();
-                    com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(dirInfo.FullName, From.Year);
+                    com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(companyDir.FullName, From.Year);
                     com.StartDate = From;
                     com.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
                     result.Add(com);
                 }
                 else
                 {
-                    if (!DateTime.TryParse(dirInfo.Name, out DateTime date))
-                    {
-                        Company com = new Company();
-                        com.Name = dirInfo.Name;
-                        ExcelDataReader edr = new ExcelDataReader(dirInfo.Name, From.Year);
-                        com.PaidCost = edr.GetPaidCost();
-                        com.TotalCost = edr.GetTotalCost();
-                        com.EmployeeNumber = edr.GetEmployeeNumber();
-                        com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
-                        com.StartDate = From;
-                        com.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
-                        result.Add(com);
-                    }
+                    Company com = new Company();
+                    com.Name = companyDir.Name;
+                    com.StartDate = From;
+                    ExcelDataReader edr = new ExcelDataReader(companyDir.Name, From.Year, plan);
+                    com.PaidCost += edr.GetPaidCost();
+                    com.TotalCost += edr.GetTotalCost();
+                    com.EmployeeNumber += edr.GetEmployeeNumber();
+                    com.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
+                    com.UnitPrice += Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
+                    result.Add(com);
+
                 }
             }
             return result;
@@ -267,7 +272,7 @@ namespace VirtualCredit
                 ExcelDataReader edr;
                 if (System.IO.File.Exists(Path.Combine(comp, new DirectoryInfo(comp).Name + ".xls")))
                 {
-                    edr = new ExcelDataReader(di.Name, From.Year);
+                    edr = new ExcelDataReader(di.Name, From.Year, "");
                 }
                 else
                 {

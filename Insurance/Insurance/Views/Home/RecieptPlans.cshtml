@@ -1,0 +1,43 @@
+﻿
+@{
+    ViewData["Title"] = "RecieptPlans";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h1>选择方案</h1>
+<div>
+    <div style="margin:0 auto">
+        <a href="/Home/GetTargetPlanData?plan=30万">
+            <div class="card text-white bg-success mb-3 numbericDashboard">
+                <div class="card-header">+</div>
+                <div class="card-body">
+                    <h5 class="card-title">30万保额</h5>
+                    <p class="card-text"></p>
+                </div>
+            </div>
+        </a>
+        <a href="/Home/GetTargetPlanData?plan=60万">
+            <div class="card text-white bg-success mb-3 numbericDashboard">
+                <div class="card-header">+</div>
+                <div class="card-body">
+                    <h5 class="card-title">60万保额</h5>
+                    <p class="card-text"></p>
+                </div>
+            </div>
+        </a>
+        <a href="/Home/GetTargetPlanData?plan=80万">
+            <div class="card text-white bg-success mb-3 numbericDashboard">
+                <div class="card-header">+</div>
+                <div class="card-body">
+                    <h5 class="card-title">80万保额</h5>
+                    <p class="card-text"></p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<script>
+    $("a.active").removeClass('active');
+    $("#page_6").addClass('active');
+</script>
