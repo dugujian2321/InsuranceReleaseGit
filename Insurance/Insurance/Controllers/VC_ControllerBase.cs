@@ -142,10 +142,58 @@ namespace VirtualCredit
         {
             var currUser = GetCurrentUser();
 
-            string result = Directory.GetDirectories(ExcelRoot, currUser.CompanyName, SearchOption.AllDirectories)[0];
+            string result = Directory.GetDirectories(ExcelRoot, currUser.CompanyName, SearchOption.AllDirectories).FirstOrDefault();
             return result;
 
         }
+
+        public List<Company> GetSpringAccountsCompany()
+        {
+            UserInfoModel currUser = GetCurrentUser();
+            string companiesDirectory = GetCurrentUserRootDir();
+            List<Company> result = new List<Company>();
+            var springs = currUser.SpringAccounts;
+            foreach (var account in springs)
+            {
+                var companyName = account.CompanyName;
+                if (result.Any(_ => _.Name == companyName))
+                {
+                    continue;
+                }
+                var companyDir = Directory.GetDirectories(companiesDirectory, companyName, SearchOption.AllDirectories).FirstOrDefault();
+                if (string.IsNullOrEmpty(companyDir)) continue;
+                if (!Directory.Exists(companyDir)) continue;
+                var dirInfo = new DirectoryInfo(companyDir);
+                Company company = new Company();
+                company.Name = dirInfo.Name;
+                ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, "");
+                company.EmployeeNumber = edr.GetEmployeeNumber();
+                company.StartDate = From;
+                company.PaidCost = edr.GetPaidCost();
+                company.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
+                company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
+                company.TotalCost = edr.GetTotalCost();
+                result.Add(company);
+            }
+            Company self = new Company();
+            self.Name = currUser.CompanyName;
+            string thisSummary = Path.Combine(companiesDirectory, currUser.CompanyName + ".xls");
+
+            if (System.IO.File.Exists(thisSummary))
+            {
+                ExcelTool et = new ExcelTool(thisSummary, "Sheet1");
+                self.EmployeeNumber = et.GetEmployeeNumber();
+                self.StartDate = From;
+                self.PaidCost = et.GetPaidCost();
+                self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
+                self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
+                self.TotalCost = et.GetCostFromJuneToMay(companiesDirectory, From.Year);
+                result.Add(self);
+            }
+
+            return result;
+        }
+
 
         public List<Company> GetChildAccountsCompany()
         {
@@ -160,7 +208,7 @@ namespace VirtualCredit
                 {
                     continue;
                 }
-                var companyDir = Path.Combine(companiesDirectory, companyName);
+                var companyDir = Directory.GetDirectories(companiesDirectory,companyName,SearchOption.AllDirectories).FirstOrDefault();
                 if (string.IsNullOrEmpty(companyDir)) continue;
                 if (!Directory.Exists(companyDir)) continue;
                 var dirInfo = new DirectoryInfo(companyDir);

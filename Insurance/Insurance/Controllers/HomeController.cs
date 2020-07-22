@@ -389,7 +389,7 @@ namespace VirtualCredit.Controllers
                 int advanceDays = currUser.DaysBefore;
                 DateTime dt = DateTime.Now.Date.AddDays(-1d * advanceDays);
                 model.AllowedStartDate = dt.ToString("yyyy-MM-dd");
-                model.CompanyList = GetChildAccountsCompany();
+                model.CompanyList = GetSpringAccountsCompany();
                 model.Plans = currUser.AccessLevel == 0 ? "all" : currUser._Plan;
                 return View(model);
             }
@@ -795,6 +795,7 @@ namespace VirtualCredit.Controllers
         {
             try
             {
+                HttpContext.Session.Set("plan", string.Empty);
                 return View("RecieptPlans");
             }
             catch (Exception e)
@@ -817,6 +818,7 @@ namespace VirtualCredit.Controllers
                 RecipeSummaryModel model = new RecipeSummaryModel();
                 var currUser = GetCurrentUser();
                 model.CompanyList = GetChildrenCompanies(currUser, plan).ToList();
+                HttpContext.Session.Set("plan", plan);
                 return View("RecipeSummary", model);
             }
             catch (Exception e)
@@ -878,6 +880,8 @@ namespace VirtualCredit.Controllers
         [UserLoginFilters]
         public IActionResult RecipeSummary([FromQuery]string date, [FromQuery]string name)
         {
+            string plan = HttpContext.Session.Get<string>("plan");
+            if (string.IsNullOrEmpty(plan)) return View("Error");
             //获取该公司历史表单详细
             DetailModel dm = new DetailModel();
             List<NewExcel> allexcels = new List<NewExcel>();
@@ -892,7 +896,10 @@ namespace VirtualCredit.Controllers
             }
             if (currUser.CompanyName == name) isSelf = true;
             //string date = "2020/3/1";
-            DateTime dt1 = DateTime.Parse(date);
+            if (!DateTime.TryParse(date, out DateTime dt1))
+            {
+                return View("Error");
+            }
             string month = dt1.ToString("yyyy-MM");
             string companyName = name;
             string targetDirectory = GetSearchExcelsInDir(companyName);
@@ -905,6 +912,8 @@ namespace VirtualCredit.Controllers
 
             foreach (var monthDir in monthDirs)
             {
+                DirectoryInfo di = new DirectoryInfo(monthDir);
+                if (di.Parent.Name != plan) continue;
                 excels.AddRange(Directory.GetFiles(monthDir));
             }
 
@@ -927,9 +936,9 @@ namespace VirtualCredit.Controllers
             return View("RecipeSummaryDetail", dm);
         }
 
-        private NewExcel GetExcelInfo(string fileName, string companyName)
+        private NewExcel GetExcelInfo(string fileFullName, string companyName)
         {
-            FileInfo fi = new FileInfo(fileName);
+            FileInfo fi = new FileInfo(fileFullName);
             if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
                 return null;
 
@@ -937,7 +946,7 @@ namespace VirtualCredit.Controllers
             excel.FileName = fi.Name;
             excel.Company = companyName;
 
-            ExcelTool et = new ExcelTool(fileName, "Sheet1");
+            ExcelTool et = new ExcelTool(fileFullName, "Sheet1");
             excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
             string[] fileinfo = fi.Name.Split('@');
             excel.Submitter = fileinfo[2];
@@ -1159,6 +1168,8 @@ namespace VirtualCredit.Controllers
         [UserLoginFilters]
         public IActionResult RecipeSummaryByMonth([FromQuery]string name)
         {
+            string plan = HttpContext.Session.Get<string>("plan");
+            if (string.IsNullOrEmpty(plan)) return View("Error");
             ReaderWriterLockSlim r_locker = null;
             bool isSelf = false;
             var currUser = GetCurrentUser();
@@ -1178,7 +1189,6 @@ namespace VirtualCredit.Controllers
                 }
                 string companyName = name;
                 string targetCompDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories).FirstOrDefault();
-
                 for (DateTime date = From; date <= To; date = date.AddMonths(1))
                 {
                     string monthDir = date.ToString("yyyy-MM");
@@ -1188,11 +1198,14 @@ namespace VirtualCredit.Controllers
                         so = SearchOption.TopDirectoryOnly;
                     }
                     var dirs = Directory.GetDirectories(targetCompDir, monthDir, so);
+
                     if (dirs.Length == 0) continue;
                     NewExcel excel = new NewExcel();
                     excel.Company = companyName;
                     foreach (string month in dirs)
                     {
+                        DirectoryInfo di = new DirectoryInfo(month);
+                        if (di.Parent.Name != plan) continue;
                         var tempexcel = GetMonthlyDetail(month, name);
                         excel.StartDate = tempexcel.StartDate;
                         excel.EndDate = tempexcel.EndDate;
@@ -1202,7 +1215,7 @@ namespace VirtualCredit.Controllers
                         excel.Unpaid += tempexcel.Unpaid;
                         excel.UploadDate = tempexcel.UploadDate;
                     }
-                    if (excel != null)
+                    if (excel != null && excel.StartDate != null)
                     {
                         allMonthlyExcels.Add(excel);
                     }

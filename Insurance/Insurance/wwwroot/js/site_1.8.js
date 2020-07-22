@@ -604,7 +604,7 @@ function Calculate() {
                 alert("生效日期不正确，该月保单可能已被锁定");
             }
             else if (data == -9999996) {
-                alert("所选方案不存在或您无权投保该方案");
+                alert("该公司尚未开通该方案账号或您无权投保该方案");
             }
             else {
                 document.getElementById('price').innerText = data;

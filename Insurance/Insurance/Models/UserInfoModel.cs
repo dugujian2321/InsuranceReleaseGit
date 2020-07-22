@@ -69,8 +69,34 @@ namespace VirtualCredit.Models
                 childAccounts = value;
             }
         }
+        private List<UserInfoModel> springAccounts;
+        public List<UserInfoModel> SpringAccounts
+        {
+            get
+            {
+                return GetSpringAccounts(this);
+            }
+            set
+            {
+                springAccounts = value;
+            }
+        }
 
         public int StartDate { get; set; }
         public bool AllowEdit { get; set; }
+
+        private List<UserInfoModel> GetSpringAccounts(UserInfoModel user)
+        {
+            List<UserInfoModel> result = new List<UserInfoModel>();
+            if (user.ChildAccounts != null && user.ChildAccounts.Count > 0)
+            {
+                foreach (var item in user.ChildAccounts)
+                {
+                    result.Add(item);
+                    result.AddRange(GetSpringAccounts(item));
+                }
+            }
+            return result;
+        }
     }
 }
