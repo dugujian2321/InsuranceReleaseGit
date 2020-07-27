@@ -1016,12 +1016,16 @@ namespace VirtualCredit.Controllers
             string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
             string template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", "Insurance_recipet.docx");
             string companyDir = GetSearchExcelsInDir(company);
-            List<string> childCompanies = GetChildrenCompanies(company).ToList();
+            List<string> childCompanies = GetChildrenCompanies(company).Where(_ => !Plans.Contains(_)).ToList();
             childCompanies.Add(company);
             List<string> summaries = new List<string>();
             foreach (var comp in childCompanies)
             {
-                string compDir = GetSearchExcelsInDir(comp);
+                string compDir = string.Empty;
+                if (comp == company)
+                    compDir = companyDir;
+                else
+                    compDir = Directory.GetDirectories(companyDir, comp, SearchOption.AllDirectories).FirstOrDefault();
                 summaries.Add(Path.Combine(compDir, comp + ".xls"));
             }
             string newdoc = Path.Combine(_hostingEnvironment.WebRootPath, "Word", company + DateTime.Now.ToString("yyyy-MM-dd-HH-hh-ss-mm") + ".docx");
@@ -1482,9 +1486,9 @@ namespace VirtualCredit.Controllers
 
         [AdminFilters]
         [UserLoginFilters]
-        public IActionResult DeleteReceipt(string company, string fileName, string startDate)
+        public IActionResult DeleteReceipt(string company, string fileName, string startDate, string plan)
         {
-            var locker = GetCurrentUser().MyLocker.RWLocker;
+            var locker = (Utility.LockerList.Where(_ => _.LockerCompany == company).FirstOrDefault() as ReaderWriterLockerWithName).RWLocker;
             try
             {
                 if (fileName.Contains("期初自动流转"))
@@ -1501,9 +1505,9 @@ namespace VirtualCredit.Controllers
                 string[] fileinfo = fileName.Split("@");
                 string companyDir = GetSearchExcelsInDir(company);
                 DateTime start = Convert.ToDateTime(startDate);
-                string targetFilePath = Path.Combine(companyDir, start.ToString("yyyy-MM"), fileName);
+                string targetFilePath = Path.Combine(companyDir, plan, start.ToString("yyyy-MM"), fileName);
                 ExcelTool targetExcel = new ExcelTool(targetFilePath, "Sheet1");
-                ExcelTool summary = new ExcelTool(Path.Combine(companyDir, company + ".xls"), "sheet1");
+                ExcelTool summary = new ExcelTool(Path.Combine(companyDir, plan,company + ".xls"), "sheet1");
                 DataTable targetExcelTable = targetExcel.ExcelToDataTable("Sheet1", true);
                 DataTable summaryTable = summary.ExcelToDataTable("Sheet1", true);
                 DateTime summaryStartDate = new DateTime();

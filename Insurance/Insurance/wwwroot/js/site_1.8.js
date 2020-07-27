@@ -289,11 +289,11 @@ function MarkPaid() {
 }
 
 
-function DeleteReceipt(name, file, date) {
+function DeleteReceipt(name, file, date, plan) {
     document.getElementById('btn_deletereceipt').disabled = true;
     $.ajax(
         {
-            url: "/Home/DeleteReceipt?company=" + name + "&filename=" + file + "&startdate=" + date,
+            url: "/Home/DeleteReceipt?company=" + name + "&filename=" + file + "&startdate=" + date + "&plan=" + plan,
             async: true,
             processData: false,
             type: 'get',
@@ -350,9 +350,10 @@ function RegisterEvents() {
         var filename = button.data('filename');
         var uploaddate = button.data('uploaddate');
         var startdate = button.data('startdate');
+        var plan = button.data('plan');
         var modal = document.getElementById('confirmDeleteExcel');
         modal.getElementsByClassName('modal-body')[0].innerHTML = "是否确认删除于 " + uploaddate + " 上传的保单?";
-        document.getElementById('btn_deletereceipt').onclick = function () { DeleteReceipt(company, filename, startdate) };
+        document.getElementById('btn_deletereceipt').onclick = function () { DeleteReceipt(company, filename, startdate, plan) };
     });
 
     $('#confirmDeleteCompany').on('show.bs.modal', function (event) {

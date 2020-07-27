@@ -118,6 +118,16 @@ namespace VirtualCredit.Controllers
                         RWLocker = new System.Threading.ReaderWriterLockSlim()
                     };
                     Utility.LockerList.Add(newlocker);
+                    foreach (var item in user.SpringAccounts)
+                    {
+                        if (Utility.LockerList.Any(_ => _.LockerCompany == item.CompanyName)) continue;
+                        newlocker = new ReaderWriterLockerWithName()
+                        {
+                            LockerCompany = item.CompanyName,
+                            RWLocker = new System.Threading.ReaderWriterLockSlim()
+                        };
+                        Utility.LockerList.Add(newlocker);
+                    }
                 }
                 GetCurrentUser().MyLocker = Utility.GetCompanyLocker(GetCurrentUser().CompanyName);
                 return RedirectToAction("Index", "Home", null);
