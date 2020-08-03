@@ -97,7 +97,7 @@ namespace VirtualCredit.Controllers
 
                 if (isSelf)
                 {
-                    targetCompanyDir = currUserDir;
+                    targetCompanyDir = Path.Combine(currUserDir, currUser._Plan);
                 }
                 else
                 {
@@ -277,9 +277,20 @@ namespace VirtualCredit.Controllers
                 string companyDir = GetSearchExcelsInDir(companyName);
                 SearchOption so = SearchOption.AllDirectories;
                 if (isSelf) so = SearchOption.TopDirectoryOnly;
-                var monthDirs = Directory.GetDirectories(companyDir, month, so);
+                List<string> monthDirs = new List<string>();
+                if (!string.IsNullOrEmpty(currUser._Plan))
+                {
+                    foreach (var plan in currUser._Plan.Split('_'))
+                    {
+                        monthDirs.AddRange(Directory.GetDirectories(Path.Combine(companyDir, plan), month, so));
+                    }
+                }
+                else
+                {
+                    monthDirs = Directory.GetDirectories(companyDir, month, so).ToList();
+                }
 
-                if (monthDirs.Length > 0)
+                if (monthDirs.Count > 0)
                 {
                     foreach (string monthDir in monthDirs)
                     {
@@ -389,7 +400,9 @@ namespace VirtualCredit.Controllers
                 int advanceDays = currUser.DaysBefore;
                 DateTime dt = DateTime.Now.Date.AddDays(-1d * advanceDays);
                 model.AllowedStartDate = dt.ToString("yyyy-MM-dd");
-                model.CompanyList = GetSpringAccountsCompany();
+                model.CompanyNameList = GetSpringCompaniesName(true);
+                //if (currUser.AccessLevel != 0)
+                //    model.CompanyList.Add(new Company() { Name = currUser.CompanyName });
                 model.Plans = currUser.AccessLevel == 0 ? "all" : currUser._Plan;
                 return View(model);
             }
@@ -1507,7 +1520,7 @@ namespace VirtualCredit.Controllers
                 DateTime start = Convert.ToDateTime(startDate);
                 string targetFilePath = Path.Combine(companyDir, plan, start.ToString("yyyy-MM"), fileName);
                 ExcelTool targetExcel = new ExcelTool(targetFilePath, "Sheet1");
-                ExcelTool summary = new ExcelTool(Path.Combine(companyDir, plan,company + ".xls"), "sheet1");
+                ExcelTool summary = new ExcelTool(Path.Combine(companyDir, plan, company + ".xls"), "sheet1");
                 DataTable targetExcelTable = targetExcel.ExcelToDataTable("Sheet1", true);
                 DataTable summaryTable = summary.ExcelToDataTable("Sheet1", true);
                 DateTime summaryStartDate = new DateTime();

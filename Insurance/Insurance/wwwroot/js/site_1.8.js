@@ -1623,6 +1623,7 @@ function async_Validate(callbk_validateFields) {
 var validationPass = false;
 var userNamePass = false;
 var pwdPass = false;
+var daysbeforePass = false;
 var canRegister = false;
 var canReset = false;
 var mailPass = false;
@@ -1649,6 +1650,10 @@ function ValidateFields_RegisterView() {
     }
 
     if (cPwdBox.value == "" || pwdPass == false) {
+        registerPageInputResult = false;
+    }
+
+    if (daysbeforePass == false) {
         registerPageInputResult = false;
     }
 
@@ -1798,6 +1803,7 @@ function SetFieldsEvent() {
     var pwdBox = document.getElementById("pwdBox");
     var idBox = document.getElementById("UserName");
     var cPwdBox = document.getElementById('confirmPwd');
+    var daysbeforebox = document.getElementById('daysbefore');
     cPwdBox.onfocus = function () {
         ShowPwsTips();
     }
@@ -1806,7 +1812,30 @@ function SetFieldsEvent() {
     }
     idBox.onblur = function () { UserNameExists(idBox.value) };
     pwdBox.onblur = function () { PwdValid() };
+    daysbeforebox.onblur = function () { DaysBeforeValidate(daysbeforebox) };
     cPwdBox.onblur = function () { PwdValid() };
+}
+
+function DaysBeforeValidate(obj) {
+    $.ajax(
+        {
+            type: 'get',
+            url: '/Account/ValidateDaysBefore?days=' + obj.value,
+            dataType: 'json',
+            async: true,
+            contentType: 'application/json',
+            success: function (data) {
+                var msg = document.getElementById('daysbeforeMsg');
+                msg.innerText = data;
+                if (data == "√") {
+                    daysbeforePass = true;
+                } else {
+                    daysbeforePass = false;
+                }
+                ValidateFields_RegisterView();
+            }
+        }
+    );
 }
 
 function IsAgreementChecked() {

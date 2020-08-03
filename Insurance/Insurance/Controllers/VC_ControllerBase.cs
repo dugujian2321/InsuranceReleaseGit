@@ -147,6 +147,31 @@ namespace VirtualCredit
 
         }
 
+
+        public List<string> GetSpringCompaniesName(bool includingself)
+        {
+            UserInfoModel currUser = GetCurrentUser();
+            string companiesDirectory = GetCurrentUserRootDir();
+            List<string> result = new List<string>();
+            var springs = currUser.SpringAccounts;
+            foreach (var account in springs)
+            {
+                var companyName = account.CompanyName;
+                if (result.Any(_ => _ == companyName))
+                {
+                    continue;
+                }
+                result.Add(account.CompanyName);
+            }
+
+            if (includingself)
+            {
+                result.Add(currUser.CompanyName);
+            }
+
+            return result;
+        }
+
         public List<Company> GetSpringAccountsCompany()
         {
             UserInfoModel currUser = GetCurrentUser();
@@ -194,6 +219,21 @@ namespace VirtualCredit
             return result;
         }
 
+        private List<UserInfoModel[]> GroupAccountByCompanyName(List<UserInfoModel> accounts)
+        {
+            List<UserInfoModel[]> result = new List<UserInfoModel[]>();
+            List<string> scannedCompany = new List<string>();
+            foreach (var item in accounts)
+            {
+                if (scannedCompany.Contains(item.CompanyName)) continue;
+                List<UserInfoModel> users = new List<UserInfoModel>();
+                string companyName = item.CompanyName;
+                scannedCompany.Add(companyName);
+                users.AddRange(accounts.Where(x => x.CompanyName == companyName));
+                result.Add(users.ToArray());
+            }
+            return result;
+        }
 
         public List<Company> GetChildAccountsCompany()
         {
@@ -201,32 +241,31 @@ namespace VirtualCredit
             string companiesDirectory = GetCurrentUserRootDir();
             List<Company> result = new List<Company>();
             var children = currUser.ChildAccounts;
-            foreach (var account in children)
+            var companyAccounts = GroupAccountByCompanyName(children);
+            foreach (var companyAccount in companyAccounts)
             {
-                var companyName = account.CompanyName;
-                if (result.Any(_ => _.Name == companyName))
-                {
-                    continue;
-                }
-                var companyDir = Directory.GetDirectories(companiesDirectory,companyName,SearchOption.AllDirectories).FirstOrDefault();
+                var companyName = companyAccount[0].CompanyName;
+                var companyDir = Directory.GetDirectories(companiesDirectory, companyName, SearchOption.AllDirectories).FirstOrDefault();
                 if (string.IsNullOrEmpty(companyDir)) continue;
                 if (!Directory.Exists(companyDir)) continue;
-                var dirInfo = new DirectoryInfo(companyDir);
                 Company company = new Company();
-                company.Name = dirInfo.Name;
-                ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, "");
-                company.EmployeeNumber = edr.GetEmployeeNumber();
-                company.StartDate = From;
-                company.PaidCost = edr.GetPaidCost();
-                company.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
-                company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
-                company.TotalCost = edr.GetTotalCost();
+                company.Name = companyName;
+
+                foreach (var account in companyAccount)
+                {
+                    ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, account._Plan);
+                    company.EmployeeNumber += edr.GetEmployeeNumber();
+                    company.StartDate = From;
+                    company.PaidCost += edr.GetPaidCost();
+                    company.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
+                    company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
+                    company.TotalCost += edr.GetTotalCost();
+                }
                 result.Add(company);
             }
             Company self = new Company();
             self.Name = currUser.CompanyName;
-            string thisSummary = Path.Combine(companiesDirectory, currUser.CompanyName + ".xls");
-
+            string thisSummary = Path.Combine(companiesDirectory, currUser._Plan, self.Name + ".xls");
             if (System.IO.File.Exists(thisSummary))
             {
                 ExcelTool et = new ExcelTool(thisSummary, "Sheet1");
@@ -235,10 +274,17 @@ namespace VirtualCredit
                 self.PaidCost = et.GetPaidCost();
                 self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
                 self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
-                self.TotalCost = et.GetCostFromJuneToMay(companiesDirectory, From.Year);
+                self.TotalCost = et.GetCostFromJuneToMay(Path.Combine(companiesDirectory, currUser._Plan), From.Year);
                 result.Add(self);
+                //ExcelDataReader et = new ExcelDataReader(self.Name,From.Year,currUser._Plan);
+                //self.EmployeeNumber = et.GetEmployeeNumber();
+                //self.StartDate = From;
+                //self.PaidCost = et.GetPaidCost();
+                //self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaid();
+                //self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
+                //self.TotalCost = et.GetTotalCost();
+                //result.Add(self);
             }
-
             return result;
         }
 

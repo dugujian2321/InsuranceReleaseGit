@@ -7,7 +7,7 @@
 <div>
     @{
         UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
-        if (currentUser.ChildAccounts.Count > 0)
+        if (currentUser.AllowCreateAccount == "1")
         {
             <a class="btn btn-warning" style="margin:10px" asp-action="ExportAllEmployees" asp-controller="Home">导出所有在保人员名单</a>
             <table class="table">

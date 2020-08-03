@@ -411,7 +411,8 @@ namespace VirtualCredit
                 SqlParameter userNamePara = new SqlParameter("@userName", user.UserName);
                 SqlParameter userPwdPara = new SqlParameter("@userPassword", user.userPassword);
                 dt = SQLServerHelper.ExecuteReader(cmd, userNamePara, userPwdPara);
-                if (dt.Rows.Count > 0)
+
+                if (dt != null && dt.Rows.Count > 0)
                 {
                     DataRow row = dt.Rows[0];
                     UserInfoModel uim = new UserInfoModel();

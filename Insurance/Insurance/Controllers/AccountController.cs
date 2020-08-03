@@ -121,6 +121,29 @@ namespace Insurance.Controllers
             ViewBag.LoginResult = msg;
         }
 
+        public JsonResult ValidateDaysBefore([FromQuery]string days)
+        {
+            string result = "√";
+            if (!int.TryParse(days,out int res))
+            {
+                return Json("请输入数字");
+            }
+            
+            var currUser = GetCurrentUser();
+            if (currUser.AccessLevel == 0)
+            {
+                return Json(result);
+            }
+            else
+            {
+                if (Convert.ToInt32(days) > currUser.DaysBefore)
+                {
+                    result = $"追溯期不能大于{currUser.DaysBefore.ToString()}天" ;
+                }
+            }
+            return Json(result);
+        }
+
         [HttpGet]
         [UserLoginFilters]
         public JsonResult GetAccountDetail(string userName)
@@ -298,6 +321,24 @@ namespace Insurance.Controllers
                 ViewBag.PwdNotMatch = "两次输入的密码不一致，请重新输入";
                 pass = false;
             }
+            if (currUser.AccessLevel != 0)
+            {
+                if (user.DaysBefore > currUser.DaysBefore)
+                {
+                    HttpContext.Session.Set<string>("noAccessCreateAccout", $"追溯期不能大于{currUser.DaysBefore}天");
+                    ViewBag.DaysBeforeIncorrect = "追溯期不正确";
+                    pass = false;
+                }
+            }
+            if (currUser.AccessLevel != 0)
+            {
+                if (user._Plan != currUser._Plan)
+                {
+                    HttpContext.Session.Set<string>("noAccessCreateAccout", "子账户方案必须与其父账户相同");
+                    ViewBag.PlanIncorrect = "方案不正确";
+                    pass = false;
+                }
+            }
             if (!pass)
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "输入信息不合规范");
@@ -308,22 +349,13 @@ namespace Insurance.Controllers
             //user.userPassword = md5.EncryptNTimesWithBackendSalt(user.userPassword, 500);
             TimeSpan ts1 = DateTime.UtcNow.AddMinutes(10) - new DateTime(1970, 1, 1, 0, 0, 0, 0);
             long temp = Convert.ToInt64(ts1.TotalSeconds);
-            if (user.AllowCreateAccount == "1")
-            {
-                user.AllowCreateAccount = "1";
-            }
-            else
-            {
-                user.AllowCreateAccount = "2";
-            }
             user.Father = currUser.UserName;
             user.AccessLevel = currUser.AccessLevel + 1;
-            List<Company> companies = GetAllCompanies();
 
             //var t = companies.Where(p => p.Name == user.CompanyName); //是否已有同名公司
 
 
-            if (!ExcelTool.CreateNewCompanyTable(user))
+            if (!ExcelTool.CreateNewCompanyTable(user, out string compDir))
             {
                 return View("Error");
             }
@@ -336,6 +368,7 @@ namespace Insurance.Controllers
             }
             else
             {
+                Directory.Delete(compDir, true);
                 return View("../Shared/Error");
             }
 

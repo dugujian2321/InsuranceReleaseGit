@@ -235,6 +235,39 @@ namespace Insurance.Services
             return GetCellText(1, 6);
         }
 
+        public double GetCostFromJuneToMay(string companyDir, int year, string plan)
+        {
+            DateTime now = DateTime.Now;
+            DateTime from = new DateTime();
+            DateTime to = new DateTime();
+
+            from = new DateTime(year, 6, 1);
+            to = new DateTime(year + 1, 5, 31, 23, 59, 59);
+
+
+            double cost = 0;
+            if (Directory.Exists(companyDir))
+            {
+                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                {
+                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    {
+                        continue;
+                    }
+                    DateTime dirDate = Convert.ToDateTime(new DirectoryInfo(monthDir).Name);
+                    dirDate = new DateTime(dirDate.Year, dirDate.Month, 1);
+                    if (dirDate >= from && dirDate <= to)
+                    {
+                        foreach (string file in Directory.GetFiles(monthDir))
+                        {
+                            string[] excelinfo = file.Split('@');
+                            cost += Convert.ToDouble(excelinfo[1]);
+                        }
+                    }
+                }
+            }
+            return Math.Round(cost, 2);
+        }
         public double GetCostFromJuneToMay(string companyDir, int year)
         {
             DateTime now = DateTime.Now;
@@ -266,10 +299,8 @@ namespace Insurance.Services
                     }
                 }
             }
-
             return Math.Round(cost, 2);
         }
-
 
         /// <summary>
         /// 计算公司所有月份所有上传保单的费用
@@ -898,22 +929,37 @@ namespace Insurance.Services
             return result;
         }
 
-        public static bool CreateNewCompanyTable(IUser user)
+        public static bool CreateNewCompanyTable(NewUserModel user, out string companyDir)
         {
             bool result = true;
             string name = user.CompanyName;
+            string dir = string.Empty;
+            UserInfoModel father = DatabaseService.SelectUser(user.Father);
             try
             {
-                string fatherDir = Directory.GetDirectories(Utility.Instance.ExcelRoot, user.Father, SearchOption.AllDirectories).FirstOrDefault();
-                string dir = Path.Combine(fatherDir, name);
-                Directory.CreateDirectory(dir);
-                File.Copy(Path.Combine(Utility.Instance.WebRootFolder, "Excel", "SummaryTemplate.xls"), Path.Combine(dir, name + ".xls"), true); //创建 公司名.xls
-                File.CreateText(Path.Combine(dir, name + "_0.txt"));
+                string fatherDir = Directory.GetDirectories(Utility.Instance.ExcelRoot, father.CompanyName, SearchOption.AllDirectories).FirstOrDefault();
+                dir = Path.Combine(fatherDir, name);
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+                var plans = user._Plan.Split("_");
+                foreach (string plan in plans)
+                {
+                    string planDir = Path.Combine(dir, plan);
+                    if (!Directory.Exists(planDir))
+                    {
+                        Directory.CreateDirectory(planDir);
+                        File.Copy(Path.Combine(Utility.Instance.WebRootFolder, "Excel", "SummaryTemplate.xls"), Path.Combine(planDir, name + ".xls"), true); //创建 公司名.xls
+                        File.CreateText(Path.Combine(planDir, name + "_0.txt"));
+                    }
+
+                }
+
             }
             catch
             {
                 result = false;
             }
+            companyDir = dir;
             return result;
         }
 

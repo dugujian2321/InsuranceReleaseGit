@@ -10,11 +10,6 @@ namespace Insurance.Models
         [DataType(DataType.Password)]
         public string confirmPassword { get; set; }
 
-        [Required(ErrorMessage = "公司名称不能为空")]
-        [DataType(DataType.Text)]
-        [DatabaseProp]
-        public new string CompanyName { get; set; }
-
         [DatabaseProp]
         public int AccessLevel { get; set; }
 

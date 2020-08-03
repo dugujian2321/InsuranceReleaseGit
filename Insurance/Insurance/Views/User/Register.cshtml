@@ -44,13 +44,16 @@
             @Html.TextBoxFor(user => user.DaysBefore, new { @class = "inputBox", id = "daysbefore", type = "text", autocomplete = "off" })
             <div class="input-group-append">
                 <span class="input-group-text" for="daysbefore">天</span>
+                <span id="daysbeforeMsg" class="warningMessage"></span>
             </div>
+
         </div>
         <div class="input-group mb-3">
             <div class="input-group-prepend">
                 <span class="input-group-text" id="inputGroup-sizing-default">选择方案</span>
             </div>
             @Html.DropDownListFor(user => user._Plan, ViewBag.Plans as IEnumerable<SelectListItem>, new { @class = "inputBox", id = "plan", type = "text", autocomplete = "off" })
+            <span id="daysbeforeMsg" class="warningMessage">@ViewBag.PlanIncorrect</span>
         </div>
         <div class="input-group mb-3">
             <div class="input-group-prepend">
@@ -73,7 +76,7 @@
         <div>
             @{
                 UserInfoModel uim = Context.Session.Get<UserInfoModel>("CurrentUser");
-                if (uim != null && uim.AccessLevel > 0)
+                if (uim != null && uim.AllowCreateAccount == "1")
                 {
                     string cn = uim.CompanyName;
                     string cnAbb = uim.CompanyNameAbb;
@@ -81,8 +84,8 @@
                         <div class="input-group-prepend">
                             <span class="input-group-text" id="inputGroup-sizing-default">公司名称</span>
                         </div>
-                        <input class="inputBox" id="cpName" type="text" asp-for="CompanyName" readonly value="@cn" autocomplete="off" />
-                        <input class="inputBox" id="cpName" type="text" asp-for="CompanyNameAbb" readonly value="@cnAbb" autocomplete="off" />
+                        <input class="inputBox" id="cpName" type="text" asp-for="CompanyName"  value="@cn" autocomplete="off" />
+                        <input class="inputBox" id="cpName" type="text" asp-for="CompanyNameAbb"  value="@cnAbb" autocomplete="off" />
                     </div>
                 }
                 else

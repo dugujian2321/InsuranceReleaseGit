@@ -7,7 +7,7 @@
 <div>
     @{
         UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
-        if (currentUser.ChildAccounts.Count > 0)
+        if (currentUser.AllowCreateAccount == "1")
         {
             <table class="table">
                 <thead>

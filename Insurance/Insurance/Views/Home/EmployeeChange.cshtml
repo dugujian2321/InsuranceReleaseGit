@@ -28,9 +28,9 @@
         <div class="input-group mb-3">
             <span class="input-group-text">公司名称</span>
             <select class="custom-select" id="companyGroup" onchange="UpdateAllowedStartDate()">
-                @foreach (var company in Model.CompanyList)
+                @foreach (var company in Model.CompanyNameList)
                 {
-                    <option selected>@company.Name</option>
+                    <option selected>@company</option>
                 }
             </select>
         </div>

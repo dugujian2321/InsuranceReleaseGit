@@ -9,7 +9,9 @@ namespace Insurance.Models
     public class EmployeeChangeModel : ViewModelBase
     {
         public List<Company> CompanyList { get; set; }
+        public List<string> CompanyNameList { get; set; }
 
+        
         public DateTime Start { get; set; }
 
         public DateTime End { get; set; }

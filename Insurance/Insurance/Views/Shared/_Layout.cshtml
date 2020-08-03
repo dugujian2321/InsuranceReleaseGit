@@ -167,7 +167,7 @@
                         </li>
                         <li class="nav-item">
                             @{
-                                if (Context.Session.Get<UserInfoModel>("CurrentUser").ChildAccounts.Count > 0)
+                                if (Context.Session.Get<UserInfoModel>("CurrentUser").AllowCreateAccount == "1")
                                 {
                                     <a id="page_2" class="nav-link" asp-action="HistoricalList" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">保单列表</a>
                                 }
@@ -198,7 +198,7 @@
                         </li>
                         <li class="nav-item">
                             @{
-                                if (Context.Session.Get<UserInfoModel>("CurrentUser").ChildAccounts.Count > 0)
+                                if (Context.Session.Get<UserInfoModel>("CurrentUser").AllowCreateAccount == "1")
                                 {
                                     <a id="page_6" class="nav-link" asp-action="GetAllRecipeSummary" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">保费汇总</a>
                                 }
