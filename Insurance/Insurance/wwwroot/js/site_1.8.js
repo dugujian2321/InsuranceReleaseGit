@@ -171,6 +171,7 @@ function UpdatePlan() {
     }
 }
 
+
 function SubmitRecipet(obj) {
     obj.disabled = !0;
     $.ajax(

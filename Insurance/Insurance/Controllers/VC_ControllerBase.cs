@@ -323,17 +323,17 @@ namespace VirtualCredit
             {
                 var companyDir = new DirectoryInfo(company);
                 if (companyDir.Name == "管理员") continue;
-                if (companyDir.Name == targetDir) //若该文件夹为当前账号文件夹
+                if (companyDir.Name == new DirectoryInfo(targetDir).Name) //若该文件夹为当前账号文件夹
                 {
                     Company com = new Company();
                     com.Name = companyDir.Name;
-                    string summary = Path.Combine(companyDir.FullName, companyDir.Name + ".xls");
+                    string summary = Path.Combine(companyDir.FullName, plan, companyDir.Name + ".xls");
                     if (!new FileInfo(summary).Exists) continue;
                     ExcelTool edr = new ExcelTool(summary, "Sheet1");
                     com.PaidCost = edr.GetPaidCost();
-                    com.TotalCost = edr.GetCostFromJuneToMay(companyDir.FullName, From.Year);
+                    com.TotalCost = edr.GetCostFromJuneToMay(Path.Combine(companyDir.FullName, plan), From.Year);
                     com.EmployeeNumber = edr.GetEmployeeNumber();
-                    com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(companyDir.FullName, From.Year);
+                    com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(Path.Combine(companyDir.FullName, plan), From.Year);
                     com.StartDate = From;
                     com.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
                     result.Add(com);

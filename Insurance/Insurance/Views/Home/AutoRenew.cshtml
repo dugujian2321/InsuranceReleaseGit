@@ -5,10 +5,12 @@
 }
 @using System.Data;
 @model Insurance.Models.RenewModel
+    <div class="alert alert-primary" style="font-size:20px;color:red" role="alert">
+        提示：每月最后三天可续保，续保后本月保单将锁定
+    </div>
 @{
     string currentCompany = string.Empty;
     <div>
-        <span class="alert-danger" style="font-size:30px">提示：每月最后三天可续保，续保后本月保单将锁定</span>
         <table class="table table-primary table-bordered">
             <thead>
                 <tr style="text-align:center">
@@ -79,7 +81,7 @@
     $('#autorenew').on('show.bs.modal', function (event) {
         var button = $(event.relatedTarget) // Button that triggered the modal
         var recipient = button.data('whatever') // Extract info from data-* attributes
-        var date = button.data('enddate') 
+        var date = button.data('enddate')
         // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
         // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
         var modal = $(this)

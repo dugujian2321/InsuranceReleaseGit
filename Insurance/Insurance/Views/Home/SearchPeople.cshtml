@@ -5,7 +5,9 @@
 }
 @model Insurance.Models.SearchPeopleModel
 @using System.Data
-<br />
+<div class="alert alert-primary" style="font-size:20px" role="alert">
+    请输入姓名或身份证
+</div>
 <div>
     @using (Html.BeginForm(actionName: "Search", controllerName: "Home", method: FormMethod.Get))
     {
@@ -25,8 +27,8 @@
     }
 </div>
 <div>
-    <table class="table">
-        <thead>
+    <table class="table table-striped table-bordered">
+        <thead class="thead-dark">
             <tr>
                 <th scope="col">姓名</th>
                 <th scope="col">身份证</th>
@@ -80,7 +82,6 @@
                         </tr>
                     </thead>
                     <tbody id="info">
-
                     </tbody>
                 </table>
             </div>

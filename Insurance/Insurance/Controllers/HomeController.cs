@@ -828,6 +828,7 @@ namespace VirtualCredit.Controllers
         {
             try
             {
+                ViewBag.Plan = plan;
                 RecipeSummaryModel model = new RecipeSummaryModel();
                 var currUser = GetCurrentUser();
                 model.CompanyList = GetChildrenCompanies(currUser, plan).ToList();
@@ -845,6 +846,11 @@ namespace VirtualCredit.Controllers
         [AdminFilters]
         public IActionResult BanlanceAccount([FromQuery]string companyName)
         {
+            string plan = HttpContext.Session.Get<string>("plan");
+            ViewBag.Plan = plan;
+            ViewBag.Company = companyName;
+
+            if (string.IsNullOrEmpty(plan)) return View("Error");
             DateTime now = DateTime.Now;
             int year = 0;
             if (now.Month >= 6)
@@ -887,6 +893,7 @@ namespace VirtualCredit.Controllers
                 }
             }
             detailModel.Company = companyName;
+            ViewBag.Page = "未结算汇总";
             return View("RecipeSummaryDetail", detailModel);
         }
 
@@ -894,6 +901,9 @@ namespace VirtualCredit.Controllers
         public IActionResult RecipeSummary([FromQuery]string date, [FromQuery]string name)
         {
             string plan = HttpContext.Session.Get<string>("plan");
+            ViewBag.Plan = plan;
+            ViewBag.Company = name;
+            
             if (string.IsNullOrEmpty(plan)) return View("Error");
             //获取该公司历史表单详细
             DetailModel dm = new DetailModel();
@@ -914,14 +924,21 @@ namespace VirtualCredit.Controllers
                 return View("Error");
             }
             string month = dt1.ToString("yyyy-MM");
+            ViewBag.Date = month;
             string companyName = name;
             string targetDirectory = GetSearchExcelsInDir(companyName);
             List<string> excels = new List<string>();
-
+            string[] monthDirs;
             SearchOption so = SearchOption.AllDirectories;
-            if (isSelf) so = SearchOption.TopDirectoryOnly;
-
-            string[] monthDirs = Directory.GetDirectories(targetDirectory, month, so);
+            if (isSelf)
+            {
+                so = SearchOption.TopDirectoryOnly;
+                monthDirs = Directory.GetDirectories(Path.Combine(targetDirectory, plan), month, so);
+            }
+            else
+            {
+                monthDirs = Directory.GetDirectories(targetDirectory, month, so);
+            }
 
             foreach (var monthDir in monthDirs)
             {
@@ -1187,6 +1204,8 @@ namespace VirtualCredit.Controllers
         {
             string plan = HttpContext.Session.Get<string>("plan");
             if (string.IsNullOrEmpty(plan)) return View("Error");
+            ViewBag.Plan = plan;
+            ViewBag.Company = name;
             ReaderWriterLockSlim r_locker = null;
             bool isSelf = false;
             var currUser = GetCurrentUser();
@@ -1210,11 +1229,16 @@ namespace VirtualCredit.Controllers
                 {
                     string monthDir = date.ToString("yyyy-MM");
                     SearchOption so = SearchOption.AllDirectories;
+                    string[] dirs;
                     if (isSelf)
                     {
                         so = SearchOption.TopDirectoryOnly;
+                        dirs = Directory.GetDirectories(Path.Combine(targetCompDir, plan), monthDir, so);
                     }
-                    var dirs = Directory.GetDirectories(targetCompDir, monthDir, so);
+                    else
+                    {
+                        dirs = Directory.GetDirectories(targetCompDir, monthDir, so);
+                    }
 
                     if (dirs.Length == 0) continue;
                     NewExcel excel = new NewExcel();
