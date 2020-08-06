@@ -1,9 +1,11 @@
-﻿using Insurance.Models;
+﻿using Insurance;
+using Insurance.Models;
 using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing.Constraints;
+using Microsoft.EntityFrameworkCore.Storage;
 using NPOI.OpenXmlFormats.Wordprocessing;
 using NPOI.XWPF.UserModel;
 using System;
@@ -903,7 +905,7 @@ namespace VirtualCredit.Controllers
             string plan = HttpContext.Session.Get<string>("plan");
             ViewBag.Plan = plan;
             ViewBag.Company = name;
-            
+
             if (string.IsNullOrEmpty(plan)) return View("Error");
             //获取该公司历史表单详细
             DetailModel dm = new DetailModel();
@@ -1037,6 +1039,148 @@ namespace VirtualCredit.Controllers
             return File(new FileStream(summary_file, FileMode.Open, FileAccess.Read), "text/plain", $"{company}_{exportStart.ToString("yyyy-MM")}_入离职汇总表格.xls");
         }
 
+        [HttpGet]
+        public IActionResult SummaryByYear()
+        {
+            HistoricalModel model = new HistoricalModel();
+            DataTable dt = new DataTable();
+            DataColumn year_col = new DataColumn("Year");
+            DataColumn hc_col = new DataColumn();
+            DataColumn totalearned_col = new DataColumn();
+            DataColumn totalpaid_col = new DataColumn();
+
+            dt.Columns.Add(year_col);
+            dt.Columns.Add(hc_col);
+            dt.Columns.Add(totalearned_col);
+            dt.Columns.Add(totalpaid_col);
+            for (int year = 2019; year <= From.Year; year++)
+            {
+                DataRow newrow = dt.NewRow();
+                newrow[0] = year;
+                var data = SummaryByYear(year);
+                newrow[1] = (int)data["headCount"];
+                newrow[2] = (double)data["totalIn"];
+                newrow[3] = (double)data["totalOut"];
+                dt.Rows.Add(newrow);
+            }
+            model.SummaryByYearTable = dt;
+            return View("HistoricalList", model);
+
+        }
+
+        /// <summary>
+        /// 统计每年所有参保公司的人数，保费，赔款
+        /// </summary>
+        /// <param name="year"></param>
+        /// <returns></returns>
+        private Dictionary<string, ValueType> SummaryByYear(int year)
+        {
+            int headCount = 0;
+            double totalIn = 0;
+            double totalOut = 0;
+            Dictionary<string, ValueType> result = new Dictionary<string, ValueType>();
+            UserInfoModel currUser = GetCurrentUser();
+
+            string backUpDir = string.Empty;
+            if (year == From.Year)
+            {
+                backUpDir = Path.Combine(ExcelRoot);
+            }
+            else
+            {
+                backUpDir = Path.Combine(ExcelRoot, "历年归档", year.ToString());
+            }
+            if (!Directory.Exists(backUpDir))
+            {
+                result.Add("headCount", headCount);
+                result.Add("totalIn", totalIn);
+                result.Add("totalOut", totalOut);
+                return result;
+            }
+            string dataDir = Directory.GetDirectories(backUpDir, currUser.CompanyName, SearchOption.AllDirectories).FirstOrDefault(); //当前账号所属公司的文件夹
+            //if (currUser.AllowCreateAccount != "1") return new DataTable(); //如果当前公司没有子账号，则无法查看合计信息
+            var subCompanyList = Directory.GetDirectories(dataDir, "*", SearchOption.AllDirectories).Where(d =>
+                {
+                    DirectoryInfo di = new DirectoryInfo(d);
+                    return !Plans.Contains(di.Name) && !DateTime.TryParse(di.Name, out DateTime dt);
+                }
+            );
+
+            foreach (string comp in subCompanyList)
+            {
+                DirectoryInfo di = new DirectoryInfo(comp);
+                var data = SummaryByCompany(di.FullName);
+                headCount += (int)data["headCount"];
+                totalIn += (double)data["totalIn"];
+                totalOut += (double)data["totalOut"];
+            }
+            result.Add("headCount", headCount);
+            result.Add("totalIn", totalIn);
+            result.Add("totalOut", totalOut);
+            return result;
+        }
+
+        /// <summary>
+        /// 在给定的公司文件夹中统计该公司信息，不统计其子公司信息
+        /// </summary>
+        /// <param name="dataDir"></param>
+        /// <returns></returns>
+        private Dictionary<string, ValueType> SummaryByCompany(string companyDataDir)
+        {
+            string companyName = new DirectoryInfo(companyDataDir).Name;
+            int headCount = 0;
+            double totalIn = 0;
+            double totalOut = 0;
+            foreach (var plan in Plans)
+            {
+                string summaryFile = Path.Combine(companyDataDir, plan, companyName + ".xls");
+                if (!new FileInfo(summaryFile).Exists) continue;
+                ExcelTool et = new ExcelTool(summaryFile, "Sheet1");
+                headCount += et.m_main.GetLastRow();
+                totalIn = et.GetTotalCost(companyDataDir);
+                string txtFile = Directory.GetFiles(Path.Combine(companyDataDir, plan), "*", SearchOption.TopDirectoryOnly)
+                    .Where(file => file.Contains(".txt", StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
+                if (txtFile == null) throw new Exception("txt file not found");
+                FileInfo fi = new FileInfo(txtFile);
+                totalOut += Convert.ToDouble(fi.Name.Split("_")[1].Replace(".txt", string.Empty));
+            }
+            Dictionary<string, ValueType> dic = new Dictionary<string, ValueType>();
+            dic.Add("headCount", headCount);
+            dic.Add("totalIn", totalIn);
+            dic.Add("totalOut", totalOut);
+            return dic;
+        }
+
+        /// <summary>
+        /// 获取公司所有汇总保单，recursive控制是否包括子公司
+        /// </summary>
+        /// <param name="companyDataDir"></param>
+        /// <returns></returns>
+        private List<string> GetSummaryFiles(string companyDataDir, bool recursive = false)
+        {
+            List<string> summaryList = new List<string>();
+            DirectoryInfo di = new DirectoryInfo(companyDataDir);
+            foreach (var plan in Plans)
+            {
+                string planDir = Path.Combine(companyDataDir, plan);
+                var summaries = Path.Combine(planDir, di.Name + ".xls");
+                summaryList.Add(summaries);
+            }
+            if (recursive)
+            {
+                var subCompanyList = Directory.GetDirectories(companyDataDir).Where(d =>
+                {
+                    DirectoryInfo info = new DirectoryInfo(d);
+                    return !Plans.Contains(info.Name) && !DateTime.TryParse(info.Name, out DateTime dt);
+                });
+                foreach (var subComp in subCompanyList)
+                {
+                    summaryList.AddRange(GetSummaryFiles(companyDataDir, true));
+                }
+            }
+            return summaryList;
+        }
+
         private static readonly object doclocker = new object();
 
         [UserLoginFilters]
@@ -1046,17 +1190,15 @@ namespace VirtualCredit.Controllers
             string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
             string template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", "Insurance_recipet.docx");
             string companyDir = GetSearchExcelsInDir(company);
-            List<string> childCompanies = GetChildrenCompanies(company).Where(_ => !Plans.Contains(_)).ToList();
-            childCompanies.Add(company);
+            //List<string> childCompanies = GetChildrenCompanies(company).Where(_ => !Plans.Contains(_)).ToList();
+            //childCompanies.Add(company);
             List<string> summaries = new List<string>();
-            foreach (var comp in childCompanies)
+            foreach (var plan in Plans)
             {
-                string compDir = string.Empty;
-                if (comp == company)
-                    compDir = companyDir;
-                else
-                    compDir = Directory.GetDirectories(companyDir, comp, SearchOption.AllDirectories).FirstOrDefault();
-                summaries.Add(Path.Combine(compDir, comp + ".xls"));
+                string planDir = Path.Combine(companyDir, plan);
+                if (!Directory.Exists(planDir)) continue;
+                //compDir = Directory.GetDirectories(companyDir, comp, SearchOption.AllDirectories).FirstOrDefault();
+                summaries.Add(Path.Combine(planDir, company + ".xls"));
             }
             string newdoc = Path.Combine(_hostingEnvironment.WebRootPath, "Word", company + DateTime.Now.ToString("yyyy-MM-dd-HH-hh-ss-mm") + ".docx");
 
@@ -1098,8 +1240,8 @@ namespace VirtualCredit.Controllers
             }
 
             //读取表格
-            UserInfoModel user = GetCurrentUser();
-            user.MyLocker.RWLocker.EnterReadLock();
+
+            currUser.MyLocker.RWLocker.EnterReadLock();
             int index = 1;
             DataTable dt = new DataTable();
             foreach (var summary in summaries)

@@ -7,52 +7,82 @@
 <div>
     @{
         UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
-        if (currentUser.AllowCreateAccount == "1")
+        if (Model.SummaryByYearTable != null)
         {
-            <a class="btn btn-warning" style="margin:10px" asp-action="ExportAllEmployees" asp-controller="Home">导出所有在保人员名单</a>
             <table class="table table-striped table-bordered">
                 <thead class="thead-dark">
-                    <tr>
-                        <th>操作</th>
-                        <th scope="col">公司名称</th>
+                    <tr style="text-align:center">
+                        <th scope="col">年份</th>
                         <th scope="col">人数</th>
-                        <th scope="col">累积保费</th>
-                        <th scope="col">开始时间</th>
-                        <th scope="col">赔款金额</th>
+                        <th scope="col">总保费</th>
+                        <th scope="col">总赔款</th>
                         <th scope="col">操作</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td></td>
-                        <td style="color:blue"><strong>合计</strong></td>
-                        <td style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.EmployeeNumber)</strong></td>
-                        <td style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.TotalCost)</strong></td>
-                        <td style="color:blue"><strong>@Model.CompanyList.FirstOrDefault().StartDate.ToString("yyyy/M/d")</strong></td>
-                        <td style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.PaidCost)</strong></td>
-                        <td>详细</td>
-                    </tr>
-                    @if (Model.CompanyList != null && Model.CompanyList.Count > 0)
+                    @foreach (System.Data.DataRow row in Model.SummaryByYearTable.Rows)
                     {
-                        @foreach (Company item in Model.CompanyList)
-                        {
-                            <tr>
-                                <td>
-                                    <button type="button" class="btn btn-danger" data-toggle="modal" data-company="@item.Name" data-target="#confirmDeleteCompany">
-                                        删除
-                                    </button>
-                                </td>
-                                <td class="td_middle">@item.Name</td>
-                                <td class="td_middle">@item.EmployeeNumber</td>
-                                <td class="td_middle">@item.TotalCost</td>
-                                <td class="td_middle">@item.StartDate.ToShortDateString()</td>
-                                <td class="td_middle"><input type="text" value="@item.PaidCost" onchange="SaveCost('@item.Name',this)" /></td>
-                                <td class="td_middle"><a href="/Home/CompanyHisitoryByMonth?name=@item.Name" class="btn btn-primary">详细</a></td>
-                            </tr>
-                        }
+                        <tr style="text-align:center">
+                            <td class="td_middle">@row[0]</td>
+                            <td class="td_middle">@row[1]</td>
+                            <td class="td_middle">@row[2]</td>
+                            <td class="td_middle">@row[3]</td>
+                            <td class="td_middle"><a href="" class="btn btn-primary">详细</a></td>
+                        </tr>
                     }
+
                 </tbody>
             </table>
+        }
+        else
+        {
+            if (currentUser.AllowCreateAccount == "1")
+            {
+                <a class="btn btn-warning" style="margin:5px 0px" asp-action="ExportAllEmployees" asp-controller="Home">导出所有在保人员名单</a>
+                <table class="table table-striped table-bordered">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>操作</th>
+                            <th scope="col">公司名称</th>
+                            <th scope="col">人数</th>
+                            <th scope="col">累积保费</th>
+                            <th scope="col">开始时间</th>
+                            <th scope="col">赔款金额</th>
+                            <th scope="col">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="text-align:center">
+                            <td></td>
+                            <td class="td_middle" style="color:blue"><strong>合计</strong></td>
+                            <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.EmployeeNumber)</strong></td>
+                            <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.TotalCost)</strong></td>
+                            <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.FirstOrDefault().StartDate.ToString("yyyy/M/d")</strong></td>
+                            <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.PaidCost)</strong></td>
+                            <td><a class="btn btn-primary" href="/Home/SummaryByYear">详细</a></td>
+                        </tr>
+                        @if (Model.CompanyList != null && Model.CompanyList.Count > 0)
+                        {
+                            @foreach (Company item in Model.CompanyList)
+                            {
+                                <tr style="text-align:center">
+                                    <td>
+                                        <button type="button" class="btn btn-danger" data-toggle="modal" data-company="@item.Name" data-target="#confirmDeleteCompany">
+                                            删除
+                                        </button>
+                                    </td>
+                                    <td class="td_middle">@item.Name</td>
+                                    <td class="td_middle">@item.EmployeeNumber</td>
+                                    <td class="td_middle">@item.TotalCost</td>
+                                    <td class="td_middle">@item.StartDate.ToShortDateString()</td>
+                                    <td class="td_middle"><input type="text" value="@item.PaidCost" onchange="SaveCost('@item.Name',this)" /></td>
+                                    <td class="td_middle"><a href="/Home/CompanyHisitoryByMonth?name=@item.Name" class="btn btn-primary">详细</a></td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            }
         }
     }
 

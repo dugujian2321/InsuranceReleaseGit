@@ -303,7 +303,7 @@ namespace Insurance.Services
         }
 
         /// <summary>
-        /// 计算公司所有月份所有上传保单的费用
+        /// 计算公司所有月份所有上传保单的费用,《不》包括子公司的数据
         /// </summary>
         /// <param name="companyDir"></param>
         /// <returns></returns>
@@ -312,16 +312,21 @@ namespace Insurance.Services
             double cost = 0;
             if (Directory.Exists(companyDir))
             {
-                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                foreach (var plan in VC_ControllerBase.Plans)
                 {
-                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    string planDir = Path.Combine(companyDir, plan);
+                    if (!Directory.Exists(planDir)) continue;
+                    foreach (string monthDir in Directory.GetDirectories(planDir))
                     {
-                        continue;
-                    }
-                    foreach (string file in Directory.GetFiles(monthDir))
-                    {
-                        string[] excelinfo = file.Split('@');
-                        cost += Convert.ToDouble(excelinfo[1]);
+                        if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                        {
+                            continue;
+                        }
+                        foreach (string file in Directory.GetFiles(monthDir))
+                        {
+                            string[] excelinfo = file.Split('@');
+                            cost += Convert.ToDouble(excelinfo[1]);
+                        }
                     }
                 }
             }

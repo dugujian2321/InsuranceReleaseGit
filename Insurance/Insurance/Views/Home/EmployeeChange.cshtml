@@ -30,6 +30,11 @@
             <select class="custom-select" id="companyGroup" onchange="UpdateAllowedStartDate()">
                 @foreach (var company in Model.CompanyNameList)
                 {
+                    if (company == "管理员")
+                    {
+                        continue;
+                    }
+
                     <option selected>@company</option>
                 }
             </select>
