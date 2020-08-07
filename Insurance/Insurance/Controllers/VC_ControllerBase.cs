@@ -141,7 +141,6 @@ namespace VirtualCredit
         public string GetCurrentUserRootDir()
         {
             var currUser = GetCurrentUser();
-
             string result = Directory.GetDirectories(ExcelRoot, currUser.CompanyName, SearchOption.AllDirectories).FirstOrDefault();
             return result;
 

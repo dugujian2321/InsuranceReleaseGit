@@ -54,11 +54,13 @@ namespace VirtualCredit.Controllers
 
         }
         [UserLoginFilters]
-        public IActionResult HistoricalList(HistoricalModel model)
+        public IActionResult HistoricalList()
         {
             try
             {
+                HistoricalModel model = new HistoricalModel();
                 model.CompanyList = GetChildAccountsCompany();
+                ViewBag.PageInfo = "保单列表";
                 return View("HistoricalList", model);
             }
             catch (Exception e)
@@ -69,7 +71,50 @@ namespace VirtualCredit.Controllers
 
         }
 
+        [UserLoginFilters]
+        public IActionResult YearHistory([FromQuery]int year)
+        {
+            if (year == From.Year)
+            {
+                return HistoricalList();
+            }
 
+            string dataDir = Path.Combine(ExcelRoot, "历年归档", year.ToString(), "管理员");
+            if (!Directory.Exists(dataDir)) return View("Error");
+            string[] companyList = Directory.GetDirectories(dataDir, "*", SearchOption.AllDirectories).Where(d =>
+              {
+                  DirectoryInfo di = new DirectoryInfo(d);
+                  return !Plans.Contains(di.Name) && !DateTime.TryParse(di.Name, out DateTime dt);
+              }).ToArray();
+            HistoricalModel model = new HistoricalModel();
+            List<Company> compList = new List<Company>();
+            foreach (string company in companyList)
+            {
+                DirectoryInfo di = new DirectoryInfo(company);
+                var dic = SummaryByCompany(company);
+                Company comp = new Company();
+                comp.Name = di.Name;
+                comp.PaidCost = (double)dic["totalOut"];
+                comp.TotalCost = (double)dic["totalIn"];
+                comp.EmployeeNumber = (int)dic["headCount"];
+                comp.StartDate = new DateTime(year, 6, 1);
+                compList.Add(comp);
+            }
+            model.CompanyList = compList;
+            ViewBag.PageInfo = $"{year}年数据";
+            ViewBag.IsHistory = true;
+            return View("HistoricalList", model);
+        }
+
+        /// <summary>
+        /// 获取历史归档文件夹中的公司数据
+        /// </summary>
+        /// <returns></returns>
+        [UserLoginFilters]
+        public IActionResult HistoryInfo(string companyName, int year)
+        {
+            return View("Detail");
+        }
 
         [UserLoginFilters]
         public IActionResult CompanyHisitoryByMonth([FromQuery]string name)
@@ -1064,6 +1109,7 @@ namespace VirtualCredit.Controllers
                 dt.Rows.Add(newrow);
             }
             model.SummaryByYearTable = dt;
+            ViewBag.PageInfo = "历年保单数据";
             return View("HistoricalList", model);
 
         }
