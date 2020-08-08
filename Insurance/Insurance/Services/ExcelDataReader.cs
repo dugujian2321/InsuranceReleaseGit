@@ -35,19 +35,36 @@ namespace Insurance.Services
             Initialize();
         }
 
+        public ExcelDataReader(DirectoryInfo companyDir, int year, string plan)
+        {
+            CompanyName = companyDir.Name;
+            //Account = account;
+            Year = year;
+            Plan = plan;
+            start = new DateTime(Year, 6, 1);
+            end = new DateTime(Year + 1, 5, 31, 23, 59, 59);
+            CompanyDir = companyDir.FullName;
+            ExcelRootFolder = Path.Combine(Utility.Instance.WebRootFolder, "Excel", "历年归档", year.ToString());
+            Initialize();
+        }
+
         private void Initialize()
         {
-            foreach (var dir in Directory.GetDirectories(ExcelRootFolder, "*", SearchOption.AllDirectories))
+            if (string.IsNullOrEmpty(CompanyDir))
             {
-                if (!DateTime.TryParse(dir, out DateTime dateTime))
+                foreach (var dir in Directory.GetDirectories(ExcelRootFolder, "*", SearchOption.AllDirectories))
                 {
-                    if (new DirectoryInfo(dir).Name == CompanyName)
+                    if (!DateTime.TryParse(dir, out DateTime dateTime))
                     {
-                        CompanyDir = dir;
-                        break;
+                        if (new DirectoryInfo(dir).Name == CompanyName)
+                        {
+                            CompanyDir = dir;
+                            break;
+                        }
                     }
-                }
-            } //获取公司文件夹路径
+                } //获取公司文件夹路径
+            }
+
             string searchPattern = "*";
             if (!string.IsNullOrEmpty(Plan))
             {

@@ -67,7 +67,7 @@
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">New message</h5>
+                <h5 class="modal-title" id="exampleModalLabel"></h5>
             </div>
             <div class="modal-body">
                 <table class="table table-active">
@@ -86,16 +86,63 @@
                 </table>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button class="btn btn-primary" data-toggle="modal" data-target="#caseDetail" type="button">报案</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
             </div>
         </div>
     </div>
 </div>
-
+<div class="modal fade bd-example-modal-xl" id="caseDetail" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">在线报案</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="basic-addon1">出险日期</span>
+                        </div>
+                        <input id="casedate" type="date" class="form-control">
+                    </div>
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="basic-addon1">出险人</span>
+                        </div>
+                        <input id="caseperson" type="text" class="form-control">
+                    </div>
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="basic-addon1">案件说明</span>
+                        </div>
+                        <textarea id="casedetail" class="form-control" style="height:200px"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="SubmitCase()">确认报案</button>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
     $("a.active").removeClass('active');
     $("#page_4").addClass('active');
     $('#personalInfo').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget) // Button that triggered the modal
+        var recipient = button.data('whatever') // Extract info from data-* attributes
+        // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+        // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+        var modal = $(this)
+        modal.find('.modal-title').text(recipient + ' 明细')
+        //modal.find('.modal-body input').val(recipient)
+    });
+    $('#caseDetail').on('show.bs.modal', function (event) {
         var button = $(event.relatedTarget) // Button that triggered the modal
         var recipient = button.data('whatever') // Extract info from data-* attributes
         // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).

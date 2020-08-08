@@ -143,9 +143,14 @@ namespace VirtualCredit
             var currUser = GetCurrentUser();
             string result = Directory.GetDirectories(ExcelRoot, currUser.CompanyName, SearchOption.AllDirectories).FirstOrDefault();
             return result;
-
         }
-
+        public string GetCurrentUserHistoryRootDir(int year)
+        {
+            var currUser = GetCurrentUser();
+            string root = Path.Combine(ExcelRoot, "历年归档", year.ToString());
+            string result = Directory.GetDirectories(root, currUser.CompanyName, SearchOption.AllDirectories).FirstOrDefault();
+            return result;
+        }
 
         public List<string> GetSpringCompaniesName(bool includingself)
         {

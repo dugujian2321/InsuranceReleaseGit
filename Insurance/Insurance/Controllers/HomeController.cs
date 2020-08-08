@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing.Constraints;
 using Microsoft.EntityFrameworkCore.Storage;
+using NPOI.HSSF.Extractor;
 using NPOI.OpenXmlFormats.Wordprocessing;
 using NPOI.XWPF.UserModel;
 using System;
@@ -71,6 +72,12 @@ namespace VirtualCredit.Controllers
 
         }
 
+
+        /// <summary>
+        /// 获取某年的公司数据
+        /// </summary>
+        /// <param name="year"></param>
+        /// <returns></returns>
         [UserLoginFilters]
         public IActionResult YearHistory([FromQuery]int year)
         {
@@ -81,7 +88,7 @@ namespace VirtualCredit.Controllers
 
             string dataDir = Path.Combine(ExcelRoot, "历年归档", year.ToString(), "管理员");
             if (!Directory.Exists(dataDir)) return View("Error");
-            string[] companyList = Directory.GetDirectories(dataDir, "*", SearchOption.AllDirectories).Where(d =>
+            string[] companyList = Directory.GetDirectories(dataDir, "*", SearchOption.TopDirectoryOnly).Where(d =>
               {
                   DirectoryInfo di = new DirectoryInfo(d);
                   return !Plans.Contains(di.Name) && !DateTime.TryParse(di.Name, out DateTime dt);
@@ -91,13 +98,16 @@ namespace VirtualCredit.Controllers
             foreach (string company in companyList)
             {
                 DirectoryInfo di = new DirectoryInfo(company);
-                var dic = SummaryByCompany(company);
                 Company comp = new Company();
                 comp.Name = di.Name;
-                comp.PaidCost = (double)dic["totalOut"];
-                comp.TotalCost = (double)dic["totalIn"];
-                comp.EmployeeNumber = (int)dic["headCount"];
                 comp.StartDate = new DateTime(year, 6, 1);
+                foreach (string plan in Plans)
+                {
+                    ExcelDataReader edr = new ExcelDataReader(di, year, plan);
+                    comp.PaidCost += edr.GetPaidCost();
+                    comp.TotalCost += edr.GetTotalCost();
+                    comp.EmployeeNumber += edr.GetEmployeeNumber();
+                }
                 compList.Add(comp);
             }
             model.CompanyList = compList;
@@ -111,9 +121,97 @@ namespace VirtualCredit.Controllers
         /// </summary>
         /// <returns></returns>
         [UserLoginFilters]
-        public IActionResult HistoryInfo(string companyName, int year)
+        public IActionResult YearlyHistoryData([FromQuery]string companyName, [FromQuery]int year)
         {
-            return View("Detail");
+            ReaderWriterLockSlim r_locker = null;
+            bool isSelf = false;
+
+            try
+            {
+                r_locker = GetCurrentUser().MyLocker.RWLocker;
+                r_locker.EnterReadLock();
+                //获取该公司历史表单详细
+                List<NewExcel> allMonthlyExcels = new List<NewExcel>();
+                var currUser = GetCurrentUser();
+                if (currUser.CompanyName == companyName)
+                {
+                    isSelf = true;
+                }
+                if (!HasAuthority(companyName))
+                {
+                    return Json("权限不足");
+                }
+                string targetCompanyDir;
+                string yearDir = Path.Combine(ExcelRoot, "历年归档", year.ToString());
+                string currUserDir = GetCurrentUserHistoryRootDir(year);
+
+                if (isSelf)
+                {
+                    targetCompanyDir = Path.Combine(currUserDir, currUser._Plan);
+                }
+                else
+                {
+                    targetCompanyDir = Directory.GetDirectories(currUserDir, companyName, SearchOption.AllDirectories).FirstOrDefault();
+                }
+                DateTime dtFrom = new DateTime(year, 6, 1);
+                DateTime dtTo = new DateTime(year + 1, 5, 31);
+                for (DateTime date = dtFrom; date <= dtTo; date = date.AddMonths(1))
+                {
+                    string dirName = date.ToString("yyyy-MM");
+                    SearchOption so = SearchOption.AllDirectories;
+                    if (isSelf)
+                    {
+                        so = SearchOption.TopDirectoryOnly;
+                    }
+                    var monthDirs = Directory.GetDirectories(targetCompanyDir, dirName, so);
+                    if (monthDirs.Length == 0 || !Directory.Exists(monthDirs[0])) continue;
+                    NewExcel excel = null;
+                    int headcount = 0;
+                    double cost = 0;
+                    excel = new NewExcel();
+                    excel.Company = companyName;
+                    DateTime dt = date;
+                    excel.StartDate = new DateTime(dt.Year, dt.Month, 1).ToShortDateString();
+                    excel.EndDate = new DateTime(dt.Year, dt.Month, DateTime.DaysInMonth(dt.Year, dt.Month)).ToShortDateString();
+                    foreach (var monthDir in monthDirs)
+                    {
+                        foreach (string fileName in Directory.GetFiles(monthDir))
+                        {
+                            FileInfo fi = new FileInfo(fileName);
+                            ExcelTool et = new ExcelTool(fileName, "Sheet1");
+                            string[] fileinfo = fi.Name.Split('@');
+                            headcount += et.GetEmployeeNumber();
+                            cost += Convert.ToDouble(fileinfo[1]);
+                        }
+                    }
+                    if (excel != null)
+                    {
+                        excel.HeadCount = headcount;
+                        excel.Cost = cost;
+                        allMonthlyExcels.Add(excel);
+                    }
+                }
+
+
+                DetailModel dm = new DetailModel();
+                dm.Company = companyName;
+                dm.MonthlyExcel = allMonthlyExcels;
+                return View("Detail", dm);
+            }
+            catch
+            {
+                DetailModel dm = new DetailModel();
+                dm.Company = companyName;
+                dm.MonthlyExcel = new List<NewExcel>();
+                return View("Detail", dm);
+            }
+            finally
+            {
+                if (r_locker != null && r_locker.IsReadLockHeld)
+                {
+                    r_locker.ExitReadLock();
+                }
+            }
         }
 
         [UserLoginFilters]
@@ -321,7 +419,16 @@ namespace VirtualCredit.Controllers
                 string month = dt1.ToString("yyyy-MM");
                 string companyName = name;
                 List<string> excels = new List<string>();
-                string companyDir = GetSearchExcelsInDir(companyName);
+                var dataInfo = date.Split('/');
+                DateTime target = new DateTime(Convert.ToInt32(dataInfo[0]), Convert.ToInt32(dataInfo[1]), Convert.ToInt32(dataInfo[2]));
+                string companyDir = string.Empty;
+                if (target.Year < From.Year)
+                {
+                    string historyDir = Path.Combine(ExcelRoot, "历年归档", target.Year.ToString());
+                    companyDir = Directory.GetDirectories(historyDir, "*", SearchOption.AllDirectories).Where(_ => new DirectoryInfo(_).Name == name).FirstOrDefault();
+                }
+                else
+                    companyDir = GetSearchExcelsInDir(companyName);
                 SearchOption so = SearchOption.AllDirectories;
                 if (isSelf) so = SearchOption.TopDirectoryOnly;
                 List<string> monthDirs = new List<string>();
@@ -1144,6 +1251,7 @@ namespace VirtualCredit.Controllers
                 return result;
             }
             string dataDir = Directory.GetDirectories(backUpDir, currUser.CompanyName, SearchOption.AllDirectories).FirstOrDefault(); //当前账号所属公司的文件夹
+            if (string.IsNullOrEmpty(dataDir)) return result;
             //if (currUser.AllowCreateAccount != "1") return new DataTable(); //如果当前公司没有子账号，则无法查看合计信息
             var subCompanyList = Directory.GetDirectories(dataDir, "*", SearchOption.AllDirectories).Where(d =>
                 {
@@ -1630,7 +1738,7 @@ namespace VirtualCredit.Controllers
                 FileInfo fi = new FileInfo(fileName);
                 string downloadName = company + "_" + fi.Name.Split("@")[0] + ".xls";
                 string companyDir = string.Empty;
-                companyDir = GetCurrentUserRootDir();
+                companyDir = ExcelRoot;
                 string filePath = Directory.GetFiles(companyDir, fileName, SearchOption.AllDirectories)[0];//路径
 
 
@@ -1728,7 +1836,20 @@ namespace VirtualCredit.Controllers
                 }
 
                 string[] fileinfo = fileName.Split("@");
-                string companyDir = GetSearchExcelsInDir(company);
+                string companyDir = string.Empty;
+                var dateStr = startDate.Split('/');
+                DateTime dt = new DateTime(Convert.ToInt32(dateStr[0]), Convert.ToInt32(dateStr[1]), Convert.ToInt32(dateStr[2]));
+                if (dt.Year < From.Year)
+                {
+                    string historyDir = Path.Combine(ExcelRoot, "历年归档");
+                    companyDir = Directory.GetDirectories(historyDir, company, SearchOption.AllDirectories).FirstOrDefault();
+                    //companyDir = Directory.GetDirectories(dir, dt.ToString("yyyy-MM"), SearchOption.AllDirectories).FirstOrDefault();
+                }
+                else
+                {
+                    companyDir = GetSearchExcelsInDir(company);
+                }
+                
                 DateTime start = Convert.ToDateTime(startDate);
                 string targetFilePath = Path.Combine(companyDir, plan, start.ToString("yyyy-MM"), fileName);
                 ExcelTool targetExcel = new ExcelTool(targetFilePath, "Sheet1");
@@ -1736,9 +1857,9 @@ namespace VirtualCredit.Controllers
                 DataTable targetExcelTable = targetExcel.ExcelToDataTable("Sheet1", true);
                 DataTable summaryTable = summary.ExcelToDataTable("Sheet1", true);
                 DateTime summaryStartDate = new DateTime();
-                if (summaryTable.Rows.Count > 1)
+                if (summaryTable.Rows.Count >= 1)
                 {
-                    summaryStartDate = Convert.ToDateTime(summaryTable.Rows[1][6].ToString());
+                    summaryStartDate = Convert.ToDateTime(summaryTable.Rows[0][6].ToString());
                 }
                 else
                 {
@@ -1811,6 +1932,12 @@ namespace VirtualCredit.Controllers
             }
         }
 
+        [HttpPost]
+        public IActionResult SubmitCase([FromForm]DateTime casedate, [FromForm]string person, [FromForm]string detail)
+        {
+
+            return Json("");
+        }
 
         public IActionResult Privacy()
         {
