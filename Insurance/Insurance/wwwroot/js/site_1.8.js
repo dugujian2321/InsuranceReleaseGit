@@ -317,6 +317,62 @@ function DeleteReceipt(name, file, date, plan) {
     );
 }
 
+function CreateCaseTable(table) {
+    var searchtbl = document.getElementById('tbl_search');
+    searchtbl.style.visibility = 'collapse';
+    var casetbl = document.getElementById('tbl_case');
+    casetbl.style.visibility = 'visible';
+    casetbl.getElementsByTagName('tbody')[0].innerHTML = '';
+    var count = table.length;
+    for (i = 0; i < count; i++) {
+        var tr = document.createElement('tr');
+        var objlen = Object.values(table[i]).length;
+        for (j = 1; j < objlen - 1; j++) {
+            var td = document.createElement('td');
+            td.classList.add('td_middle');
+            td.innerText = Object.values(table[i])[j];
+            tr.appendChild(td);
+        }
+        var btn = document.createElement('button');
+        btn.innerText = '详细';
+        btn.classList.add('btn-primary');
+        btn.classList.add('btn');
+        btn.setAttribute('data-target', '#caseDetail');
+        btn.setAttribute('data-toggle', 'modal');
+        btn.setAttribute('data-casedate', Object.values(table[i])[4].split('T')[0]);
+        btn.setAttribute('data-person', Object.values(table[i])[3]);
+        btn.setAttribute('data-detail', Object.values(table[i])[7]);
+        btn.setAttribute('data-enable', 'false');
+        var td = document.createElement('td');
+        td.appendChild(btn);
+        tr.appendChild(td);
+        casetbl.getElementsByTagName('tbody')[0].appendChild(tr);
+    }
+}
+
+function ViewCase() {
+    $.ajax(
+        {
+            type: "get",
+            url: '/Home/ViewCase',
+            async: true,
+            dataType: 'JSON',
+            success: function (data) {
+                if (data) {
+                    CreateCaseTable(data);
+                } else {
+                    alert(data);
+                }
+            },
+            fail: function (data) {
+                alert("报案失败");
+            },
+            error: function (data) {
+                alert("错误");
+            }
+        });
+}
+
 function SubmitCase() {
     var fd = new FormData();
     var date = document.getElementById('casedate');

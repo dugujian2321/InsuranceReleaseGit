@@ -1849,7 +1849,7 @@ namespace VirtualCredit.Controllers
                 {
                     companyDir = GetSearchExcelsInDir(company);
                 }
-                
+
                 DateTime start = Convert.ToDateTime(startDate);
                 string targetFilePath = Path.Combine(companyDir, plan, start.ToString("yyyy-MM"), fileName);
                 ExcelTool targetExcel = new ExcelTool(targetFilePath, "Sheet1");
@@ -1932,11 +1932,32 @@ namespace VirtualCredit.Controllers
             }
         }
 
+        public IActionResult ViewCase()
+        {
+            var result = DatabaseService.Select("CaseInfo");
+            if (result == null || result.Rows.Count == 0) return Json("未找到报案信息");
+            foreach (DataRow row in result.Rows)
+            {
+                row[4] = DateTime.Parse(row[4].ToString()).Date;
+            }
+            return Json(result);
+        }
+
         [HttpPost]
         public IActionResult SubmitCase([FromForm]DateTime casedate, [FromForm]string person, [FromForm]string detail)
         {
-
-            return Json("");
+            if (casedate.Year < 2000 || string.IsNullOrEmpty(person) || string.IsNullOrEmpty(detail)) return Json("信息不完整");
+            string caseDir = Path.Combine(ExcelRoot, "报案信息");
+            CaseModel caseModel = new CaseModel();
+            caseModel.Wounded = person;
+            caseModel.Date = new DateTime(casedate.Year, casedate.Month, casedate.Day);
+            caseModel.Detail = detail;
+            caseModel.CaseId = Guid.NewGuid().ToString();
+            caseModel.State = "未结案";
+            if (DatabaseService.InsertStory("CaseInfo", caseModel))
+                return Json(true);
+            else
+                return Json(false);
         }
 
         public IActionResult Privacy()
