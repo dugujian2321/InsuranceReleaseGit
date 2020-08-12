@@ -394,8 +394,9 @@ function SubmitAdd(obj) {
         fail: function (data) {
             alert(data);
         },
-        error: function (data) {
-            alert('错误');
+        error: function (xhr, textStatus, errorThrown) {
+            alert('出错了，请将下一个弹窗中的错误信息截图发给管理员');
+            alert(xhr.responseText);
         }
     });
 }

@@ -265,45 +265,64 @@ namespace Insurance.Controllers
         }
 
         [UserLoginFilters]
-        public JsonResult UpdateEmployees([FromForm]IFormFile newExcel, string mode)
+        public IActionResult UpdateEmployees([FromForm]IFormFile newExcel, string mode)
         {
-            //TODO: 添加验证格式代码
-            //将FormFile中的Sheet1转换成DataTable
-            string template = Path.Combine(Utility.Instance.TemplateFolder, "employee_download.xls");
-            string uploadedExcel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
-            FileStream ms = System.IO.File.Create(uploadedExcel);
-            HttpContext.Session.Set("readyToSubmit", "N");
-            newExcel.CopyTo(ms);
-            ExcelTool et = new ExcelTool(ms, "Sheet1");
-            var dt = et.ExcelToDataTable("Sheet1", true);
-            et.Dispose();
-            System.IO.File.Delete(uploadedExcel);
-
-            //将DataTable转成Excel
-            Initialize();
-            string temp_excel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
-            System.IO.File.Copy(template, temp_excel);
-            MemoryStream stream = new MemoryStream();
-            using (FileStream fs = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite))
-            {
-                ExcelTool test = new ExcelTool(fs, "Sheet1");
-                test.RawDatatableToExcel(dt);
-            }
-
-            FileStream inputStream = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite);
-            inputStream.CopyTo(stream);
-            HttpContext.Session.Set("newExcel", stream.ToArray());
-            HttpContext.Session.Set("validationResult", new List<Employee>());
             if (newExcel is null)
             {
-                return null;
+                return BadRequest();
             }
-            List<Employee> validationResult = ValidateExcel(inputStream, "Sheet1", mode);
-            HttpContext.Session.Set("validationResult", validationResult);
-            inputStream.Close();
-            inputStream.Dispose();
-            System.IO.File.Delete(temp_excel);
-            return Json(validationResult);
+            string temp_excel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
+            try
+            {
+                //TODO: 添加验证格式代码
+                //将FormFile中的Sheet1转换成DataTable
+                string template = Path.Combine(Utility.Instance.TemplateFolder, "employee_download.xls");
+                string uploadedExcel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
+                DataTable dt = new DataTable();
+                using (FileStream ms = System.IO.File.Create(uploadedExcel))
+                {
+                    HttpContext.Session.Set("readyToSubmit", "N");
+                    newExcel.CopyTo(ms);
+                    ExcelTool et = new ExcelTool(ms, "Sheet1");
+                    dt = et.ExcelToDataTable("Sheet1", true);
+                    et.Dispose();
+                }
+                System.IO.File.Delete(uploadedExcel);
+
+                //将DataTable转成Excel
+                Initialize();
+                System.IO.File.Copy(template, temp_excel);
+                MemoryStream stream = new MemoryStream();
+                using (FileStream fs = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite))
+                {
+                    ExcelTool test = new ExcelTool(fs, "Sheet1");
+                    test.RawDatatableToExcel(dt);
+                    test.Dispose();
+                }
+
+                using (FileStream inputStream = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite))
+                {
+                    inputStream.CopyTo(stream);
+                    HttpContext.Session.Set("newExcel", stream.ToArray());
+                    HttpContext.Session.Set("validationResult", new List<Employee>());
+                    List<Employee> validationResult = ValidateExcel(inputStream, "Sheet1", mode);
+                    HttpContext.Session.Set("validationResult", validationResult);
+                    inputStream.Close();
+                    inputStream.Dispose();
+                    return Json(validationResult);
+                }
+            }
+            catch (Exception e)
+            {
+                LogService.Log(e.Message);
+                LogService.Log(e.StackTrace);
+                return StatusCode(500);
+            }
+            finally
+            {
+                System.IO.File.Delete(temp_excel);
+            }
+
         }
 
         [UserLoginFilters]
