@@ -7,7 +7,7 @@
 @using System.Data
 <div class="alert alert-primary" style="font-size:20px;" role="alert">
     请输入姓名或身份证
-    <button class="btn btn-primary" onclick="ViewCase()">查看报案</button>
+    <a class="btn btn-primary" href="/Home/ViewCase">查看报案</a>
 </div>
 
 <div>
@@ -29,55 +29,122 @@
     }
 </div>
 <div>
-    <table class="table table-striped table-bordered" id="tbl_search">
-        <thead class="thead-dark">
-            <tr>
-                <th scope="col">姓名</th>
-                <th scope="col">身份证</th>
-                <th scope="col">工种</th>
-                <th scope="col">职业类别</th>
-                <th scope="col">操作</th>
-            </tr>
-        </thead>
-        <tbody>
-            @{
-                if (Model != null && Model.Result != null)
-                {
-                    foreach (DataRow row in Model.Result.Rows)
-                    {
-                        <tr>
-                            <td class="td_middle">@row["name"]</td>
-                            <td class="td_middle">@row["id"]</td>
-                            <td class="td_middle">@row["job"]</td>
-                            <td class="td_middle">@row["type"]</td>
-                            @{
-                                if (row["name"].ToString() != "未找到符合条件的人员")
-                                {
-                                    <td class="td_middle"><button class="btn btn-primary" data-enable="true" data-toggle="modal" data-whatever="@row["name"]" data-target="#personalInfo" type="button" onclick="personDetail('@row["History"]')">详细</button></td>
-                                }
+    @{
+        if (Model.CaseTable == null)
+        {
+            <table class="table table-striped table-bordered" id="tbl_search">
+                <thead class="thead-dark">
+                    <tr>
+                        <th scope="col">姓名</th>
+                        <th scope="col">身份证</th>
+                        <th scope="col">工种</th>
+                        <th scope="col">职业类别</th>
+                        <th scope="col">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        if (Model != null && Model.Result != null)
+                        {
+                            foreach (DataRow row in Model.Result.Rows)
+                            {
+                                <tr>
+                                    <td class="td_middle">@row["name"]</td>
+                                    <td class="td_middle">@row["id"]</td>
+                                    <td class="td_middle">@row["job"]</td>
+                                    <td class="td_middle">@row["type"]</td>
+                                    @{
+                                        if (row["name"].ToString() != "未找到符合条件的人员")
+                                        {
+                                            <td class="td_middle"><button class="btn btn-primary" data-enable="true" data-toggle="modal" data-whatever="@row["name"]" data-target="#personalInfo" type="button" onclick="personDetail('@row["History"]')">详细</button></td>
+                                        }
+                                    }
+                                </tr>
                             }
-                        </tr>
-                    }
-                }
+                        }
 
-            }
-        </tbody>
-    </table>
-    <table class="table table-striped table-bordered" id="tbl_case" style="visibility:collapse">
-        <thead class="thead-dark">
-            <tr>
-                <th scope="col">报案号</th>
-                <th scope="col">报案人</th>
-                <th scope="col">出险人</th>
-                <th scope="col">出现时间</th>
-                <th scope="col">状态</th>
-                <th scope="col">赔付金额</th>
-                <th scope="col">案件信息</th>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <table class="table table-striped table-bordered" id="tbl_case" style="visibility:visible">
+                <thead class="thead-dark">
+                    <tr>
+                        <th scope="col">报案号</th>
+                        <th scope="col">报案人</th>
+                        <th scope="col">出险人</th>
+                        <th scope="col">出现时间</th>
+                        <th scope="col">状态</th>
+                        <th scope="col">已赔金额</th>
+                        <th scope="col">案件信息</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
+                        DataTable cases = new DataTable();
+                        cases = Model.CaseTable;
+                        foreach (DataRow row in cases.Rows)
+                        {
+                            string id = cases.Rows.IndexOf(row).ToString();
+                            string caseid = "case_" + id;
+                            string priceid = "price_" + id;
+                            string statusid = "status_" + id;
+                            <tr>
+                                <td id="@caseid" class="td_middle">@row[1].ToString()</td>
+                                <td class="td_middle">@row[2].ToString()</td>
+                                <td class="td_middle">@row[3].ToString()</td>
+                                <td class="td_middle">@row[4].ToString()</td>
+                                @if (currentUser.AccessLevel == 0)
+                                {
+                                    if (row[5].ToString() != "已结案")
+                                    {
+                                        <td class="td_middle">
+                                            <select id="@statusid" onchange="CaseStatusChanged(@id)">
+                                                <option>已结案</option>
+                                                <option selected>未结案</option>
+                                            </select>
+                                        </td>
+                                        <td class="td_middle">
+                                            <input id="@priceid" type="text" value="@row[6].ToString()" disabled onblur="CaseCostChanged(@id)"/>
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td class="td_middle">
+                                            <select id="@statusid" disabled onchange="CaseStatusChanged(@id)">
+                                                <option selected>已结案</option>
+                                                <option>未结案</option>
+                                            </select>
+                                        </td>
+                                        <td class="td_middle">
+                                            <input id="@priceid" type="text" value="@row[6].ToString()" disabled onblur="CaseCostChanged(@id)"/>
+                                        </td>
+                                    }
+
+                                }
+                                else
+                                {
+                                    <td class="td_middle">@row[5].ToString()</td>
+                                    <td class="td_middle">
+                                        <input id="@priceid" type="text" value="@row[6].ToString()" disabled />
+                                    </td>
+                                }
+
+                                <td>
+                                    <button class="btn btn-primary" data-target="#caseDetail" data-toggle="modal" data-casedate="@Convert.ToDateTime(row[4].ToString()).ToString("yyyy-MM-dd")" data-person="@row[3].ToString()" data-detail="@row[7].ToString()" data-enable="false">详细</button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        }
+    }
+
+
 </div>
 <div class="modal fade bd-example-modal-xl" id="personalInfo" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
@@ -138,8 +205,8 @@
                         </div>
                         <textarea id="casedetail" class="form-control" style="height:200px"></textarea>
                     </div>
-                    @{ 
-                        
+                    @{
+
                     }
                 </form>
             </div>

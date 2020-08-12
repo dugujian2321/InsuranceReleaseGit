@@ -322,54 +322,86 @@ function CreateCaseTable(table) {
     searchtbl.style.visibility = 'collapse';
     var casetbl = document.getElementById('tbl_case');
     casetbl.style.visibility = 'visible';
-    casetbl.getElementsByTagName('tbody')[0].innerHTML = '';
-    var count = table.length;
-    for (i = 0; i < count; i++) {
-        var tr = document.createElement('tr');
-        var objlen = Object.values(table[i]).length;
-        for (j = 1; j < objlen - 1; j++) {
-            var td = document.createElement('td');
-            td.classList.add('td_middle');
-            td.innerText = Object.values(table[i])[j];
-            tr.appendChild(td);
-        }
-        var btn = document.createElement('button');
-        btn.innerText = '详细';
-        btn.classList.add('btn-primary');
-        btn.classList.add('btn');
-        btn.setAttribute('data-target', '#caseDetail');
-        btn.setAttribute('data-toggle', 'modal');
-        btn.setAttribute('data-casedate', Object.values(table[i])[4].split('T')[0]);
-        btn.setAttribute('data-person', Object.values(table[i])[3]);
-        btn.setAttribute('data-detail', Object.values(table[i])[7]);
-        btn.setAttribute('data-enable', 'false');
-        var td = document.createElement('td');
-        td.appendChild(btn);
-        tr.appendChild(td);
-        casetbl.getElementsByTagName('tbody')[0].appendChild(tr);
+    //casetbl.getElementsByTagName('tbody')[0].innerHTML = '';
+    //var count = table.length;
+    //for (i = 0; i < count; i++) {
+    //    var tr = document.createElement('tr');
+    //    var objlen = Object.values(table[i]).length;
+    //    for (j = 1; j < objlen - 1; j++) {
+    //        var td = document.createElement('td');
+    //        td.classList.add('td_middle');
+    //        td.innerText = Object.values(table[i])[j];
+    //        tr.appendChild(td);
+    //    }
+    //    var btn = document.createElement('button');
+    //    btn.innerText = '详细';
+    //    btn.classList.add('btn-primary');
+    //    btn.classList.add('btn');
+    //    btn.setAttribute('data-target', '#caseDetail');
+    //    btn.setAttribute('data-toggle', 'modal');
+    //    btn.setAttribute('data-casedate', Object.values(table[i])[4].split('T')[0]);
+    //    btn.setAttribute('data-person', Object.values(table[i])[3]);
+    //    btn.setAttribute('data-detail', Object.values(table[i])[7]);
+    //    btn.setAttribute('data-enable', 'false');
+    //    var td = document.createElement('td');
+    //    td.appendChild(btn);
+    //    tr.appendChild(td);
+    //    casetbl.getElementsByTagName('tbody')[0].appendChild(tr);
+    //}
+}
+
+function CaseCostChanged(id) {
+    var caseid = document.getElementById('case_' + id).innerText;
+    var cost = document.getElementById('price_' + id).value;
+    $.ajax(
+        {
+            type: "get",
+            url: '/Home/UpdateCaseCost?id=' + caseid + '&cost=' + cost,
+            async: true,
+            dataType: 'JSON',
+            success: function (data) {
+                alert(data);
+            },
+            fail: function (data) {
+                alert("失败");
+            },
+            error: function (data) {
+                alert("错误");
+            }
+        });
+}
+
+function CaseStatusChanged(id) {
+    var textbox = document.getElementById('price_' + id);
+    var obj = document.getElementById('status_' + id);
+    if (obj.value == '已结案') {
+        textbox.disabled = '';
+    } else {
+        textbox.disabled = 'disabled';
     }
 }
 
 function ViewCase() {
+
     $.ajax(
         {
             type: "get",
             url: '/Home/ViewCase',
             async: true,
-            dataType: 'JSON',
-            success: function (data) {
-                if (data) {
-                    CreateCaseTable(data);
-                } else {
-                    alert(data);
-                }
-            },
-            fail: function (data) {
-                alert("报案失败");
-            },
-            error: function (data) {
-                alert("错误");
-            }
+            dataType: 'JSON'
+            //success: function (data) {
+            //    if (data) {
+            //        CreateCaseTable(data);
+            //    } else {
+            //        alert(data);
+            //    }
+            //},
+            //fail: function (data) {
+            //    alert("报案失败");
+            //},
+            //error: function (data) {
+            //    alert("错误");
+            //}
         });
 }
 

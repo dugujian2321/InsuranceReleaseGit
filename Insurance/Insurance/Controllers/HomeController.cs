@@ -1932,6 +1932,16 @@ namespace VirtualCredit.Controllers
             }
         }
 
+        [HttpGet]
+        [AdminFilters]
+        public JsonResult UpdateCaseCost([FromQuery]string id, [FromQuery]string cost)
+        {
+            if (!double.TryParse(cost, out double price)) return Json("金额不正确");
+            bool res = DatabaseService.UpdateOneColumn("CaseInfo", "CaseId", id, "Price", price);
+            res = DatabaseService.UpdateOneColumn("CaseInfo", "CaseId", id, "State", "已结案");
+            return res ? Json("成功") : Json("失败");
+        }
+
         public IActionResult ViewCase()
         {
             var result = DatabaseService.Select("CaseInfo");
@@ -1940,7 +1950,9 @@ namespace VirtualCredit.Controllers
             {
                 row[4] = DateTime.Parse(row[4].ToString()).Date;
             }
-            return Json(result);
+            SearchPeopleModel model = new SearchPeopleModel();
+            model.CaseTable = result;
+            return View("SearchPeople", model);
         }
 
         [HttpPost]

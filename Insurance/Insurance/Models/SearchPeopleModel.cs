@@ -13,5 +13,6 @@ namespace Insurance.Models
         public string Company { get; set; }
         public Employee People { get; set; }
         public DataTable Result { get; set; }
+        public DataTable CaseTable { get; set; }
     }
 }
