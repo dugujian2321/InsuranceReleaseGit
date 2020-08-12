@@ -671,13 +671,23 @@ namespace VirtualCredit.Controllers
             try
             {
                 GetCurrentUser().MyLocker.RWLocker.EnterReadLock();
+                if (string.IsNullOrEmpty(em_name) && string.IsNullOrEmpty(em_id))
+                {
+                    return View("SearchPeople", model);
+                }
                 if (GetCurrentUser().AccessLevel > 0)
                 {
                     string path = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, company + ".xls");
                     //res = DatabaseService.SelectPeopleByNameAndID(HttpContext.Session.Get<UserInfoModel>("CurrentUser").CompanyName, em_name, em_id);
-
-                    ExcelTool et = new ExcelTool(path, "Sheet1");
-                    res = et.SelectPeopleByNameAndID(em_name, nameCol, em_id, idCol);
+                    if (System.IO.File.Exists(path))
+                    {
+                        ExcelTool et = new ExcelTool(path, "Sheet1");
+                        res = et.SelectPeopleByNameAndID(em_name, nameCol, em_id, idCol);
+                    }
+                    else
+                    {
+                        res = new DataTable();
+                    }
                 }
                 else if (GetCurrentUser().AccessLevel == 0)
                 {
@@ -724,6 +734,7 @@ namespace VirtualCredit.Controllers
             catch (Exception e)
             {
                 LogServices.LogService.Log(e.Message);
+                LogServices.LogService.Log(e.StackTrace);
                 return View("Error");
             }
             finally
@@ -923,9 +934,9 @@ namespace VirtualCredit.Controllers
             var ruleTable = document.Tables[0];
             foreach (var row in ruleTable.Rows)
             {
-                if(row.GetCell(2).GetText() == "beibaoxianren")
+                if (row.GetCell(2).GetText() == "beibaoxianren")
                 {
-                    row.GetCell(2).Paragraphs[0].ReplaceText("beibaoxianren",company);
+                    row.GetCell(2).Paragraphs[0].ReplaceText("beibaoxianren", company);
                 }
 
                 if (row.GetCell(2).GetText() == "shengxiaoriqi")
