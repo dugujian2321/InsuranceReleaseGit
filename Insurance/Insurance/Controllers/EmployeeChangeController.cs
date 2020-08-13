@@ -294,8 +294,10 @@ namespace Insurance.Controllers
         public JsonResult UserDaysBefore([FromQuery] string company)
         {
             var user = DatabaseService.SelectUserByCompany(company);
+
             int days = user.DaysBefore;
             DateTime dt = DateTime.Now.Date.AddDays(-1 * days);
+            ClearSession();
             return Json(dt.ToString("yyyy-MM-dd"));
         }
 
@@ -444,7 +446,15 @@ namespace Insurance.Controllers
                 string summaryPath = Path.Combine(companyDir, plan, companyName + ".xls");
                 if (!System.IO.File.Exists(summaryPath))
                 {
-                    throw new FileNotFoundException();
+                    result.Add(
+                    new Employee()
+                    {
+                        Valid = false,
+                        Name=$"{companyName}尚未开通{plan}账号"
+                    }
+                    );
+                    return result;
+
                 }
                 ExcelTool summary = new ExcelTool(summaryPath, sheetName);
                 DataTable sourceDT = summary.ExcelToDataTable("Sheet1", true);
@@ -494,7 +504,8 @@ namespace Insurance.Controllers
                 result.Add(
                     new Employee()
                     {
-                        Valid = false
+                        Valid = false,
+                        Name="未知错误，请刷新页面并确保表格内容无误后重试"
                     }
                     );
                 return result;

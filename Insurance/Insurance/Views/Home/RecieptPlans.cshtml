@@ -6,10 +6,40 @@
 <div class="alert alert-primary" style="font-size:20px" role="alert">
     保费汇总
 </div>
+@{ 
+    string disable30 = string.Empty;
+    string disable60 = string.Empty;
+    string disable80 = string.Empty;
+    var currUser = Context.Session.Get<UserInfoModel>("CurrentUser");
+    if (currUser.AccessLevel != 0)
+    {
+        disable30 = disable60 = disable80 = "disabled";
+        foreach (var plan in VC_ControllerBase.Plans)
+        {
+            if(plan == currUser._Plan)
+            {
+                int num =Convert.ToInt32(plan.Replace("万", string.Empty));
+                switch (num)
+                {
+                    case 30:
+                        disable30 = string.Empty;
+                        break;
+                    case 60:
+                        disable60 = string.Empty;
+                        break;
+                    case 80:
+                        disable80 = string.Empty;
+                        break;
+                }
+                break;
+            }
+        }
+    }
+
+    }
 <div class="container">
     <div class="card-deck mb-3 text-center" style="margin:0 auto">
-
-        <div class="card mb-4 shadow-sm">
+        <div class="card mb-4 shadow-sm" disabled>
             <div class="card-header">
                 <h4 class="my-0 font-weight-normal">
                     <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-layers-half" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -22,7 +52,7 @@
                 <h1 class="card-title pricing-card-title">
                     ￥30万保额
                 </h1>
-                <button class="btn btn-lg btn-block btn-outline-primary" onclick="location.href='/Home/GetTargetPlanData?plan=30万'">
+                <button @disable30 class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=30万'">
                     查看详情
                 </button>
             </div>
@@ -40,7 +70,7 @@
                 <h1 class="card-title pricing-card-title">
                     ￥60万保额
                 </h1>
-                <button class="btn btn-lg btn-block btn-outline-primary" onclick="location.href='/Home/GetTargetPlanData?plan=60万'">
+                <button @disable60 class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=60万'">
                     查看详情
                 </button>
             </div>
@@ -58,7 +88,7 @@
                 <h1 class="card-title pricing-card-title">
                     ￥80万保额
                 </h1>
-                <button class="btn btn-lg btn-block btn-outline-primary" onclick="location.href='/Home/GetTargetPlanData?plan=80万'">
+                <button @disable80 class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=80万'">
                     查看详情
                 </button>
             </div>

@@ -78,26 +78,31 @@
                 UserInfoModel uim = Context.Session.Get<UserInfoModel>("CurrentUser");
                 if (uim != null && uim.AllowCreateAccount == "1")
                 {
-                    string cn = uim.CompanyName;
-                    string cnAbb = uim.CompanyNameAbb;
+                    string cn = string.Empty;
+                    string cnAbb = string.Empty;
                     <div class="input-group mb-3">
                         <div class="input-group-prepend">
                             <span class="input-group-text" id="inputGroup-sizing-default">公司名称</span>
                         </div>
-                        <input class="inputBox" id="cpName" type="text" asp-for="CompanyName"  value="@cn" autocomplete="off" />
-                        <input class="inputBox" id="cpName" type="text" asp-for="CompanyNameAbb"  value="@cnAbb" autocomplete="off" />
+                        <input class="inputBox" id="cpName" type="text" asp-for="CompanyName" value="@cn" autocomplete="off" />
                     </div>
-                }
-                else
-                {
                     <div class="input-group mb-3">
                         <div class="input-group-prepend">
-                            <span class="input-group-text" id="inputGroup-sizing-default">公司名称</span>
+                            <span class="input-group-text" id="inputGroup-sizing-default">公司简称</span>
                         </div>
-                        @Html.TextBoxFor(user => user.CompanyName, new { @class = "inputBox", id = "cpName", type = "Text", autocomplete = "off" })
-                        @Html.TextBoxFor(user => user.CompanyNameAbb, new { @class = "inputBox", id = "cpNameAbb", type = "Text", autocomplete = "off" })
+                        <input class="inputBox" id="cpName" type="text" asp-for="CompanyNameAbb" value="@cnAbb" autocomplete="off" />
                     </div>
                 }
+                @*else
+                    {
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text" id="inputGroup-sizing-default">公司名称</span>
+                            </div>
+                            @Html.TextBoxFor(user => user.CompanyName, new { @class = "inputBox", id = "cpName", type = "Text", autocomplete = "off" })
+                            @Html.TextBoxFor(user => user.CompanyNameAbb, new { @class = "inputBox", id = "cpNameAbb", type = "Text", autocomplete = "off" })
+                        </div>
+                    }*@
             }
 
         </div>

@@ -1509,14 +1509,18 @@ namespace VirtualCredit.Controllers
             try
             {
                 r_locker = currUser.MyLocker.RWLocker;
-                r_locker.EnterReadLock();
+                r_locker.EnterReadLock(); 
                 //获取该公司历史表单详细
                 List<NewExcel> allMonthlyExcels = new List<NewExcel>();
                 if (currUser.ChildAccounts.Count == 0)
                 {
                     if (currUser.CompanyName != name)
                     {
-                        return View("Error");
+                        ViewBag.Msg = "未查询到保单信息";
+                        DetailModel dm1 = new DetailModel();
+                        dm1.Company = name;
+                        dm1.MonthlyExcel = new List<NewExcel>();
+                        return View("RecipeSummaryDetail", dm1);
                     }
                 }
                 string companyName = name;

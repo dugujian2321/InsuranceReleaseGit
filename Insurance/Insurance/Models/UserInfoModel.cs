@@ -43,6 +43,10 @@ namespace VirtualCredit.Models
         [DatabaseProp]
         public double UnitPrice { get; set; }
 
+        /// <summary>
+        /// 1 - 允许创建子账户
+        /// 0 - 不允许创建子账户
+        /// </summary>
         [DatabaseProp]
         public string AllowCreateAccount { get; set; }
 

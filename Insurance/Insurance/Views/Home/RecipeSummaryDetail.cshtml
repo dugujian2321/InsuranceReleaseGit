@@ -5,7 +5,7 @@
 }
 @model Insurance.Models.DetailModel
     <div class="alert alert-primary" style="font-size:20px" role="alert">
-        保费汇总 @ViewBag.Plan @ViewBag.Company @ViewBag.Date @ViewBag.Page
+        保费汇总 @ViewBag.Plan @ViewBag.Company @ViewBag.Date @ViewBag.Page @ViewBag.Msg
     </div>
 @{
     if (Model.MonthlyExcel != null && Model.MonthlyExcel.Count > 0)

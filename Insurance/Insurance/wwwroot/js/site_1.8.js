@@ -153,6 +153,8 @@ function UpdateAllowedStartDate() {
             success: function (data) {
                 var dateControl = document.getElementById('startdate');
                 dateControl.min = data;
+                var des = document.getElementById('description');
+                des.innerText = '检测到投保公司发生变化，请重新上传保单';
             }
         }
     );
@@ -170,7 +172,18 @@ function UpdatePlan() {
         SubmitAdd(sub);
     }
 }
-
+function UpdateCompany() {
+    var selectedComp = document.getElementById('companyGroup');
+    var comp = selectedComp.value;
+    var add = document.getElementById('add');
+    var sub = document.getElementById('sub');
+    if (add.files.length == 1) {
+        SubmitAdd(add);
+    }
+    if (sub.files.length == 1) {
+        SubmitAdd(sub);
+    }
+}
 
 function SubmitRecipet(obj) {
     obj.disabled = !0;

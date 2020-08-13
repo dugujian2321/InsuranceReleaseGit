@@ -57,6 +57,7 @@ namespace Insurance.Controllers
                 model.CompanyNameAbb = currUser.CompanyNameAbb;
                 model.Mail = currUser.Mail;
                 model.Name = currUser.Name;
+                model.newPassword = currUser.userPassword;
                 model.RecipeAccount = currUser.RecipeAccount;
                 model.RecipeAddress = currUser.RecipeAddress;
                 model.RecipeBank = currUser.RecipeBank;
@@ -124,23 +125,18 @@ namespace Insurance.Controllers
         public JsonResult ValidateDaysBefore([FromQuery]string days)
         {
             string result = "√";
-            if (!int.TryParse(days,out int res))
+            if (!int.TryParse(days, out int res))
             {
                 return Json("请输入数字");
             }
-            
+
             var currUser = GetCurrentUser();
-            if (currUser.AccessLevel == 0)
+
+            if (Convert.ToInt32(days) > currUser.DaysBefore)
             {
-                return Json(result);
+                result = $"追溯期不能大于{currUser.DaysBefore.ToString()}天";
             }
-            else
-            {
-                if (Convert.ToInt32(days) > currUser.DaysBefore)
-                {
-                    result = $"追溯期不能大于{currUser.DaysBefore.ToString()}天" ;
-                }
-            }
+
             return Json(result);
         }
 
