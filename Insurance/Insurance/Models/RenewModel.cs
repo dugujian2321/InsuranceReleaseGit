@@ -8,5 +8,7 @@ namespace Insurance.Models
         public DataTable MonthInfo { get; set; }
         public string NextMonthEndDay { get; set; }
         public string CurrentMonth { get; set; }
+
+        public string Plan { get; set; }
     }
 }

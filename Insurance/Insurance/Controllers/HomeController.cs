@@ -576,6 +576,7 @@ namespace VirtualCredit.Controllers
             string summary = string.Empty;
             string summary_backup = string.Empty;
             DateTime now = DateTime.Now.Date;
+            UserInfoModel currUser = GetCurrentUser();
             try
             {
                 if (now.AddDays(4).Month != now.AddMonths(1).Month)
@@ -589,17 +590,17 @@ namespace VirtualCredit.Controllers
                     return Json("只可续保至" + test.NextMonthEndDay);
                 }
 
-                if (GetCurrentUser() == null)
+                if (currUser == null)
                 {
                     return Json("请先登录");
                 }
 
-                if (GetCurrentUser().AccessLevel != 0 && GetCurrentUser().CompanyName != test.CompanyName)
+                if (currUser.AccessLevel != 0 && currUser.CompanyName != test.CompanyName)
                 {
                     return Json("当前账号无权进行该操作");
                 }
                 //==================写锁====================
-                if (GetCurrentUser().AccessLevel == 0)
+                if (currUser.AllowCreateAccount == "1")
                 {
                     locker = Utility.GetCompanyLocker(test.CompanyName);
                 }
@@ -608,25 +609,29 @@ namespace VirtualCredit.Controllers
                     locker.RWLocker.EnterWriteLock();
                 }
                 //备份当前summary文件，生成新的summary,生效日期为每月1号
-                summary = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", test.CompanyName, test.CompanyName + ".xls");
-                summary_backup = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", test.CompanyName, test.CompanyName + "_" + DateTime.Now.ToString("yyyy-MM") + "_bk.xls");
+                string compDir = GetSearchExcelsInDir(test.CompanyName);
+                summary = Path.Combine(compDir, test.Plan, test.CompanyName + ".xls");
+                summary_backup = Path.Combine(compDir, test.Plan, test.CompanyName + "_" + DateTime.Now.ToString("yyyy-MM") + "_bk.xls");
                 System.IO.File.Copy(summary, summary_backup, true);
-                ExcelTool et = new ExcelTool(summary, "Sheet1");
-                if (et.GetEmployeeNumber() <= 0)
+                using (ExcelTool et = new ExcelTool(summary, "Sheet1"))
                 {
-                    return Json("无人参保");
+                    if (et.GetEmployeeNumber() <= 0)
+                    {
+                        return Json("无人参保");
+                    }
+                    DataTable tbl_summary = et.ExcelToDataTable("Sheet1", true);
+                    foreach (DataRow row in tbl_summary.Rows)
+                    {
+                        DateTime dt = DateTime.Now.Date.AddMonths(1);
+                        row["生效日期"] = new DateTime(dt.Year, dt.Month, 1).ToString("yyyy-MM-dd");
+                    }
+                    et.DatatableToExcel(tbl_summary);
                 }
-                DataTable tbl_summary = et.ExcelToDataTable("Sheet1", true);
-                foreach (DataRow row in tbl_summary.Rows)
-                {
-                    DateTime dt = DateTime.Now.Date.AddMonths(1);
-                    row["生效日期"] = new DateTime(dt.Year, dt.Month, 1).ToString("yyyy-MM-dd");
-                }
-                et.DatatableToExcel(tbl_summary);
-                GenerateNewExcelForRenew(test.CompanyName);
+
+                GenerateNewExcelForRenew(test.CompanyName, test.Plan);
                 return Json("续保成功");
             }
-            catch
+            catch (Exception e)
             {
                 RevertSummaryFile(summary, summary_backup);
                 return Json("续保失败");
@@ -641,7 +646,7 @@ namespace VirtualCredit.Controllers
 
         }
 
-        private bool GenerateNewExcelForRenew(string company)
+        private bool GenerateNewExcelForRenew(string company, string plan)
         {
             UserInfoModel currUser = null;
             string summary_bk = string.Empty;
@@ -649,14 +654,16 @@ namespace VirtualCredit.Controllers
             {
                 currUser = GetCurrentUser();
                 //=========================================进入读锁=====================================================//
-                currUser.MyLocker.RWLocker.EnterReadLock();
+                var locker = currUser.MyLocker.RWLocker;
+                if (!locker.IsWriteLockHeld)
+                    locker.EnterWriteLock();
 
-                string companyDir = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company);
-                string summaryPath = Path.Combine(companyDir, company + ".xls");
+                string companyDir = GetSearchExcelsInDir(company);
+                string summaryPath = Path.Combine(companyDir, plan, company + ".xls");
 
-                string monDir = Path.Combine(companyDir, DateTime.Now.AddMonths(1).ToString("yyyy-MM"));
+                string monDir = Path.Combine(companyDir, plan,DateTime.Now.AddMonths(1).ToString("yyyy-MM"));
                 DateTime now = DateTime.Now;
-                summary_bk = Path.Combine(companyDir, company + $"_{now.ToString("yyyy-MM")}_" + ".xls");
+                summary_bk = Path.Combine(companyDir,plan ,company + $"_{now.ToString("yyyy-MM")}_" + ".xls");
                 DateTime startdate = DateTime.Parse(now.AddMonths(1).ToString("yyyy-MM-01"));
                 System.IO.File.Copy(summaryPath, summary_bk, true); //备份当月总表
                 if (!Directory.Exists(monDir))
@@ -673,19 +680,22 @@ namespace VirtualCredit.Controllers
                 //创建新excel文档
                 System.IO.File.Copy(template, newfilepath);
 
-                ExcelTool et = new ExcelTool(newfilepath, "Sheet1");
-                DataTable tbl_summary = summary.ExcelToDataTable("Sheet1", true);
-                int i = 1;
-                foreach (DataRow row in tbl_summary.Rows)
+                using (ExcelTool et = new ExcelTool(newfilepath, "Sheet1"))
                 {
-                    et.SetCellText(i, 0, row[2].ToString());
-                    et.SetCellText(i, 1, row[3].ToString());
-                    et.SetCellText(i, 2, row[4].ToString());
-                    et.SetCellText(i, 3, row[5].ToString());
-                    et.SetCellText(i, 4, startdate.Date.ToString("yyyy/MM/dd"));
-                    i++;
+                    DataTable tbl_summary = summary.ExcelToDataTable("Sheet1", true);
+                    int i = 1;
+                    foreach (DataRow row in tbl_summary.Rows)
+                    {
+                        et.SetCellText(i, 0, row[2].ToString());
+                        et.SetCellText(i, 1, row[3].ToString());
+                        et.SetCellText(i, 2, row[4].ToString());
+                        et.SetCellText(i, 3, row[5].ToString());
+                        et.SetCellText(i, 4, startdate.Date.ToString("yyyy/MM/dd"));
+                        i++;
+                    }
+                    et.Save();
                 }
-                et.Save();
+
                 return true;
             }
             catch (Exception e)
@@ -714,11 +724,13 @@ namespace VirtualCredit.Controllers
         [UserLoginFilters]
         public IActionResult AutoRenew()
         {
+            UserInfoModel currUser = GetCurrentUser();
             string company = string.Empty;
             DataTable result = new DataTable();
             result.Columns.AddRange(
                 new DataColumn[] {
                     new DataColumn("公司"),
+                    new DataColumn("方案"),
                     new DataColumn("当前保单月份"),
                     new DataColumn("续保人数"),
                     new DataColumn("总保费"),
@@ -727,16 +739,31 @@ namespace VirtualCredit.Controllers
                     new DataColumn("续保后到期日"),
                 }
                 );
-            if (GetCurrentUser() != null)
+            if (currUser != null)
             {
-                company = GetCurrentUser().CompanyName;
+                company = currUser.CompanyName;
             }
             RenewModel rm = new RenewModel();
             string companyDir = GetSearchExcelsInDir(company);
-            string summary = Path.Combine(companyDir, company + ".xls");
+            string summary = Path.Combine(companyDir, currUser._Plan, company + ".xls");
+            if (!System.IO.File.Exists(summary))
+            {
+                DataRow errorrow = result.NewRow();
+                errorrow["公司"] = company;
+                errorrow["方案"] = currUser._Plan;
+                errorrow["当前保单月份"] = "无人参保";
+                errorrow["续保人数"] = 0;
+                errorrow["总保费"] = 0;
+                errorrow["1-4类人数"] = 0;
+                errorrow["1-4类保费"] = 0;
+                errorrow["续保后到期日"] = string.Empty;
+                result.Rows.Add(errorrow);
+                rm.MonthInfo = result;
+                return View(rm);
+            }
             ExcelTool et = new ExcelTool(summary, "Sheet1");
             int headcount = et.GetEmployeeNumber(); //总人数
-            double unitprice = GetCurrentUser().UnitPrice;
+            double unitprice = currUser.UnitPrice;
             double totalcost = Math.Round(headcount * unitprice, 2); //总保费
             DataTable tbl = et.ExcelToDataTable("Sheet1", true);
             int headcount_1_4 = 0;//1-4类人数
@@ -751,6 +778,7 @@ namespace VirtualCredit.Controllers
             {
                 DataRow errorrow = result.NewRow();
                 errorrow["公司"] = company;
+                errorrow["方案"] = currUser._Plan;
                 errorrow["当前保单月份"] = "无人参保";
                 errorrow["续保人数"] = 0;
                 errorrow["总保费"] = 0;
@@ -779,6 +807,7 @@ namespace VirtualCredit.Controllers
 
             DataRow newrow = result.NewRow();
             newrow["公司"] = company;
+            newrow["方案"] = currUser._Plan;
             newrow["当前保单月份"] = currentMonth;
             newrow["续保人数"] = headcount;
             newrow["总保费"] = totalcost;
@@ -1509,7 +1538,7 @@ namespace VirtualCredit.Controllers
             try
             {
                 r_locker = currUser.MyLocker.RWLocker;
-                r_locker.EnterReadLock(); 
+                r_locker.EnterReadLock();
                 //获取该公司历史表单详细
                 List<NewExcel> allMonthlyExcels = new List<NewExcel>();
                 if (currUser.ChildAccounts.Count == 0)

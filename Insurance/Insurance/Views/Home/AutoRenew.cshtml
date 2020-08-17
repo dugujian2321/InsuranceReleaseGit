@@ -15,6 +15,7 @@
             <thead>
                 <tr style="text-align:center">
                     <th>公司</th>
+                    <th>方案</th>
                     <th>当前保单月份</th>
                     <th>续保人数</th>
                     <th>总保费</th>
@@ -40,9 +41,10 @@
                                 <td class="td_middle">@row[4]</td>
                                 <td class="td_middle">@row[5]</td>
                                 <td class="td_middle">@row[6]</td>
+                                <td class="td_middle">@row[7]</td>
                                 <td class="td_middle">
                                     <!-- Button trigger modal -->
-                                    <a class="btn btn-danger" data-toggle="modal" data-target="#autorenew" data-whatever="@row[0]" data-currentmonth="@row[1]" data-enddate="@row[6]" href="#">
+                                    <a class="btn btn-danger" data-toggle="modal" data-target="#autorenew" data-whatever="@row[0]" data-plan="@row[1]" data-currentmonth="@row[2]" data-enddate="@row[7]" href="#">
                                         一键续保
                                     </a>
                                 </td>
@@ -67,7 +69,7 @@
                     <span class="alert-danger">续保后将无法提交本月的保单，是否确认继续？</span>
                 </div>
                 <div class="modal-footer">
-                    <button id="btn_autoview" name="comp" data-company="" data-enddate="" data-currentmonth="" type="button" class="btn btn-primary" onclick="AutoRenew(this)">确定</button>
+                    <button id="btn_autoview" name="comp" data-company="" data-enddate="" data-currentmonth="" data-plan="" type="button" class="btn btn-primary" onclick="AutoRenew(this)">确定</button>
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
                 </div>
             </div>
@@ -82,11 +84,13 @@
         var button = $(event.relatedTarget) // Button that triggered the modal
         var recipient = button.data('whatever') // Extract info from data-* attributes
         var date = button.data('enddate')
+        var plan = button.data('plan')
         // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
         // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
         var modal = $(this)
         $("#btn_autoview").attr('data-company', recipient)
         $("#btn_autoview").attr('data-enddate', date)
         $("#btn_autoview").attr('data-currentmonth', button.data('currentmonth'))
+        $("#btn_autoview").attr('data-plan', plan)
     })
 </script>

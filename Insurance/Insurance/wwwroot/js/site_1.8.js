@@ -762,13 +762,15 @@ function AutoRenew(obj) {
     var comp = $(obj).attr('data-company')
     var d = $(obj).attr('data-enddate')
     var cm = $(obj).attr('data-currentmonth')
+    var pl = $(obj).attr('data-plan')
     $.ajax(
         {
             async: true,
             data: {
                 CompanyName: comp,
                 NextMonthEndDay: d,
-                CurrentMonth: cm
+                CurrentMonth: cm,
+                Plan: pl
             },
             type: 'post',
             url: '/Home/StartRenew',
