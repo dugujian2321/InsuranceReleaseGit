@@ -27,7 +27,7 @@
 <body style="width:95%;overflow-y:scroll;padding-right:0px">
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
+            <div class="container" style="margin:10px;max-width:9999px">
 
                 @{
                     var user = Context.Session.Get<UserInfoModel>("CurrentUser");
@@ -35,7 +35,7 @@
                     {
                         <h2 class="mb-3">@user.CompanyName</h2>
 
-                        <div class="card text-black bg-light mb-2 shadow-sm" style="margin:auto">
+                        <div class="card text-black bg-light mb-2 shadow-sm" style="margin-left:auto">
                             <div class="card-header">
                                 <h5 class="my-0 font-weight-normal">
                                     今日总人数
@@ -47,7 +47,7 @@
                                 </h6>
                             </div>
                         </div>
-                        <div class="card mb-2 bg-info text-white shadow-sm" style="margin:auto">
+                        <div class="card mb-2 bg-info text-white shadow-sm">
                             <div class="card-header">
                                 <h5 class="my-0 font-weight-normal">
                                     今日加保
@@ -59,7 +59,7 @@
                                 </h6>
                             </div>
                         </div>
-                        <div class="card text-white bg-success mb-2" style="margin:auto">
+                        <div class="card text-white bg-success mb-2">
                             <div class="card-header">
                                 <h5 class="my-0 font-weight-normal">
                                     今日减保
@@ -71,7 +71,7 @@
                                 </h6>
                             </div>
                         </div>
-                        <div class="card text-white bg-primary mb-2" style="margin:auto">
+                        <div class="card text-white bg-primary mb-2">
                             <div class="card-header">
                                 <h5 class="my-0 font-weight-normal">
                                     今日保费
