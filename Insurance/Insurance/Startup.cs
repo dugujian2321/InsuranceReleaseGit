@@ -25,6 +25,8 @@ namespace VirtualCredit
             new Utility().Initial(configuration, hostingEnvironment);
             Task.Factory.StartNew(()=> {
                 new AutoRenewAllCompanies().StartListening(configuration);
+            });Task.Factory.StartNew(()=> {
+                Utility.UpdateDailyInfo();
             });
         }
 

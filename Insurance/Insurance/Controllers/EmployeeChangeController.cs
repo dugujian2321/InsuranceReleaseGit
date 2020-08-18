@@ -135,6 +135,9 @@ namespace Insurance.Controllers
                 summary_backup = Path.Combine(companyFolder, Guid.NewGuid() + "_summary_temp.xls");
                 System.IO.File.Copy(summaryFilePath, summary_backup, true);
                 //======================添加新员工===================
+
+                int headCount = 0;
+
                 if (mode == "add")
                 {
                     string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{GetCurrentUser().UserName}@Add@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + "@0@.xls"; //命名规则： 上传日期_保费_上传账号_加/减保_GUID_时间_已结保费.xls
@@ -151,6 +154,7 @@ namespace Insurance.Controllers
                             fs.Flush();
                         }
                         ExcelTool et = new ExcelTool(newfilepath, "Sheet1");
+                        headCount = et.GetEmployeeNumber();
                         et.SetCellText(0, 4, "保障开始时间");
                         et.SetCellText(0, 5, "保障结束时间");
                         for (int i = 1; i <= et.m_main.GetLastRow(); i++)
@@ -181,6 +185,9 @@ namespace Insurance.Controllers
                         result.Add(kickoffDate);
                         result.Add(endDate);
                         ClearSession();
+                        Utility.DailyTotalHC += headCount;
+                        Utility.DailyAdd += headCount;
+                        Utility.DailyTotalCost += price;
                         return Json(result);
 
                     }
@@ -210,6 +217,7 @@ namespace Insurance.Controllers
                             fs.Flush();
                         }
                         ExcelTool et = new ExcelTool(newfilepath, "Sheet1");
+                        headCount = et.GetEmployeeNumber();
                         et.SetCellText(0, 4, "保障开始时间");
                         et.SetCellText(0, 5, "保障结束时间");
                         Employee employee = null;
@@ -241,12 +249,14 @@ namespace Insurance.Controllers
                         result.Add(kickoffDate);
                         result.Add(endDate);
                         ClearSession();
+                        Utility.DailySub += headCount;
+                        Utility.DailyTotalHC += headCount;
+                        Utility.DailyTotalCost += price;
                         return Json(result);
                     }
                     catch (Exception e)
                     {
                         RevertSummaryFile(summaryFilePath, summary_backup);
-
                         return Json("fail");
                     }
                     finally

@@ -1,7 +1,9 @@
 ﻿using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using VirtualCredit.Models;
@@ -25,7 +27,7 @@ namespace VirtualCredit.Services
             myOwn.TemplateFolder = configuration["TemplatesFolder"];
             myOwn.WebRootFolder = environment.WebRootPath;
             myOwn.ExcelRoot = Path.Combine(myOwn.WebRootFolder, "Excel");
-            
+
             _instance = myOwn;
             LockerList = new List<ReaderWriterLockerWithName>();
         }
@@ -51,6 +53,29 @@ namespace VirtualCredit.Services
                 result += strs[i] + connectWith;
             }
             return result;
+        }
+        public static int DailyTotalHC;
+        public static double DailyTotalCost;
+        public static int DailyAdd;
+        public static int DailySub;
+        public static void UpdateDailyInfo()
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            DateTime currDate = DateTime.Now.Date;
+            while (true)
+            {
+                if (DateTime.Now.Date > currDate)
+                {
+                    currDate = DateTime.Now.Date;
+                    DailyAdd = 0;
+                    DailyTotalCost = 0;
+                    DailySub = 0;
+                    DailyTotalHC = 0;
+                }
+            }
+
+
         }
     }
 }
