@@ -906,7 +906,17 @@ namespace VirtualCredit.Controllers
             UserInfoModel currUser = GetCurrentUser();
             string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
             string template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", "Insurance_recipet.docx");
-            string summaryFile = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, company + ".xls");
+            DateTime targetMonth = DateTime.Parse(date);
+            string summaryFile = string.Empty;
+            if(targetMonth.Year==DateTime.Now.Year && targetMonth.Month == DateTime.Now.Month)
+            {
+                summaryFile = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, company + ".xls");
+            }
+            else
+            {
+                string name = $"{company}_{targetMonth.ToString("yyyy-MM")}_bk.xls";
+                summaryFile = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, name);
+            }
             string newdoc = Path.Combine(_hostingEnvironment.WebRootPath, "Word", company + DateTime.Now.ToString("yyyy-MM-dd-HH-hh-ss-mm") + ".docx");
 
             string companyName_Abb = string.Empty;
