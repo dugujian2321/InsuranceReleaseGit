@@ -5,10 +5,16 @@
 }
 @model Insurance.Models.SearchPeopleModel
 @using System.Data
-<div class="alert alert-primary" style="font-size:20px;" role="alert">
-    请输入姓名或身份证
-    <a class="btn btn-primary" href="/Home/ViewCase">查看报案</a>
-</div>
+    <div class="alert alert-primary" style="font-size:20px;" role="alert">
+        请输入姓名或身份证
+        @{
+            if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+            {
+                <a class="btn btn-primary" href="/Home/ViewCase">查看报案</a>
+            }
+        }
+
+    </div>
 
 <div>
     @using (Html.BeginForm(actionName: "Search", controllerName: "Home", method: FormMethod.Get))

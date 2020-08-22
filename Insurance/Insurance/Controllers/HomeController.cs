@@ -661,9 +661,9 @@ namespace VirtualCredit.Controllers
                 string companyDir = GetSearchExcelsInDir(company);
                 string summaryPath = Path.Combine(companyDir, plan, company + ".xls");
 
-                string monDir = Path.Combine(companyDir, plan,DateTime.Now.AddMonths(1).ToString("yyyy-MM"));
+                string monDir = Path.Combine(companyDir, plan, DateTime.Now.AddMonths(1).ToString("yyyy-MM"));
                 DateTime now = DateTime.Now;
-                summary_bk = Path.Combine(companyDir,plan ,company + $"_{now.ToString("yyyy-MM")}_" + ".xls");
+                summary_bk = Path.Combine(companyDir, plan, company + $"_{now.ToString("yyyy-MM")}_" + ".xls");
                 DateTime startdate = DateTime.Parse(now.AddMonths(1).ToString("yyyy-MM-01"));
                 System.IO.File.Copy(summaryPath, summary_bk, true); //备份当月总表
                 if (!Directory.Exists(monDir))
@@ -1220,6 +1220,12 @@ namespace VirtualCredit.Controllers
             return File(new FileStream(summary_file, FileMode.Open, FileAccess.Read), "text/plain", $"{company}_{exportStart.ToString("yyyy-MM")}_入离职汇总表格.xls");
         }
 
+        public IActionResult DailyDetail()
+        {
+
+            return View();
+        }
+
         [HttpGet]
         public IActionResult SummaryByYear()
         {
@@ -1239,10 +1245,13 @@ namespace VirtualCredit.Controllers
                 DataRow newrow = dt.NewRow();
                 newrow[0] = year;
                 var data = SummaryByYear(year);
-                newrow[1] = (int)data["headCount"];
-                newrow[2] = (double)data["totalIn"];
-                newrow[3] = (double)data["totalOut"];
-                dt.Rows.Add(newrow);
+                if (data.Keys.Count > 0)
+                {
+                    newrow[1] = (int)data["headCount"];
+                    newrow[2] = (double)data["totalIn"];
+                    newrow[3] = (double)data["totalOut"];
+                    dt.Rows.Add(newrow);
+                }
             }
             model.SummaryByYearTable = dt;
             ViewBag.PageInfo = "历年保单数据";
@@ -1287,8 +1296,9 @@ namespace VirtualCredit.Controllers
                     DirectoryInfo di = new DirectoryInfo(d);
                     return !Plans.Contains(di.Name) && !DateTime.TryParse(di.Name, out DateTime dt);
                 }
-            );
-
+            ).ToList();
+            if (currUser.AccessLevel != 0)
+                subCompanyList.Add(dataDir);
             foreach (string comp in subCompanyList)
             {
                 DirectoryInfo di = new DirectoryInfo(comp);
