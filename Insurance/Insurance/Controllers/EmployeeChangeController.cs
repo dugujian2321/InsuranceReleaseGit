@@ -314,6 +314,7 @@ namespace Insurance.Controllers
             }
             catch (Exception e)
             {
+                Response.WriteAsync("请使用本站提供的模板文件进行投保");
                 LogService.Log(e.Message);
                 LogService.Log(e.StackTrace);
                 return StatusCode(500);
