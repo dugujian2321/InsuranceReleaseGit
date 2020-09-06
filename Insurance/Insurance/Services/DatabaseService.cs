@@ -1,4 +1,5 @@
 ﻿using DatabaseHelper;
+using Insurance.Models;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
@@ -56,6 +57,28 @@ namespace VirtualCredit
                 res.Add(r["Name"].ToString());
             }
             return res;
+        }
+
+        /// <summary>
+        /// 添加一个新故事
+        /// </summary>
+        /// <param name="tableName">往tableName表中添加数据</param>
+        /// <param name="story">要添加的故事</param>
+        /// <returns></returns>
+        public static bool InsertDailyDetail(DailyDetailModel model)
+        {
+            try
+            {
+                SQLServerHelper.ConnectionString = ConnStr;
+                string cmdText = $"Insert into DailyDetail (Date,Company,SubmittedBy,TotalPrice,Product,NewAdd,Reduce) values ('{model.Date.ToString("yyyy-MM-dd")}','{model.Company}','{model.SubmittedBy}',{model.TotalPrice},'{model.Product}',{model.NewAdd},{model.Reduce})";
+                return SQLServerHelper.ExecuteNonQuery(cmdText);
+            }
+            catch (Exception e)
+            {
+                LogService.Log(e.Message);
+                return false;
+            }
+
         }
 
         /// <summary>
@@ -477,6 +500,29 @@ namespace VirtualCredit
             else
                 return false;
         }
+        public static DataTable SelectDailyDetailByDatetime(List<DateTime> dateTimes, List<string> companies)
+        {
+            string dateList = "(";
+            foreach (var date in dateTimes)
+            {
+                dateList += $"'{date.ToString("yyyy-MM-dd")}',";
+            }
+            dateList = dateList.Remove(dateList.LastIndexOf(","));
+            dateList += ")";
+
+            string companyList = "(";
+            foreach (var comp in companies)
+            {
+                companyList += $"'{comp}',";
+            }
+            companyList = companyList.Remove(companyList.LastIndexOf(","));
+            companyList += ")";
+
+            string cmd = $"Select Date,Sum(TotalPrice),Sum(NewAdd),Sum(Reduce) from DailyDetail where Date in {dateList} and Company in {companyList} group by Date";
+            return SQLServerHelper.ExecuteReader(cmd);
+        }
+
+
 
         public static DataTable Select(string tableName)
         {

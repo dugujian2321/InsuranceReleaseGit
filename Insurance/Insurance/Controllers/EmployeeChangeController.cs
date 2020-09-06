@@ -48,9 +48,12 @@ namespace Insurance.Controllers
             summaryFilePath = Path.Combine(companyFolder, plan, summaryFileName);
         }
 
+
+
         [UserLoginFilters]
         public JsonResult UpdateSummary(DateTime startdate, string plan)
         {
+            var currUser = GetCurrentUser();
             try
             {
                 //判断是否已计算保费
@@ -96,7 +99,7 @@ namespace Insurance.Controllers
                     return Json("No Permission");
                 }
                 string month = GetMonthFolder(startdate);
-                GetCurrentUser().MyLocker.RWLocker.EnterWriteLock(); //进入写锁
+                currUser.MyLocker.RWLocker.EnterWriteLock(); //进入写锁
                 string monthDir = Path.Combine(excelsDirectory, plan, month);
                 if (!Directory.Exists(monthDir))
                 {
@@ -165,10 +168,10 @@ namespace Insurance.Controllers
 
                         //2 - 总表中添加新员工信息
                         int startrow = summary.m_main.GetLastRow() + 1;
+                        string company = currUser.CompanyName;
                         for (int i = startrow; i < startrow + employees.Count; i++)
                         {
-                            Employee em = employees[i - startrow];
-                            string company = GetCurrentUser().CompanyName;
+                            Employee em = employees[i - startrow];                            
                             summary.SetCellText(i, 0, i.ToString()); //序号
                             summary.SetCellText(i, 1, company); //单位
                             summary.SetCellText(i, 2, em.Name); //姓名
@@ -180,6 +183,17 @@ namespace Insurance.Controllers
                         summary.Save();
                         List<string> result = new List<string>();
                         result.Add("投保成功");
+
+                        DailyDetailModel detail = new DailyDetailModel()
+                        {
+                            Company = targetcompany,
+                            SubmittedBy = GetCurrentUser().UserName,
+                            Product = plan,
+                            TotalPrice = price,
+                            Date = DateTime.Now.Date,
+                            NewAdd = headCount
+                        };
+                        UpdateDailyDetail(detail);
                         string kickoffDate = startdate.Date.ToString("yyyy/MM/dd 00:00:01");
                         string endDate = (new DateTime(startdate.Year, startdate.Month, DateTime.DaysInMonth(startdate.Year, startdate.Month))).ToString("yyyy/MM/dd 23:59:59");
                         result.Add(kickoffDate);
@@ -248,6 +262,17 @@ namespace Insurance.Controllers
                         string endDate = startdate.ToString("yyyy/MM/dd 23:59:59");
                         result.Add(kickoffDate);
                         result.Add(endDate);
+                        DailyDetailModel detail = new DailyDetailModel()
+                        {
+                            Company = targetcompany,
+                            SubmittedBy = currUser.UserName,
+                            Product = plan,
+                            TotalPrice = price,
+                            Date = DateTime.Now.Date,
+                            Reduce = headCount
+                        };
+
+                        UpdateDailyDetail(detail);
                         ClearSession();
                         Utility.DailySub += headCount;
                         Utility.DailyTotalHC += headCount;
@@ -282,6 +307,11 @@ namespace Insurance.Controllers
                 if (GetCurrentUser().MyLocker.RWLocker.IsWriteLockHeld)
                     GetCurrentUser().MyLocker.RWLocker.ExitWriteLock(); //退出写锁
             }
+        }
+
+        private bool UpdateDailyDetail(DailyDetailModel model)
+        {
+            return DatabaseService.InsertDailyDetail(model);
         }
 
         private void ClearSession()
@@ -460,7 +490,7 @@ namespace Insurance.Controllers
                     new Employee()
                     {
                         Valid = false,
-                        Name=$"{companyName}尚未开通{plan}账号"
+                        Name = $"{companyName}尚未开通{plan}账号"
                     }
                     );
                     return result;
@@ -515,7 +545,7 @@ namespace Insurance.Controllers
                     new Employee()
                     {
                         Valid = false,
-                        Name="未知错误，请刷新页面并确保表格内容无误后重试"
+                        Name = "未知错误，请刷新页面并确保表格内容无误后重试"
                     }
                     );
                 return result;
@@ -591,7 +621,7 @@ namespace Insurance.Controllers
             }
             DataTable dt = new DataTable();
 
-            var locker = GetCurrentUser().MyLocker.RWLocker;
+            var locker = currUser.MyLocker.RWLocker;
             locker.EnterReadLock();
             try
             {
@@ -622,7 +652,7 @@ namespace Insurance.Controllers
                         {
                             return -9999995;
                         }
-                        result += CalculateSubPrice(start.Date, startdate);
+                        result += CalculateSubPrice(start.Date, startdate, currUser.UnitPrice);
                     }
                     double temp = Math.Round(result, 2);
                     HttpContext.Session.Set("price", temp);

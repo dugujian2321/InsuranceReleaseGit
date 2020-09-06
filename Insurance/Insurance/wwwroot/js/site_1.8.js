@@ -212,7 +212,6 @@ function SubmitRecipet(obj) {
                         start.innerText = data[1];
                         end.innerText = data[2];
                     }
-                    window.location.reload();
                 }
             },
             fail: function () {

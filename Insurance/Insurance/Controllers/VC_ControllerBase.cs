@@ -79,10 +79,10 @@ namespace VirtualCredit
             return base.View(viewName, model);
         }
 
-        protected double CalculateSubPrice(DateTime start, DateTime end)
+        protected double CalculateSubPrice(DateTime start, DateTime end, double price)
         {
             //对于退保人员，计算退费
-            double unitPrice = (double)GetCurrentUser().UnitPrice / DateTime.DaysInMonth(end.Year, end.Month);
+            double unitPrice = price / DateTime.DaysInMonth(end.Year, end.Month);
             double received = (DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) * unitPrice;
             double earned = (end.Day - start.Day + 1) * unitPrice;
             double payback = Math.Round(earned - received, 2);

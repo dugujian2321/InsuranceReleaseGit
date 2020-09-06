@@ -1083,7 +1083,16 @@ namespace VirtualCredit.Controllers
         [UserLoginFilters]
         public IActionResult RecipeSummary([FromQuery]string date, [FromQuery]string name)
         {
-            string plan = HttpContext.Session.Get<string>("plan");
+            string plan = string.Empty;
+            var currUser = GetCurrentUser();
+            if (currUser.ChildAccounts.Count == 0)
+            {
+                plan = currUser._Plan;
+            }
+            else
+            {
+                plan = HttpContext.Session.Get<string>("plan");
+            }
             ViewBag.Plan = plan;
             ViewBag.Company = name;
 
@@ -1092,7 +1101,6 @@ namespace VirtualCredit.Controllers
             DetailModel dm = new DetailModel();
             List<NewExcel> allexcels = new List<NewExcel>();
             bool isSelf = false;
-            var currUser = GetCurrentUser();
             if (currUser.ChildAccounts.Count == 0)
             {
                 if (currUser.CompanyName != name)
@@ -1220,10 +1228,44 @@ namespace VirtualCredit.Controllers
             return File(new FileStream(summary_file, FileMode.Open, FileAccess.Read), "text/plain", $"{company}_{exportStart.ToString("yyyy-MM")}_入离职汇总表格.xls");
         }
 
+        public IActionResult DetailData([FromQuery]string date)
+        {
+            var currUser = GetCurrentUser();
+            DailyDetailModel ddm = new DailyDetailModel();
+            DataTable dataTable = DatabaseService.SelectPropFromTable("DailyDetail", "Date", date);
+            ddm.DetailTableByDate = dataTable.Clone();
+            foreach (DataRow row in dataTable.Rows)
+            {
+                if (currUser.CompanyName == row["Company"].ToString() || currUser.SpringAccounts.Any(x => x.CompanyName == row["Company"].ToString()))
+                {
+                    DataRow newrow = ddm.DetailTableByDate.NewRow();
+                    newrow.ItemArray = row.ItemArray;
+                    ddm.DetailTableByDate.Rows.Add(newrow);
+                }
+            }
+            return View("DailyDetail", ddm);
+        }
+
         public IActionResult DailyDetail()
         {
-
-            return View();
+            var currUser = GetCurrentUser();
+            List<DateTime> dateList = new List<DateTime>();
+            for (int i = 14; i >= 0; i--)
+            {
+                dateList.Add(DateTime.Now.Date.AddDays(i * -1));
+            }
+            List<string> companies = new List<string>();
+            foreach (var acc in currUser.SpringAccounts)
+            {
+                if (!companies.Contains(acc.CompanyName))
+                    companies.Add(acc.CompanyName);
+            }
+            if (!companies.Contains(currUser.CompanyName))
+                companies.Add(currUser.CompanyName);
+            DataTable dataTable = DatabaseService.SelectDailyDetailByDatetime(dateList, companies);
+            DailyDetailModel ddm = new DailyDetailModel();
+            ddm.DetailTable = dataTable;
+            return View("DailyDetail", ddm);
         }
 
         [HttpGet]
@@ -1535,9 +1577,17 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
-        public IActionResult RecipeSummaryByMonth([FromQuery]string name)
+        public IActionResult RecipeSummaryByMonth([FromQuery]string name, [FromQuery]string accountPlan = "")
         {
-            string plan = HttpContext.Session.Get<string>("plan");
+            string plan = string.Empty;
+            if (string.IsNullOrEmpty(accountPlan))
+            {
+                plan = HttpContext.Session.Get<string>("plan");
+            }
+            else
+            {
+                plan = accountPlan;
+            }
             if (string.IsNullOrEmpty(plan)) return View("Error");
             ViewBag.Plan = plan;
             ViewBag.Company = name;

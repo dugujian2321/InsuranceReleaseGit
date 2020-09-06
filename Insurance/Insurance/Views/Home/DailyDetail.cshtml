@@ -3,23 +3,65 @@
     ViewData["Title"] = "每日详情";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-
+@model Insurance.Models.DailyDetailModel
 <div class="alert alert-primary" style="font-size:20px" role="alert">
    每日详情
 </div>
 <table class="table table-striped table-bordered">
-    <thead class="thead-dark">
-        <tr style="text-align:center">
-            <td>日期</td>
-            <td>人数</td>
-            <td>保费</td>
-            <td>导出</td>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td></td>
-        </tr>
-    </tbody>
+
+    @if (Model.DetailTable != null)
+    {
+        <thead class="thead-dark">
+            <tr>
+                <th>日期</th>
+                <th>保费</th>
+                <th>加保人数</th>
+                <th>减保人数</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (System.Data.DataRow row in Model.DetailTable.Rows)
+            {
+                string date = @DateTime.Parse(row[0].ToString()).ToString("yyyy-MM-dd");
+                <tr>
+                    <td class="td_middle">@date</td>
+                    <td class="td_middle">@row[1]</td>
+                    <td class="td_middle">@row[2]</td>
+                    <td class="td_middle">@row[3]</td>
+                    <td class="td_middle"><a href="/Home/DetailData?date=@date">详细</a></td>
+                </tr>
+            }
+        </tbody>
+    }
+    else if (Model.DetailTableByDate != null)
+    {
+        <thead class="thead-dark">
+            <tr>
+                <th>日期</th>
+                <th>公司名称</th>
+                <th>方案</th>
+                <th>保费</th>
+                <th>加保人数</th>
+                <th>减保人数</th>
+                <th>投保账号</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (System.Data.DataRow row in Model.DetailTableByDate.Rows)
+            {
+                string date = @DateTime.Parse(row[0].ToString()).ToString("yyyy-MM-dd");
+                <tr>
+                    <td class="td_middle">@date</td>
+                    <td class="td_middle">@row[1]</td>
+                    <td class="td_middle">@row[4]</td>
+                    <td class="td_middle">@row[3]</td>
+                    <td class="td_middle">@row[5]</td>
+                    <td class="td_middle">@row[6]</td>
+                    <td class="td_middle">@row[2]</td>
+                </tr>
+            }
+        </tbody>
+    }
 </table>
 
