@@ -314,7 +314,8 @@ namespace Insurance.Controllers
             }
             catch (Exception e)
             {
-                Response.WriteAsync("请使用本站提供的模板文件进行投保");
+                Response.StatusCode = 500;
+                Response.WriteAsync("模板数据结构异常，请重新下载本站提供的模板文件填入数据后再试");
                 LogService.Log(e.Message);
                 LogService.Log(e.StackTrace);
                 return StatusCode(500);
