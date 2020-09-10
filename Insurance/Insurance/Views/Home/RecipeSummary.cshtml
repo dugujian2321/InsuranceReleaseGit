@@ -4,9 +4,9 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }@using Insurance.Models
 @model Insurance.Models.RecipeSummaryModel
-    <div class="alert alert-primary" style="font-size:20px" role="alert">
-        保费汇总 @ViewBag.Plan
-    </div>
+<div class="alert alert-primary" style="font-size:20px" role="alert">
+    保费汇总 @ViewBag.Plan
+</div>
 <div>
     @{
         UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
@@ -37,6 +37,13 @@
                             </tr>
                         }
                     }
+                    <tr>
+                        <td><strong>合计</strong></td>
+                        <td><strong>@Model.CompanyList.Sum(d => d.TotalCost)</strong></td>
+                        <td><strong>@Model.CompanyList.Sum(d => d.CustomerAlreadyPaid)</strong></td>
+                        <td><strong>@(Model.CompanyList.Sum(d => (d.TotalCost - d.CustomerAlreadyPaid)))</strong></td>
+                        <td><strong>/</strong></td>
+                    </tr>
                 </tbody>
             </table>
         }

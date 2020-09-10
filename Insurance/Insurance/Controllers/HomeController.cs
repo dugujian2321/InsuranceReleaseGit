@@ -494,13 +494,13 @@ namespace VirtualCredit.Controllers
                 }
                 allexcels.Sort((l, r) =>
                 {
-                    if (DateTime.Parse(l.UploadDate) <= DateTime.Parse(r.UploadDate))
+                    if (DateTime.Parse(l.UploadDate) != DateTime.Parse(r.UploadDate))
                     {
-                        return 1;
+                        return DateTime.Parse(r.UploadDate).CompareTo(DateTime.Parse(l.UploadDate));
                     }
                     else
                     {
-                        return -1;
+                        return l.Cost.CompareTo(r.Cost);
                     }
                 });
                 dm.Company = name;
@@ -1153,9 +1153,16 @@ namespace VirtualCredit.Controllers
                 }
             }
             dm.Company = name;
+            allexcels.Sort((a, b) =>
+            {
+                return a.Cost - a.Paid != b.Cost - b.Paid ? Math.Abs(b.Cost - b.Paid).CompareTo(Math.Abs(a.Cost - a.Paid)) :
+                        DateTime.Parse(a.UploadDate).CompareTo(DateTime.Parse(b.UploadDate));
+            });
             dm.Excels = allexcels;
             return View("RecipeSummaryDetail", dm);
         }
+
+
 
         private NewExcel GetExcelInfo(string fileFullName, string companyName)
         {
@@ -1635,8 +1642,9 @@ namespace VirtualCredit.Controllers
                     foreach (string month in dirs)
                     {
                         DirectoryInfo di = new DirectoryInfo(month);
-                        if (di.Parent.Name != plan) continue;
+                        if (di.Parent.Name != plan || !di.Exists) continue;
                         var tempexcel = GetMonthlyDetail(month, name);
+                        if (tempexcel == null) continue;
                         excel.StartDate = tempexcel.StartDate;
                         excel.EndDate = tempexcel.EndDate;
                         excel.Cost += tempexcel.Cost;
@@ -2076,4 +2084,6 @@ namespace VirtualCredit.Controllers
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
+
+
 }

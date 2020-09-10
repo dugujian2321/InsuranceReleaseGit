@@ -81,9 +81,12 @@
                                     @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
                                     {
                                         <td>
-                                            <button type="button" class="btn btn-danger" data-toggle="modal" data-company="@item.Name" data-target="#confirmDeleteCompany">
-                                                删除
-                                            </button>
+                                            @if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+                                            {
+                                                <button type="button" class="btn btn-danger" data-toggle="modal" data-company="@item.Name" data-target="#confirmDeleteCompany">
+                                                    删除
+                                                </button>
+                                            }
                                         </td>
                                     }
                                     <td class="td_middle">@item.Name</td>

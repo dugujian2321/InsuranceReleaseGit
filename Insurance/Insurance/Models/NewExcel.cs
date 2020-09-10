@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Net.Http.Headers;
+using System;
 
 namespace Insurance.Models
 {
@@ -24,7 +25,10 @@ namespace Insurance.Models
 
         public double Paid { get; set; }
 
-        public double Unpaid { get; set; }
+        public double Unpaid
+        {
+            get;set;
+        }
         public string Uploader { get; set; }
         public string Plan { get; set; }
     }
