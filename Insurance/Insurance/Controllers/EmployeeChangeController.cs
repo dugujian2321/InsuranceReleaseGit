@@ -265,39 +265,41 @@ namespace Insurance.Controllers
         }
 
         [UserLoginFilters]
-        public IActionResult UpdateEmployees([FromForm]IFormFile newExcel, string mode)
+        public IActionResult UpdateEmployees([FromForm] IFormFile newExcel, string mode)
         {
             if (newExcel is null)
             {
                 return BadRequest();
             }
+            FileInfo fi = new FileInfo(newExcel.FileName);
             string temp_excel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
             try
             {
                 //TODO: 添加验证格式代码
                 //将FormFile中的Sheet1转换成DataTable
                 string template = Path.Combine(Utility.Instance.TemplateFolder, "employee_download.xls");
-                string uploadedExcel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
+                string uploadedExcel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + fi.Extension);
                 DataTable dt = new DataTable();
                 using (FileStream ms = System.IO.File.Create(uploadedExcel))
                 {
                     HttpContext.Session.Set("readyToSubmit", "N");
                     newExcel.CopyTo(ms);
-                    ExcelTool et = new ExcelTool(ms, "Sheet1");
+                    ms.Flush();
+                }
+                using (ExcelTool et = new ExcelTool(uploadedExcel, "Sheet1"))
+                {
                     dt = et.ExcelToDataTable("Sheet1", true);
-                    et.Dispose();
                 }
                 System.IO.File.Delete(uploadedExcel);
+
 
                 //将DataTable转成Excel
                 Initialize();
                 System.IO.File.Copy(template, temp_excel);
                 MemoryStream stream = new MemoryStream();
-                using (FileStream fs = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite))
+                using (ExcelTool test = new ExcelTool(temp_excel, "Sheet1"))
                 {
-                    ExcelTool test = new ExcelTool(fs, "Sheet1");
                     test.RawDatatableToExcel(dt);
-                    test.Dispose();
                 }
 
                 using (FileStream inputStream = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite))
@@ -307,8 +309,6 @@ namespace Insurance.Controllers
                     HttpContext.Session.Set("validationResult", new List<Employee>());
                     List<Employee> validationResult = ValidateExcel(inputStream, "Sheet1", mode);
                     HttpContext.Session.Set("validationResult", validationResult);
-                    inputStream.Close();
-                    inputStream.Dispose();
                     return Json(validationResult);
                 }
             }
@@ -508,9 +508,10 @@ namespace Insurance.Controllers
                 }
             }
         }
-
-        public double CalculatePrice([FromForm]DateTime startdate)
+        static object locker1 = new object();
+        public double CalculatePrice([FromForm] DateTime startdate)
         {
+
             if (startdate.Year > DateTime.Now.Year)
             {
                 return -9999997;
@@ -541,14 +542,12 @@ namespace Insurance.Controllers
             try
             {
                 string dateTime = startdate.ToShortDateString();
-                using (FileStream fs = System.IO.File.Open(summaryFilePath, FileMode.OpenOrCreate))
+
+                using (ExcelTool et = new ExcelTool(summaryFilePath, "Sheet1"))
                 {
-                    lock (fs)
-                    {
-                        ExcelTool et = new ExcelTool(fs, "Sheet1");
-                        dt = et.ExcelToDataTable("Sheet1", true);
-                    }
+                    dt = et.ExcelToDataTable("Sheet1", true);
                 }
+
                 if (mode == "add")
                 {
                     double temp = CalculateAddPrice(startdate);
