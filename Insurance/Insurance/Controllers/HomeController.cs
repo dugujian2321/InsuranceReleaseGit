@@ -79,7 +79,7 @@ namespace VirtualCredit.Controllers
         /// <param name="year"></param>
         /// <returns></returns>
         [UserLoginFilters]
-        public IActionResult YearHistory([FromQuery]int year)
+        public IActionResult YearHistory([FromQuery] int year)
         {
             if (year == From.Year)
             {
@@ -121,7 +121,7 @@ namespace VirtualCredit.Controllers
         /// </summary>
         /// <returns></returns>
         [UserLoginFilters]
-        public IActionResult YearlyHistoryData([FromQuery]string companyName, [FromQuery]int year)
+        public IActionResult YearlyHistoryData([FromQuery] string companyName, [FromQuery] int year)
         {
             ReaderWriterLockSlim r_locker = null;
             bool isSelf = false;
@@ -215,7 +215,7 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
-        public IActionResult CompanyHisitoryByMonth([FromQuery]string name)
+        public IActionResult CompanyHisitoryByMonth([FromQuery] string name)
         {
             ReaderWriterLockSlim r_locker = null;
             bool isSelf = false;
@@ -395,7 +395,7 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
-        public IActionResult CompanyHistory([FromQuery]string date, [FromQuery]string name)
+        public IActionResult CompanyHistory([FromQuery] string date, [FromQuery] string name)
         {
             ReaderWriterLockSlim r_locker = null;
             DetailModel dm;
@@ -570,7 +570,7 @@ namespace VirtualCredit.Controllers
 
         [HttpPost]
         [UserLoginFilters]
-        public JsonResult StartRenew([FromForm]RenewModel test)
+        public JsonResult StartRenew([FromForm] RenewModel test)
         {
             ReaderWriterLockerWithName locker = null;
             string summary = string.Empty;
@@ -837,7 +837,7 @@ namespace VirtualCredit.Controllers
 
         [HttpGet]
         [UserLoginFilters]
-        public JsonResult ShowPersonalDetail([FromQuery]string comp, [FromQuery]string id)
+        public JsonResult ShowPersonalDetail([FromQuery] string comp, [FromQuery] string id)
         {
             DataTable res = new DataTable();
             ReaderWriterLockSlim r_locker = null;
@@ -991,8 +991,22 @@ namespace VirtualCredit.Controllers
         {
             try
             {
+                var currUser = GetCurrentUser();
+                SummaryModel sm = new SummaryModel();
+                sm.PlanList = new List<Plan>();
+                foreach (var plan in Plans)
+                {
+                    Plan p = new Plan();
+                    p.Name = plan;
+                    var comp = GetChildrenCompanies(currUser, plan);
+                    p.TotalCost = comp.Sum(x => x.TotalCost);
+                    p.TotalPaid = comp.Sum(x => x.CustomerAlreadyPaid);
+                    p.HeadCount = comp.Sum(x => x.EmployeeNumber);
+                    sm.PlanList.Add(p);
+                }
+
                 HttpContext.Session.Set("plan", string.Empty);
-                return View("RecieptPlans");
+                return View("RecieptPlans", sm);
             }
             catch (Exception e)
             {
@@ -1000,6 +1014,7 @@ namespace VirtualCredit.Controllers
                 return View("Error");
             }
         }
+
 
         /// <summary>
         /// 列出所有公司的保费汇总信息
@@ -1027,7 +1042,7 @@ namespace VirtualCredit.Controllers
 
         [UserLoginFilters]
         [AdminFilters]
-        public IActionResult BanlanceAccount([FromQuery]string companyName)
+        public IActionResult BanlanceAccount([FromQuery] string companyName)
         {
             string plan = HttpContext.Session.Get<string>("plan");
             ViewBag.Plan = plan;
@@ -1081,7 +1096,7 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
-        public IActionResult RecipeSummary([FromQuery]string date, [FromQuery]string name)
+        public IActionResult RecipeSummary([FromQuery] string date, [FromQuery] string name)
         {
             string plan = string.Empty;
             var currUser = GetCurrentUser();
@@ -1235,7 +1250,7 @@ namespace VirtualCredit.Controllers
             return File(new FileStream(summary_file, FileMode.Open, FileAccess.Read), "text/plain", $"{company}_{exportStart.ToString("yyyy-MM")}_入离职汇总表格.xls");
         }
 
-        public IActionResult DetailData([FromQuery]string date)
+        public IActionResult DetailData([FromQuery] string date)
         {
             var currUser = GetCurrentUser();
             DailyDetailModel ddm = new DailyDetailModel();
@@ -1522,7 +1537,7 @@ namespace VirtualCredit.Controllers
         }
 
         [HttpPost]
-        public bool MarkAsPaid([FromForm]string ids)
+        public bool MarkAsPaid([FromForm] string ids)
         {
             string company = string.Empty;
             List<string> changedFiles = new List<string>();
@@ -1584,7 +1599,7 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
-        public IActionResult RecipeSummaryByMonth([FromQuery]string name, [FromQuery]string accountPlan = "")
+        public IActionResult RecipeSummaryByMonth([FromQuery] string name, [FromQuery] string accountPlan = "")
         {
             string plan = string.Empty;
             if (string.IsNullOrEmpty(accountPlan))
@@ -1893,7 +1908,7 @@ namespace VirtualCredit.Controllers
         /// <param name="accountName"></param>
         [UserLoginFilters]
         [AdminFilters]
-        public IActionResult RemoveAccountData([FromQuery]string accountName)
+        public IActionResult RemoveAccountData([FromQuery] string accountName)
         {
             var locker = GetCurrentUser().MyLocker.RWLocker;
             try
@@ -2035,7 +2050,7 @@ namespace VirtualCredit.Controllers
 
         [HttpGet]
         [AdminFilters]
-        public JsonResult UpdateCaseCost([FromQuery]string id, [FromQuery]string cost)
+        public JsonResult UpdateCaseCost([FromQuery] string id, [FromQuery] string cost)
         {
             if (!double.TryParse(cost, out double price)) return Json("金额不正确");
             bool res = DatabaseService.UpdateOneColumn("CaseInfo", "CaseId", id, "Price", price);
@@ -2057,7 +2072,7 @@ namespace VirtualCredit.Controllers
         }
 
         [HttpPost]
-        public IActionResult SubmitCase([FromForm]DateTime casedate, [FromForm]string person, [FromForm]string detail)
+        public IActionResult SubmitCase([FromForm] DateTime casedate, [FromForm] string person, [FromForm] string detail)
         {
             if (casedate.Year < 2000 || string.IsNullOrEmpty(person) || string.IsNullOrEmpty(detail)) return Json("信息不完整");
             string caseDir = Path.Combine(ExcelRoot, "报案信息");

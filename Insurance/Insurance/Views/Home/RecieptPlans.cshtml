@@ -3,10 +3,11 @@
     ViewData["Title"] = "RecieptPlans";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
+@model Insurance.Models.SummaryModel
 <div class="alert alert-primary" style="font-size:20px" role="alert">
     保费汇总
 </div>
-@{ 
+@{
     string disable30 = string.Empty;
     string disable60 = string.Empty;
     string disable80 = string.Empty;
@@ -16,9 +17,9 @@
         disable30 = disable60 = disable80 = "disabled";
         foreach (var plan in VC_ControllerBase.Plans)
         {
-            if(plan == currUser._Plan)
+            if (plan == currUser._Plan)
             {
-                int num =Convert.ToInt32(plan.Replace("万", string.Empty));
+                int num = Convert.ToInt32(plan.Replace("万", string.Empty));
                 switch (num)
                 {
                     case 30:
@@ -35,64 +36,70 @@
             }
         }
     }
+}
 
-    }
 <div class="container">
     <div class="card-deck mb-3 text-center" style="margin:0 auto">
-        <div class="card mb-4 shadow-sm" disabled>
-            <div class="card-header">
-                <h4 class="my-0 font-weight-normal">
-                    <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-layers-half" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" d="M3.188 8L.264 9.559a.5.5 0 0 0 0 .882l7.5 4a.5.5 0 0 0 .47 0l7.5-4a.5.5 0 0 0 0-.882L12.813 8l-4.578 2.441a.5.5 0 0 1-.47 0L3.188 8z" />
-                        <path fill-rule="evenodd" d="M7.765 1.559a.5.5 0 0 1 .47 0l7.5 4a.5.5 0 0 1 0 .882l-7.5 4a.5.5 0 0 1-.47 0l-7.5-4a.5.5 0 0 1 0-.882l7.5-4zM1.563 6L8 9.433 14.438 6 8 2.567 1.562 6z" />
-                    </svg>
-                </h4>
-            </div>
-            <div class="card-body">
-                <h1 class="card-title pricing-card-title">
-                    ￥30万保额
-                </h1>
-                <button @disable30 class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=30万'">
-                    查看详情
-                </button>
-            </div>
-        </div>
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header">
-                <h4 class="my-0 font-weight-normal">
-                    <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-layers-half" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" d="M3.188 8L.264 9.559a.5.5 0 0 0 0 .882l7.5 4a.5.5 0 0 0 .47 0l7.5-4a.5.5 0 0 0 0-.882L12.813 8l-4.578 2.441a.5.5 0 0 1-.47 0L3.188 8z" />
-                        <path fill-rule="evenodd" d="M7.765 1.559a.5.5 0 0 1 .47 0l7.5 4a.5.5 0 0 1 0 .882l-7.5 4a.5.5 0 0 1-.47 0l-7.5-4a.5.5 0 0 1 0-.882l7.5-4zM1.563 6L8 9.433 14.438 6 8 2.567 1.562 6z" />
-                    </svg>
-                </h4>
-            </div>
-            <div class="card-body">
-                <h1 class="card-title pricing-card-title">
-                    ￥60万保额
-                </h1>
-                <button @disable60 class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=60万'">
-                    查看详情
-                </button>
-            </div>
-        </div>
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header">
-                <h4 class="my-0 font-weight-normal">
-                    <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-layers-half" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" d="M3.188 8L.264 9.559a.5.5 0 0 0 0 .882l7.5 4a.5.5 0 0 0 .47 0l7.5-4a.5.5 0 0 0 0-.882L12.813 8l-4.578 2.441a.5.5 0 0 1-.47 0L3.188 8z" />
-                        <path fill-rule="evenodd" d="M7.765 1.559a.5.5 0 0 1 .47 0l7.5 4a.5.5 0 0 1 0 .882l-7.5 4a.5.5 0 0 1-.47 0l-7.5-4a.5.5 0 0 1 0-.882l7.5-4zM1.563 6L8 9.433 14.438 6 8 2.567 1.562 6z" />
-                    </svg>
-                </h4>
-            </div>
-            <div class="card-body">
-                <h1 class="card-title pricing-card-title">
-                    ￥80万保额
-                </h1>
-                <button @disable80 class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=80万'">
-                    查看详情
-                </button>
-            </div>
-        </div>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-dark">
+                <tr style="text-align:center">
+                    <th>保额</th>
+                    <th>在保人数</th>
+                    <th>总保费</th>
+                    <th>合计已结保费</th>
+                    <th>合计未结保费</th>
+                    <th>详情</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="text-align:center">
+                    <td class="td_middle">30万</td>
+                    <td class="td_middle">@Model.PlanList[0].HeadCount</td>
+                    <td class="td_middle">@Model.PlanList[0].TotalCost</td>
+                    <td class="td_middle">@Model.PlanList[0].TotalPaid</td>
+                    <td class="td_middle">@Model.PlanList[0].Unpaid</td>
+                    <td>
+                        <button @disable30 class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=30万'">
+                            查看详情
+                        </button>
+                    </td>
+                </tr>
+                <tr style="text-align:center">
+                    <td class="td_middle">60万</td>
+                    <td class="td_middle">@Model.PlanList[1].HeadCount</td>
+                    <td class="td_middle">@Model.PlanList[1].TotalCost</td>
+                    <td class="td_middle">@Model.PlanList[1].TotalPaid</td>
+                    <td class="td_middle">@Model.PlanList[1].Unpaid</td>
+                    <td>
+                        <button @disable60 class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=60万'">
+                            查看详情
+                        </button>
+                    </td>
+                </tr>
+                <tr style="text-align:center">
+                    <td class="td_middle">80万</td>
+                    <td class="td_middle">@Model.PlanList[2].HeadCount</td>
+                    <td class="td_middle">@Model.PlanList[2].TotalCost</td>
+                    <td class="td_middle">@Model.PlanList[2].TotalPaid</td>
+                    <td class="td_middle">@Model.PlanList[2].Unpaid</td>
+                    <td class="td_middle">
+                        <button @disable80 class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=80万'">
+                            查看详情
+                        </button>
+                    </td>
+                </tr>
+                <tr style="text-align:center">
+                    <td class="td_middle">合计</td>
+                    <td class="td_middle">@Model.PlanList.Sum(x => x.HeadCount)</td>
+                    <td class="td_middle">@Model.PlanList.Sum(x => x.TotalCost)</td>
+                    <td class="td_middle">@Model.PlanList.Sum(x => x.TotalPaid)</td>
+                    <td class="td_middle">@Model.PlanList.Sum(x => x.Unpaid)</td>
+                    <td class="td_middle">
+                        /
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
