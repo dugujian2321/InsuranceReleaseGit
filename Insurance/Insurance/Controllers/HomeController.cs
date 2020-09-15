@@ -61,6 +61,7 @@ namespace VirtualCredit.Controllers
             {
                 HistoricalModel model = new HistoricalModel();
                 model.CompanyList = GetChildAccountsCompany();
+                model.CompanyList = model.CompanyList.OrderBy(c => c.Name).ToList();
                 ViewBag.PageInfo = "保单列表";
                 return View("HistoricalList", model);
             }
@@ -917,8 +918,10 @@ namespace VirtualCredit.Controllers
                     string uploadtime = excelInfo[0] + " " + excelInfo[5].Replace('-', ':');
                     string comp = fi.Directory.Parent.Name;
                     string uploader = excelInfo[2];
-                    ExcelTool et = new ExcelTool(file, "Sheet1");
-                    temp = et.SelectPeopleByNameAndID(em_name, nameCol, em_id, idCol);
+                    using (ExcelTool et = new ExcelTool(file, "Sheet1"))
+                    {
+                        temp = et.SelectPeopleByNameAndID(em_name, nameCol, em_id, idCol);
+                    }
                     if (temp != null && temp.Rows.Count > 0)
                     {
                         if (res.Columns.Count <= 0)
@@ -1030,6 +1033,7 @@ namespace VirtualCredit.Controllers
                 RecipeSummaryModel model = new RecipeSummaryModel();
                 var currUser = GetCurrentUser();
                 model.CompanyList = GetChildrenCompanies(currUser, plan).ToList();
+                model.CompanyList = model.CompanyList.OrderBy(x => x.Name).ToList();
                 HttpContext.Session.Set("plan", plan);
                 return View("RecipeSummary", model);
             }

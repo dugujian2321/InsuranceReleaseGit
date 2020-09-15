@@ -70,12 +70,12 @@ namespace Insurance.Services
             {
                 searchPattern = Plan;
             }
-            dirsContainExcel = Directory.GetDirectories(CompanyDir, searchPattern, SearchOption.AllDirectories).ToList();
+            dirsContainExcel = Directory.GetDirectories(CompanyDir, searchPattern, SearchOption.AllDirectories).ToList(); //该公司及其子公司所有指定方案的目录
 
         }
 
         /// <summary>
-        /// 
+        /// 获取保单方案下的保单人次
         /// </summary>
         /// <returns></returns>
         public int GetEmployeeNumber()
@@ -106,6 +106,21 @@ namespace Insurance.Services
                     }
                 }
             });
+            return result;
+        }
+        /// <summary>
+        /// 获取保单方案下的当前在保人数
+        /// </summary>
+        /// <returns></returns>
+        public int GetCurrentEmployeeNumber()
+        {
+            int result = 0;
+            string planDir = Path.Combine(CompanyDir, Plan);
+            string summaryFile = Path.Combine(planDir, CompanyName + ".xls");
+            using(ExcelTool et = new ExcelTool(summaryFile, "Sheet1"))
+            {
+                result = et.GetEmployeeNumber();
+            }
             return result;
         }
 

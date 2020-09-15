@@ -58,24 +58,5 @@ namespace VirtualCredit.Services
         public static double DailyTotalCost;
         public static int DailyAdd;
         public static int DailySub;
-        public static void UpdateDailyInfo()
-        {
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-            DateTime currDate = DateTime.Now.Date;
-            while (true)
-            {
-                if (DateTime.Now.Date > currDate)
-                {
-                    currDate = DateTime.Now.Date;
-                    DailyAdd = 0;
-                    DailyTotalCost = 0;
-                    DailySub = 0;
-                    DailyTotalHC = 0;
-                }
-            }
-
-
-        }
     }
 }

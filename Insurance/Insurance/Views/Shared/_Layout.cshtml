@@ -31,6 +31,8 @@
 
                 @{
                     var user = Context.Session.Get<UserInfoModel>("CurrentUser");
+                    var dailyPrice = Context.Session.Get<double>("DailyPrice");
+                    var dailyHeadCount = Context.Session.Get<int>("DailyHeadCount");
                     if (user != null)
                     {
                         <h2 class="mb-3">@user.CompanyName</h2>
@@ -43,7 +45,7 @@
                             </div>
                             <div class="card-body" style="text-align:center">
                                 <h6 class="card-title">
-                                    @VirtualCredit.Services.Utility.DailyTotalHC
+                                    @dailyHeadCount
                                 </h6>
                             </div>
                         </div>
@@ -80,7 +82,7 @@
                             <a href="/Home/DailyDetail" style="text-decoration:none">
                                 <div class="card-body" style="text-align:center">
                                     <h6 class="card-title pricing-card-title">
-                                        @VirtualCredit.Services.Utility.DailyTotalCost
+                                        @dailyPrice
                                     </h6>
                                 </div>
                             </a>

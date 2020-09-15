@@ -20,5 +20,9 @@ namespace VirtualCredit.Models
         [DatabaseProp] public string RecipeType { get; set; }
         public string UserNameEdit { get; set; }
         public ReaderWriterLockerWithName MyLocker { get; set; }
+
+        public int DailyHeadCount { get; set; }
+
+        public double DailyCost { get; set; }
     }
 }

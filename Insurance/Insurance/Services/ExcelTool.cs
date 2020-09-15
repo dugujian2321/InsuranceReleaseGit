@@ -869,69 +869,77 @@ namespace Insurance.Services
 
         public DataTable SelectPeopleByNameAndID(string name, int nameCol, string id, int idCol)
         {
-            DataTable result = new DataTable();
-            result.Columns.Add(new DataColumn("company"));
-            result.Columns.Add(new DataColumn("name"));
-            result.Columns.Add(new DataColumn("id"));
-            result.Columns.Add(new DataColumn("job"));
-            result.Columns.Add(new DataColumn("type"));
-            result.Columns.Add(new DataColumn("start_date"));
-            result.Columns.Add(new DataColumn("end_date"));
-
-            DataTable source;
-            ExcelToDataTable("Sheet1", true, out source);
-            if (source is null)
+            try
             {
-                DataRow newRow = result.NewRow();
-                newRow["name"] = "未找到符合条件的人员";
-                newRow["id"] = string.Empty;
-                result.Rows.Add(newRow);
+                DataTable result = new DataTable();
+                result.Columns.Add(new DataColumn("company"));
+                result.Columns.Add(new DataColumn("name"));
+                result.Columns.Add(new DataColumn("id"));
+                result.Columns.Add(new DataColumn("job"));
+                result.Columns.Add(new DataColumn("type"));
+                result.Columns.Add(new DataColumn("start_date"));
+                result.Columns.Add(new DataColumn("end_date"));
+
+                DataTable source;
+                ExcelToDataTable("Sheet1", true, out source);
+                if (source is null)
+                {
+                    DataRow newRow = result.NewRow();
+                    newRow["name"] = "未找到符合条件的人员";
+                    newRow["id"] = string.Empty;
+                    result.Rows.Add(newRow);
+                    return result;
+                }
+                if (string.IsNullOrEmpty(id))
+                {
+                    foreach (DataRow row in source.Rows)
+                    {
+                        if (row["姓名"].ToString().IndexOf(name) >= 0)
+                        {
+                            DataRow newRow = result.NewRow();
+                            newRow["name"] = row["姓名"];
+                            newRow["id"] = row["身份证"];
+                            newRow["job"] = row["工种"];
+                            newRow["type"] = row["职业类别"];
+                            newRow["start_date"] = row["保障开始时间"];
+                            newRow["end_date"] = row["保障结束时间"];
+                            newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
+                            result.Rows.Add(newRow);
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (DataRow row in source.Rows)
+                    {
+                        if (row["身份证"].ToString() == id)
+                        {
+                            DataRow newRow = result.NewRow();
+                            newRow["name"] = row["姓名"];
+                            newRow["id"] = id;
+                            newRow["job"] = row["工种"];
+                            newRow["type"] = row["职业类别"];
+                            newRow["start_date"] = row["保障开始时间"];
+                            newRow["end_date"] = row["保障结束时间"];
+                            newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
+                            result.Rows.Add(newRow);
+                        }
+                    }
+                }
+                if (result.Rows.Count <= 0)
+                {
+                    DataRow newRow = result.NewRow();
+                    newRow["name"] = "未找到符合条件的人员";
+                    newRow["id"] = string.Empty;
+                    result.Rows.Add(newRow);
+                }
                 return result;
             }
-            if (string.IsNullOrEmpty(id))
+            catch (Exception e)
             {
-                foreach (DataRow row in source.Rows)
-                {
-                    if (row["姓名"].ToString().IndexOf(name) >= 0)
-                    {
-                        DataRow newRow = result.NewRow();
-                        newRow["name"] = row["姓名"];
-                        newRow["id"] = row["身份证"];
-                        newRow["job"] = row["工种"];
-                        newRow["type"] = row["职业类别"];
-                        newRow["start_date"] = row["保障开始时间"];
-                        newRow["end_date"] = row["保障结束时间"];
-                        newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
-                        result.Rows.Add(newRow);
-                    }
-                }
+                throw;
             }
-            else
-            {
-                foreach (DataRow row in source.Rows)
-                {
-                    if (row["身份证"].ToString() == id)
-                    {
-                        DataRow newRow = result.NewRow();
-                        newRow["name"] = row["姓名"];
-                        newRow["id"] = id;
-                        newRow["job"] = row["工种"];
-                        newRow["type"] = row["职业类别"];
-                        newRow["start_date"] = row["保障开始时间"];
-                        newRow["end_date"] = row["保障结束时间"];
-                        newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
-                        result.Rows.Add(newRow);
-                    }
-                }
-            }
-            if (result.Rows.Count <= 0)
-            {
-                DataRow newRow = result.NewRow();
-                newRow["name"] = "未找到符合条件的人员";
-                newRow["id"] = string.Empty;
-                result.Rows.Add(newRow);
-            }
-            return result;
+            
         }
 
         public static bool CreateNewCompanyTable(NewUserModel user, out string companyDir)

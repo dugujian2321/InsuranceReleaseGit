@@ -21,6 +21,7 @@ namespace VirtualCredit
         public static long CustomersCount = 0;
         public static string ExcelRoot = Utility.Instance.ExcelRoot;
         protected ImageTool _imageTool;
+        public UserInfoModel currUser_temp;
         public string RoleId
         {
             get
@@ -239,13 +240,44 @@ namespace VirtualCredit
             return result;
         }
 
+        /// <summary>
+        /// 获取账号自身的相关数据，不包含其子账号的数据
+        /// </summary>
+        /// <param name="account"></param>
+        /// <returns></returns>
+        public AccountData GetAccountData(UserInfoModel account)
+        {
+            AccountData ad = new AccountData();
+            ad.Account = account;
+            ad.PricePerMonth = account.UnitPrice;
+            string company = account.CompanyName;
+            if (company == "管理员")
+            {
+                return null;
+            }
+            string plan = account._Plan;
+            string companyDir = Directory.GetDirectories(Path.Combine(ExcelRoot, "管理员"), company, SearchOption.AllDirectories).FirstOrDefault();
+            string accountDir = Directory.GetDirectories(companyDir, plan, SearchOption.AllDirectories).FirstOrDefault();
+            string accountSummaryFile = Path.Combine(accountDir, company + ".xls");
+            if (!System.IO.File.Exists(accountSummaryFile)) return ad;
+            using (ExcelTool et = new ExcelTool(accountSummaryFile, "Sheet1"))
+            {
+                ad.HeadCount = et.GetEmployeeNumber();
+            }
+            return ad;
+        }
+
+        /// <summary>
+        /// 获取当前账号所有子公司（包括所有后代账号的信息）的信息,包括当前账号自身的数据
+        /// </summary>
+        /// <returns></returns>
         public List<Company> GetChildAccountsCompany()
         {
             UserInfoModel currUser = GetCurrentUser();
             string companiesDirectory = GetCurrentUserRootDir();
             List<Company> result = new List<Company>();
             var children = currUser.ChildAccounts;
-            var companyAccounts = GroupAccountByCompanyName(children);
+            var companyAccounts = GroupAccountByCompanyName(children); 
             foreach (var companyAccount in companyAccounts)
             {
                 var companyName = companyAccount[0].CompanyName;
@@ -258,7 +290,7 @@ namespace VirtualCredit
                 foreach (var account in companyAccount)
                 {
                     ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, account._Plan);
-                    company.EmployeeNumber += edr.GetEmployeeNumber();
+                    company.EmployeeNumber += edr.GetCurrentEmployeeNumber();
                     company.StartDate = From;
                     company.PaidCost += edr.GetPaidCost();
                     company.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
@@ -267,6 +299,7 @@ namespace VirtualCredit
                 }
                 result.Add(company);
             }
+
             Company self = new Company();
             self.Name = currUser.CompanyName;
             string thisSummary = Path.Combine(companiesDirectory, currUser._Plan, self.Name + ".xls");
@@ -352,7 +385,9 @@ namespace VirtualCredit
                     com.TotalCost += edr.GetTotalCost();
                     com.EmployeeNumber += edr.GetEmployeeNumber();
                     com.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
-                    com.UnitPrice += Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
+                    var temp = DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name);
+                    if (temp != null)
+                        com.UnitPrice += Convert.ToDouble(temp.Rows[0]["UnitPrice"]);
                     result.Add(com);
 
                 }
@@ -421,9 +456,11 @@ namespace VirtualCredit
 
         public UserInfoModel GetCurrentUser()
         {
+            if (currUser_temp != null) return currUser_temp;
             IUser user = new UserInfoModel();
-            user.UserName = HttpContext.Session.Get<UserInfoModel>("CurrentUser").UserName;
-            user.userPassword = HttpContext.Session.Get<UserInfoModel>("CurrentUser").userPassword;
+            var currUser = HttpContext.Session.Get<UserInfoModel>("CurrentUser");
+            user.UserName = currUser.UserName;
+            user.userPassword = currUser.userPassword;
             UserInfoModel uim = DatabaseService.UserMatchUserNamePassword(user);
             uim.MyLocker = Utility.GetCompanyLocker(uim.CompanyName);
             if (uim.ChildAccounts == null || uim.ChildAccounts.Count == 0)

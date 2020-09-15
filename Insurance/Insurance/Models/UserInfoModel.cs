@@ -55,6 +55,9 @@ namespace VirtualCredit.Models
 
         private List<UserInfoModel> childAccounts;
 
+        /// <summary>
+        /// 直接子账号
+        /// </summary>
         public List<UserInfoModel> ChildAccounts
         {
             get

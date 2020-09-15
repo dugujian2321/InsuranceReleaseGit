@@ -199,7 +199,6 @@ namespace Insurance.Controllers
                         result.Add(kickoffDate);
                         result.Add(endDate);
                         ClearSession();
-                        Utility.DailyTotalHC += headCount;
                         Utility.DailyAdd += headCount;
                         Utility.DailyTotalCost += price;
                         return Json(result);
@@ -275,7 +274,6 @@ namespace Insurance.Controllers
                         UpdateDailyDetail(detail);
                         ClearSession();
                         Utility.DailySub += headCount;
-                        Utility.DailyTotalHC += headCount;
                         Utility.DailyTotalCost += price;
                         return Json(result);
                     }

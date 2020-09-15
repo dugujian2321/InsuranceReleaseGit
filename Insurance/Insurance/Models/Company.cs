@@ -8,6 +8,10 @@ namespace Insurance.Models
     public class Company
     {
         public string Name { get; set; }
+
+        /// <summary>
+        /// 当前在保人数
+        /// </summary>
         public int EmployeeNumber { get; set; }
         /// <summary>
         /// 总保费
@@ -22,8 +26,9 @@ namespace Insurance.Models
         /// <summary>
         /// 已赔付金额
         /// </summary>
-        public double PaidCost { get; set; } 
+        public double PaidCost { get; set; }
         public DateTime StartDate { get; set; }
         public double UnitPrice { get; set; }
+        public double DailyCost { get; set; }
     }
 }
