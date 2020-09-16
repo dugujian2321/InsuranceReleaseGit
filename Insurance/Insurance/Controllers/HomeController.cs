@@ -1172,11 +1172,12 @@ namespace VirtualCredit.Controllers
                 }
             }
             dm.Company = name;
-            allexcels.Sort((a, b) =>
-            {
-                return a.Cost - a.Paid != b.Cost - b.Paid ? Math.Abs(b.Cost - b.Paid).CompareTo(Math.Abs(a.Cost - a.Paid)) :
-                        DateTime.Parse(a.UploadDate).CompareTo(DateTime.Parse(b.UploadDate));
-            });
+            //allexcels.Sort((a, b) =>
+            //{
+            //    return a.Cost - a.Paid != b.Cost - b.Paid ? Math.Abs(b.Cost - b.Paid).CompareTo(Math.Abs(a.Cost - a.Paid)) :
+            //            DateTime.Parse(a.UploadDate).CompareTo(DateTime.Parse(b.UploadDate)); //先按结算状态排序，再按时间排序
+            //});
+            allexcels = allexcels.OrderBy(x => x.Status).ThenBy(x => x.UploadDate).ToList();
             dm.Excels = allexcels;
             return View("RecipeSummaryDetail", dm);
         }

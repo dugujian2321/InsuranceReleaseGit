@@ -31,6 +31,10 @@ namespace Insurance.Models
         }
         public string Uploader { get; set; }
         public string Plan { get; set; }
+        /// <summary>
+        /// //结算状态 true-已结算 false-未结算
+        /// </summary>
+        public bool Status { get { return Cost - Paid == 0; } } 
     }
 
 
