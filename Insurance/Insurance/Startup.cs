@@ -26,6 +26,9 @@ namespace VirtualCredit
             Task.Factory.StartNew(()=> {
                 new AutoRenewAllCompanies().StartListening(configuration);
             });
+            Task.Factory.StartNew(() => {
+                Utility.DailyUpdate();
+            });
         }
 
         public IConfiguration Configuration { get; }

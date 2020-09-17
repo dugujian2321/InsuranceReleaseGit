@@ -28,4 +28,22 @@ namespace Insurance.Models
         public DataTable DetailTable { get; set; }
         public DataTable DetailTableByDate { get; set; }
     }
+
+    public class DailyDetailDataModel : ViewModelBase
+    {
+        [DatabaseProp]
+        public DateTime YMDDate { get; set; }      
+
+        [DatabaseProp]
+        public string Company { get; set; }
+
+        [DatabaseProp]
+        public int HeadCount { get; set; }
+
+        [DatabaseProp]
+        public double DailyPrice { get; set; }
+        [DatabaseProp]
+        public string Product { get; set; }
+
+    }
 }

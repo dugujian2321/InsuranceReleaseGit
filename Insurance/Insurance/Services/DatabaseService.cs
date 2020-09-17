@@ -81,6 +81,12 @@ namespace VirtualCredit
 
         }
 
+        public static bool BulkInsert(string tblName,DataTable dataTable)
+        {
+            return SQLServerHelper.BulkInsert(tblName, dataTable);
+        }
+
+
         /// <summary>
         /// 添加一个新故事
         /// </summary>

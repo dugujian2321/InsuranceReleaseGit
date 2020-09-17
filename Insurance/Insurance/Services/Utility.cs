@@ -1,11 +1,14 @@
-﻿using Insurance.Services;
+﻿using Insurance.Models;
+using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using VirtualCredit.Models;
 
 namespace VirtualCredit.Services
@@ -58,5 +61,88 @@ namespace VirtualCredit.Services
         public static double DailyTotalCost;
         public static int DailyAdd;
         public static int DailySub;
+
+
+        static DateTime lastestDate = DateTime.Now.Date;
+        public static void DailyUpdate()
+        {
+            while (true)
+            {
+                DateTime now = DateTime.Now.Date;
+                if (now > lastestDate)
+                {
+                    if (UpdateDailyData()) lastestDate = now;
+                }
+                else
+                {
+                    Thread.Sleep(60 * 1000);
+                }
+            }
+        }
+
+        private static bool UpdateDailyData()
+        {
+            try
+            {
+                string excelDir = Instance.ExcelRoot;
+                string adminDir = Path.Combine(excelDir, "管理员");
+
+                List<string> companyDirList = new List<string>();
+
+                foreach (string comp in Directory.GetDirectories(adminDir, "*", SearchOption.AllDirectories))
+                {
+                    DirectoryInfo di = new DirectoryInfo(comp);
+                    if (!VC_ControllerBase.Plans.Contains(di.Name) && !DateTime.TryParse(di.Name, out DateTime dt)) companyDirList.Add(comp);
+                }
+                DataTable todayDataTable = new DataTable();
+                todayDataTable.Columns.AddRange(new DataColumn[] {
+                    new DataColumn("YMDDate",typeof(DateTime)),
+                    new DataColumn("Company",typeof(string)),
+                    new DataColumn("HeadCount",typeof(int)),
+                    new DataColumn("DailyPrice",typeof(decimal)),
+                    new DataColumn("Product",typeof(string)),
+                });
+                foreach (string company in companyDirList)
+                {
+                    foreach (string plan in VC_ControllerBase.Plans)
+                    {
+                        string planDir = Path.Combine(company, plan);
+                        DirectoryInfo compInfo = new DirectoryInfo(company);
+                        string summary = Path.Combine(planDir, compInfo.Name + ".xls");
+                        if (!System.IO.File.Exists(summary)) continue;
+                        UserInfoModel account = null;
+                        var table = DatabaseService.SelectMultiPropFromTable("UserInfo", new string[] { "CompanyName", "_Plan" }, new string[] { compInfo.Name, plan });
+                        if (table != null && table.Rows.Count > 0)
+                        {
+                            account = DatabaseService.SelectUser(table.Rows[0]["userName"].ToString());
+                        }
+                        else
+                            continue;
+                        using (ExcelTool et = new ExcelTool(Path.Combine(planDir, compInfo.Name + ".xls"), "Sheet1"))
+                        {
+                            DateTime dt = lastestDate;
+                            string compName = compInfo.Name;
+                            int headcount = et.GetEmployeeNumber();
+                            double dailyPrice = headcount * 0.01 * ( Math.Floor(100 * (account.UnitPrice / DateTime.DaysInMonth(lastestDate.Year, lastestDate.Month))) + 1);
+                            DataRow dr = todayDataTable.NewRow();
+                            dr["YMDDate"] = dt.Date;
+                            dr["Company"] = compName;
+                            dr["HeadCount"] = headcount;
+                            dr["DailyPrice"] = dailyPrice;
+                            dr["Product"] = plan;
+                            todayDataTable.Rows.Add(dr);
+                        }
+                    }
+                }
+                    DatabaseService.BulkInsert("DailyDetailData", todayDataTable);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+
+
+        }
     }
 }

@@ -173,7 +173,7 @@ namespace VirtualCredit
             {
                 result.Add(currUser.CompanyName);
             }
-
+            result = result.OrderBy(x => x).ToList();
             return result;
         }
 
@@ -277,7 +277,7 @@ namespace VirtualCredit
             string companiesDirectory = GetCurrentUserRootDir();
             List<Company> result = new List<Company>();
             var children = currUser.ChildAccounts;
-            var companyAccounts = GroupAccountByCompanyName(children); 
+            var companyAccounts = GroupAccountByCompanyName(children);
             foreach (var companyAccount in companyAccounts)
             {
                 var companyName = companyAccount[0].CompanyName;
