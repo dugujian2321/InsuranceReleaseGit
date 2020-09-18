@@ -13,7 +13,7 @@ namespace Insurance.Models
 
         public string EndDate { get; set; }
 
-        public double Cost { get; set; }
+        public decimal Cost { get; set; }
 
         public int HeadCount { get; set; }
 
@@ -23,9 +23,9 @@ namespace Insurance.Models
 
         public string FileName { get; set; }
 
-        public double Paid { get; set; }
+        public decimal Paid { get; set; }
 
-        public double Unpaid
+        public decimal Unpaid
         {
             get;set;
         }

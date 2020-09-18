@@ -1,6 +1,7 @@
 ﻿using Insurance.Models;
 using Insurance.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity.UI.V3.Pages.Internal.Account.Manage;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -149,14 +150,20 @@ namespace VirtualCredit.Controllers
             double dailyPrice = 0;
             int dailyHeadCount = 0;
             var currUser = GetCurrentUser();
-            foreach (var account in currUser.SpringAccounts)
+            List<UserInfoModel> accounts = new List<UserInfoModel>();
+            accounts.Add(currUser);
+            accounts.AddRange(currUser.SpringAccounts);
+            foreach (var account in accounts)
             {
                 AccountData ad = GetAccountData(account);
-                dailyPrice += ad.PricePerDay * ad.HeadCount;
-                dailyHeadCount += ad.HeadCount;
+                if (ad != null)
+                {
+                    dailyPrice += MathEx.ToCurrency(ad.PricePerDay * ad.HeadCount);
+                    dailyHeadCount += ad.HeadCount;
+                }
             }
             HttpContext.Session.Set("DailyHeadCount", dailyHeadCount);
-            HttpContext.Session.Set("DailyPrice", 0.01 * (Math.Ceiling(dailyPrice * 100) + 1));
+            HttpContext.Session.Set("DailyPrice", dailyPrice);
         }
 
         public IActionResult ForgetPassword()

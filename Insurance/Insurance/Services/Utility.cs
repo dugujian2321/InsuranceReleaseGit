@@ -15,6 +15,8 @@ namespace VirtualCredit.Services
 {
     public class Utility
     {
+        public static List<string> CachedCompanyDirPath { get; set; }
+
         private static UtilitiesModel _instance;
         public static UtilitiesModel Instance { get { return _instance; } }
         public static List<ReaderWriterLockerWithName> LockerList { get; set; }
@@ -30,6 +32,7 @@ namespace VirtualCredit.Services
             myOwn.TemplateFolder = configuration["TemplatesFolder"];
             myOwn.WebRootFolder = environment.WebRootPath;
             myOwn.ExcelRoot = Path.Combine(myOwn.WebRootFolder, "Excel");
+            CachedCompanyDirPath = new List<string>();
 
             _instance = myOwn;
             LockerList = new List<ReaderWriterLockerWithName>();
@@ -63,7 +66,7 @@ namespace VirtualCredit.Services
         public static int DailySub;
 
 
-        static DateTime lastestDate = DateTime.Now.Date;
+        static DateTime lastestDate = new DateTime(2020, 9, 18); //DateTime.Now; //
         public static void DailyUpdate()
         {
             while (true)
@@ -125,7 +128,7 @@ namespace VirtualCredit.Services
                             DateTime dt = lastestDate;
                             string compName = compInfo.Name;
                             int headcount = et.GetEmployeeNumber();
-                            double dailyPrice = headcount * 0.01 * ( Math.Floor(100 * (account.UnitPrice / DateTime.DaysInMonth(lastestDate.Year, lastestDate.Month))) + 1);
+                            double dailyPrice = MathEx.ToCurrency(headcount * account.UnitPrice / DateTime.DaysInMonth(lastestDate.Year, lastestDate.Month));
                             DataRow dr = todayDataTable.NewRow();
                             dr["YMDDate"] = dt.Date;
                             dr["Company"] = compName;
@@ -136,7 +139,7 @@ namespace VirtualCredit.Services
                         }
                     }
                 }
-                    DatabaseService.BulkInsert("DailyDetailData", todayDataTable);
+                DatabaseService.BulkInsert("DailyDetailData", todayDataTable);
                 return true;
             }
             catch

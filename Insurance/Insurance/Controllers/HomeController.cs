@@ -168,7 +168,7 @@ namespace VirtualCredit.Controllers
                     if (monthDirs.Length == 0 || !Directory.Exists(monthDirs[0])) continue;
                     NewExcel excel = null;
                     int headcount = 0;
-                    double cost = 0;
+                    decimal cost = 0;
                     excel = new NewExcel();
                     excel.Company = companyName;
                     DateTime dt = date;
@@ -182,7 +182,7 @@ namespace VirtualCredit.Controllers
                             ExcelTool et = new ExcelTool(fileName, "Sheet1");
                             string[] fileinfo = fi.Name.Split('@');
                             headcount += et.GetEmployeeNumber();
-                            cost += Convert.ToDouble(fileinfo[1]);
+                            cost += decimal.Parse(fileinfo[1]);
                         }
                     }
                     if (excel != null)
@@ -239,7 +239,7 @@ namespace VirtualCredit.Controllers
                 string companyName = name;
                 string targetCompanyDir;
 
-                string currUserDir = GetCurrentUserRootDir();
+                string currUserDir = GetCurrentUserRootDir(currUser);
 
                 if (isSelf)
                 {
@@ -262,7 +262,7 @@ namespace VirtualCredit.Controllers
                     if (monthDirs.Length == 0 || !Directory.Exists(monthDirs[0])) continue;
                     NewExcel excel = null;
                     int headcount = 0;
-                    double cost = 0;
+                    decimal cost = 0;
                     excel = new NewExcel();
                     excel.Company = name;
                     DateTime dt = date;
@@ -276,7 +276,7 @@ namespace VirtualCredit.Controllers
                             ExcelTool et = new ExcelTool(fileName, "Sheet1");
                             string[] fileinfo = fi.Name.Split('@');
                             headcount += et.GetEmployeeNumber();
-                            cost += Convert.ToDouble(fileinfo[1]);
+                            cost += decimal.Parse(fileinfo[1]);
                         }
                     }
                     if (excel != null)
@@ -410,7 +410,7 @@ namespace VirtualCredit.Controllers
                 dm = new DetailModel();
                 //获取该公司历史表单详细
                 string currUserCompany = string.Empty;
-                string currUserRootDir = GetCurrentUserRootDir();
+                string currUserRootDir = GetCurrentUserRootDir(currUser);
                 currUserCompany = new DirectoryInfo(currUserRootDir).Name;
 
                 List<NewExcel> allexcels = new List<NewExcel>();
@@ -482,14 +482,14 @@ namespace VirtualCredit.Controllers
                     {
                         excel.Mode = "加保";
                         excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
-                        excel.Cost = Convert.ToDouble(fileinfo[1]);
+                        excel.Cost = decimal.Parse(fileinfo[1]);
                     }
                     else //若结束时间不为空，则为减员文档
                     {
                         excel.Mode = "减保";
                         excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
                         excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
-                        excel.Cost = Convert.ToDouble(fileinfo[1]);
+                        excel.Cost = decimal.Parse(fileinfo[1]);
                     }
                     allexcels.Add(excel);
                 }
@@ -1206,15 +1206,15 @@ namespace VirtualCredit.Controllers
             {
                 excel.Mode = "加保";
                 excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
-                excel.Cost = Convert.ToDouble(fileinfo[1]);
+                excel.Cost = decimal.Parse(fileinfo[1]);
             }
             else
             {
                 excel.Mode = "减保";
                 excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
-                excel.Cost = Convert.ToDouble(fileinfo[1]);
+                excel.Cost = decimal.Parse(fileinfo[1]);
             }
-            excel.Paid = Convert.ToDouble(fileinfo[6]);
+            excel.Paid = decimal.Parse(fileinfo[6]);
             return excel;
         }
 
@@ -1716,9 +1716,9 @@ namespace VirtualCredit.Controllers
             }
             NewExcel excel = null;
             int headcount = 0;
-            double cost = 0;
-            double unpaid = 0;
-            double paid = 0;
+            decimal cost = 0;
+            decimal unpaid = 0;
+            decimal paid = 0;
             foreach (string fileName in Directory.GetFiles(dir))
             {
                 FileInfo fi = new FileInfo(fileName);
@@ -1735,9 +1735,9 @@ namespace VirtualCredit.Controllers
                 excel.EndDate = new DateTime(dt.Year, dt.Month, DateTime.DaysInMonth(dt.Year, dt.Month)).ToShortDateString();
                 headcount += et.GetEmployeeNumber();
                 excel.StartDate = new DateTime(dt.Year, dt.Month, 1).ToShortDateString();
-                paid += Convert.ToDouble(fileinfo[6]);
-                unpaid += Convert.ToDouble(fileinfo[1]) - Convert.ToDouble(fileinfo[6]);
-                cost += Convert.ToDouble(fileinfo[1]);
+                paid += decimal.Parse(fileinfo[6]);
+                unpaid += decimal.Parse(fileinfo[1]) - decimal.Parse(fileinfo[6]);
+                cost += decimal.Parse(fileinfo[1]);
             }
             excel.UploadDate = new DirectoryInfo(dir).Name;
             excel.HeadCount = headcount;

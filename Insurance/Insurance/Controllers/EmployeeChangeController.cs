@@ -82,7 +82,7 @@ namespace Insurance.Controllers
                     Initialize(targetcompany);
                 }
                 string mode = HttpContext.Session.Get<string>("mode");
-                string currUserDir = GetSearchExcelsInDir(GetCurrentUser().CompanyName);
+                string currUserDir = GetSearchExcelsInDir(currUser.CompanyName);
                 var di = new DirectoryInfo(currUserDir);
                 string excelsDirectory = string.Empty;
                 if (di.Name == targetcompany)

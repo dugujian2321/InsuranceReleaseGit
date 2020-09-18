@@ -84,9 +84,9 @@ namespace VirtualCredit
         {
             //对于退保人员，计算退费
             double unitPrice = price / DateTime.DaysInMonth(end.Year, end.Month);
-            double received = (DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) * unitPrice;
-            double earned = (end.Day - start.Day + 1) * unitPrice;
-            double payback = Math.Round(earned - received, 2);
+            double received = MathEx.ToCurrency((DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) * unitPrice);
+            double earned = MathEx.ToCurrency((end.Day - start.Day + 1) * unitPrice);
+            double payback = earned - received;
             return payback;
         }
 
@@ -111,7 +111,7 @@ namespace VirtualCredit
             int totalNumber = newEmployees.Count;
             double pricedDays = monthDays - day_sepecified + 1; //收费天数
             result = pricedDays * unitPrice * totalNumber;
-            return Math.Round(result, 2);
+            return MathEx.ToCurrency(result);
         }
 
         public string GetSearchExcelsInDir(string companyName)
@@ -119,11 +119,11 @@ namespace VirtualCredit
             var currUser = GetCurrentUser();
             if (currUser.CompanyName == companyName)
             {
-                return GetCurrentUserRootDir();
+                return GetCurrentUserRootDir(currUser);
             }
             else
             {
-                return Directory.GetDirectories(GetCurrentUserRootDir(), companyName, SearchOption.AllDirectories).FirstOrDefault();
+                return Directory.GetDirectories(GetCurrentUserRootDir(currUser), companyName, SearchOption.AllDirectories).FirstOrDefault();
             }
         }
 
@@ -139,9 +139,13 @@ namespace VirtualCredit
             return children.Contains(company);
         }
 
-        public string GetCurrentUserRootDir()
+        /// <summary>
+        /// 当前账号所属公司的文件夹
+        /// </summary>
+        /// <param name="currUser"></param>
+        /// <returns></returns>
+        public string GetCurrentUserRootDir(UserInfoModel currUser)
         {
-            var currUser = GetCurrentUser();
             string result = Directory.GetDirectories(ExcelRoot, currUser.CompanyName, SearchOption.AllDirectories).FirstOrDefault();
             return result;
         }
@@ -156,7 +160,7 @@ namespace VirtualCredit
         public List<string> GetSpringCompaniesName(bool includingself)
         {
             UserInfoModel currUser = GetCurrentUser();
-            string companiesDirectory = GetCurrentUserRootDir();
+            string companiesDirectory = GetCurrentUserRootDir(currUser);
             List<string> result = new List<string>();
             var springs = currUser.SpringAccounts;
             foreach (var account in springs)
@@ -180,7 +184,7 @@ namespace VirtualCredit
         public List<Company> GetSpringAccountsCompany()
         {
             UserInfoModel currUser = GetCurrentUser();
-            string companiesDirectory = GetCurrentUserRootDir();
+            string companiesDirectory = GetCurrentUserRootDir(currUser);
             List<Company> result = new List<Company>();
             var springs = currUser.SpringAccounts;
             foreach (var account in springs)
@@ -268,20 +272,42 @@ namespace VirtualCredit
         }
 
         /// <summary>
+        /// 获取当前账号所属公司 或 其子账号所属公司的根目录
+        /// </summary>
+        /// <param name="currUser"></param>
+        /// <param name="companyName"></param>
+        /// <returns></returns>
+        public string GetCompanyDir(UserInfoModel currUser, string companyName)
+        {
+            string companiesDirectory = GetCurrentUserRootDir(currUser);
+            if (currUser.CompanyName == companyName) return companiesDirectory;
+            if (Utility.CachedCompanyDirPath.Any(x => new DirectoryInfo(x).Name == companyName))
+            {
+                return Utility.CachedCompanyDirPath.Where(x => new DirectoryInfo(x).Name == companyName).FirstOrDefault();                              
+            }
+            else
+            {
+                string result = Directory.GetDirectories(companiesDirectory, companyName, SearchOption.AllDirectories).FirstOrDefault();
+                Utility.CachedCompanyDirPath.Add(result);
+                return result;
+            }
+        }
+
+        /// <summary>
         /// 获取当前账号所有子公司（包括所有后代账号的信息）的信息,包括当前账号自身的数据
         /// </summary>
         /// <returns></returns>
         public List<Company> GetChildAccountsCompany()
         {
             UserInfoModel currUser = GetCurrentUser();
-            string companiesDirectory = GetCurrentUserRootDir();
+            string companiesDirectory = GetCurrentUserRootDir(currUser);
             List<Company> result = new List<Company>();
             var children = currUser.ChildAccounts;
             var companyAccounts = GroupAccountByCompanyName(children);
             foreach (var companyAccount in companyAccounts)
             {
                 var companyName = companyAccount[0].CompanyName;
-                var companyDir = Directory.GetDirectories(companiesDirectory, companyName, SearchOption.AllDirectories).FirstOrDefault();
+                var companyDir = GetCompanyDir(currUser, companyName);
                 if (string.IsNullOrEmpty(companyDir)) continue;
                 if (!Directory.Exists(companyDir)) continue;
                 Company company = new Company();

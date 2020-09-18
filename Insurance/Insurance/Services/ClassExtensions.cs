@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using NPOI.SS.UserModel;
+using System;
 
 namespace VirtualCredit
 {
@@ -17,6 +18,30 @@ namespace VirtualCredit
 
             return value == null ? default(T) :
                 JsonConvert.DeserializeObject<T>(value);
+        }
+    }
+
+    public static class MathEx
+    {
+        /// <summary>
+        /// 将value转为比它大且与其差最小的指定小数位的数字
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="decimalPlace"></param>
+        /// <returns></returns>
+        public static double ToCurrency(double value)
+        {
+            double result = Math.Round(value, 2);
+            int integral = (int)(value * 100);
+            if (integral != value * 100.0)
+            {
+                result = (integral + 1.0) / 100.0;
+            }
+            else
+            {
+                result = integral / 100.0;
+            }
+            return result;
         }
     }
 

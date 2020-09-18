@@ -13,5 +13,7 @@ namespace VirtualCredit.Models
         public string ExcelRoot { get; set; }
 
         public string SearchExcelsIn { get; set; }
+
+        
     }
 }
