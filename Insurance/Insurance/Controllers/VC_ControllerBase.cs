@@ -454,6 +454,7 @@ namespace VirtualCredit
             return ViewBag.ValidationStr;
         }
 
+        [UserLoginFilters]
         public UserInfoModel GetCurrentUser()
         {
             if (currUser_temp != null) return currUser_temp;

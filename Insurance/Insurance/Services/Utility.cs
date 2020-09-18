@@ -71,11 +71,13 @@ namespace VirtualCredit.Services
                 DateTime now = DateTime.Now.Date;
                 if (now > lastestDate)
                 {
+                    LockerList.ForEach(l => l.RWLocker.EnterReadLock());
                     if (UpdateDailyData()) lastestDate = now;
+                    LockerList.ForEach(l => l.RWLocker.ExitReadLock());
                 }
                 else
                 {
-                    Thread.Sleep(60 * 1000);
+                    Thread.Sleep(1000);
                 }
             }
         }

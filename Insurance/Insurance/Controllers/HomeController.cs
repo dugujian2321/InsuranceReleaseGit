@@ -1258,24 +1258,31 @@ namespace VirtualCredit.Controllers
         public IActionResult DetailData([FromQuery] string date)
         {
             var currUser = GetCurrentUser();
+            List<string> plans = currUser._Plan.Split(' ').ToList();
             DailyDetailModel ddm = new DailyDetailModel();
-            DataTable dataTable = DatabaseService.SelectPropFromTable("DailyDetail", "Date", date);
+            DataTable dataTable = DatabaseService.SelectPropFromTable("DailyDetailData", "YMDDate", date);
             ddm.DetailTableByDate = dataTable.Clone();
             foreach (DataRow row in dataTable.Rows)
             {
-                if (currUser.CompanyName == row["Company"].ToString() || currUser.SpringAccounts.Any(x => x.CompanyName == row["Company"].ToString()))
+                if ((currUser.CompanyName == row["Company"].ToString() || currUser.SpringAccounts.Any(x => x.CompanyName == row["Company"].ToString()))
+                    && plans.Contains(row["Product"].ToString().Trim())
+                    )
                 {
                     DataRow newrow = ddm.DetailTableByDate.NewRow();
                     newrow.ItemArray = row.ItemArray;
                     ddm.DetailTableByDate.Rows.Add(newrow);
                 }
             }
+            DataView dv = ddm.DetailTableByDate.DefaultView;
+            dv.Sort = "DailyPrice DESC, Company";
+            ddm.DetailTableByDate = dv.ToTable();
             return View("DailyDetail", ddm);
         }
 
         public IActionResult DailyDetail()
         {
             var currUser = GetCurrentUser();
+            List<string> plans = currUser._Plan.Split(' ').ToList();
             List<DateTime> dateList = new List<DateTime>();
             for (int i = 14; i >= 0; i--)
             {
@@ -1289,7 +1296,7 @@ namespace VirtualCredit.Controllers
             }
             if (!companies.Contains(currUser.CompanyName))
                 companies.Add(currUser.CompanyName);
-            DataTable dataTable = DatabaseService.SelectDailyDetailByDatetime(dateList, companies);
+            DataTable dataTable = DatabaseService.SelectDailyDetailByDatetime(dateList, companies, plans);
             DailyDetailModel ddm = new DailyDetailModel();
             ddm.DetailTable = dataTable;
             return View("DailyDetail", ddm);

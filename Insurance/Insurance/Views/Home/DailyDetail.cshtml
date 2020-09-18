@@ -14,9 +14,8 @@
         <thead class="thead-dark">
             <tr>
                 <th>日期</th>
-                <th>保费</th>
-                <th>加保人数</th>
-                <th>减保人数</th>
+                <th>当日保费</th>
+                <th>在保人数</th>
                 <th>操作</th>
             </tr>
         </thead>
@@ -28,7 +27,6 @@
                     <td class="td_middle">@date</td>
                     <td class="td_middle">@row[1]</td>
                     <td class="td_middle">@row[2]</td>
-                    <td class="td_middle">@row[3]</td>
                     <td class="td_middle"><a href="/Home/DetailData?date=@date">详细</a></td>
                 </tr>
             }
@@ -42,9 +40,7 @@
                 <th>公司名称</th>
                 <th>方案</th>
                 <th>保费</th>
-                <th>加保人数</th>
-                <th>减保人数</th>
-                <th>投保账号</th>
+                <th>在保人数</th>
             </tr>
         </thead>
         <tbody>
@@ -56,8 +52,6 @@
                     <td class="td_middle">@row[1]</td>
                     <td class="td_middle">@row[4]</td>
                     <td class="td_middle">@row[3]</td>
-                    <td class="td_middle">@row[5]</td>
-                    <td class="td_middle">@row[6]</td>
                     <td class="td_middle">@row[2]</td>
                 </tr>
             }

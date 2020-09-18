@@ -81,7 +81,7 @@ namespace VirtualCredit
 
         }
 
-        public static bool BulkInsert(string tblName,DataTable dataTable)
+        public static bool BulkInsert(string tblName, DataTable dataTable)
         {
             return SQLServerHelper.BulkInsert(tblName, dataTable);
         }
@@ -506,7 +506,7 @@ namespace VirtualCredit
             else
                 return false;
         }
-        public static DataTable SelectDailyDetailByDatetime(List<DateTime> dateTimes, List<string> companies)
+        public static DataTable SelectDailyDetailByDatetime(List<DateTime> dateTimes, List<string> companies, List<string> plans)
         {
             string dateList = "(";
             foreach (var date in dateTimes)
@@ -524,8 +524,16 @@ namespace VirtualCredit
             companyList = companyList.Remove(companyList.LastIndexOf(","));
             companyList += ")";
 
-            string cmd = $"Select Date,Sum(TotalPrice),Sum(NewAdd),Sum(Reduce) from DailyDetail where Date in {dateList} and Company in {companyList} group by Date";
-            return SQLServerHelper.ExecuteReader(cmd);
+            string planList = "(";
+            foreach (var plan in plans)
+            {
+                planList += $"'{plan}',";
+            }
+            planList = planList.Remove(planList.LastIndexOf(","));
+            planList += ")";
+
+            string cmd = $"Select YMDDate,Sum(DailyPrice),Sum(HeadCount) from DailyDetailData where YMDDate in {dateList} and Company in {companyList} and Product in {planList} group by YMDDate";
+            return SQLServerHelper.ExecuteReader(cmd, null);
         }
 
 
