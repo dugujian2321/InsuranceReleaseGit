@@ -24,28 +24,23 @@ namespace VirtualCredit.Controllers
 {
     public class HomeController : VC_ControllerBase
     {
-        private readonly int idCol = 3;
-        private readonly int nameCol = 2;
-        private static bool isSignExpired { get; set; }
-        private static long expiredTime { get; set; }
-        public DataTable SearchResult { get; set; }
+        private static readonly int idCol = 3;
+        private static readonly int nameCol = 2;
 
         public HomeController(IHostingEnvironment hostingEnvironment)
         {
             _hostingEnvironment = hostingEnvironment;
         }
+
         [UserLoginFilters]
         public IActionResult Index(HomePageModel model)
         {
             try
             {
-                if (SessionService.IsUserLogin(HttpContext))
-                {
-                    ViewBag.UserName = GetCurrentUser().UserName;
-                }
+                ViewBag.UserName = GetCurrentUser().UserName;
                 Response.Cookies.Append("invalidFlag", DateTime.UtcNow.ToString(),
                 new CookieOptions() { Expires = DateTimeOffset.UtcNow.AddDays(7) });
-                return View(model);
+                return View("Index", model);
             }
             catch (Exception e)
             {
@@ -559,7 +554,7 @@ namespace VirtualCredit.Controllers
                 //if (currUser.AccessLevel != 0)
                 //    model.CompanyList.Add(new Company() { Name = currUser.CompanyName });
                 model.Plans = currUser.AccessLevel == 0 ? "all" : currUser._Plan;
-                return View(model);
+                return View(nameof(EmployeeChange), model);
             }
             catch (Exception e)
             {
@@ -760,7 +755,7 @@ namespace VirtualCredit.Controllers
                 errorrow["续保后到期日"] = string.Empty;
                 result.Rows.Add(errorrow);
                 rm.MonthInfo = result;
-                return View(rm);
+                return View(nameof(AutoRenew),rm);
             }
             ExcelTool et = new ExcelTool(summary, "Sheet1");
             int headcount = et.GetEmployeeNumber(); //总人数
@@ -788,7 +783,7 @@ namespace VirtualCredit.Controllers
                 errorrow["续保后到期日"] = string.Empty;
                 result.Rows.Add(errorrow);
                 rm.MonthInfo = result;
-                return View(rm);
+                return View(nameof(AutoRenew),rm);
             }
 
             foreach (DataRow row in tbl.Rows)
@@ -817,7 +812,7 @@ namespace VirtualCredit.Controllers
             newrow["续保后到期日"] = nextMonth.ToString("yyyy-MM-dd");
             result.Rows.Add(newrow);
             rm.MonthInfo = result;
-            return View(rm);
+            return View(nameof(AutoRenew),rm);
         }
 
         [HttpGet]
@@ -827,7 +822,7 @@ namespace VirtualCredit.Controllers
             HttpContext.Session.Set<List<Employee>>("searchResult", null);
             try
             {
-                return View(model);
+                return View(nameof(SearchPeople),model);
             }
             catch (Exception e)
             {
@@ -2108,7 +2103,7 @@ namespace VirtualCredit.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return View("Error",new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 

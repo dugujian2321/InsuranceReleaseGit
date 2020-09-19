@@ -283,7 +283,7 @@ namespace VirtualCredit
             if (currUser.CompanyName == companyName) return companiesDirectory;
             if (Utility.CachedCompanyDirPath.Any(x => new DirectoryInfo(x).Name == companyName))
             {
-                return Utility.CachedCompanyDirPath.Where(x => new DirectoryInfo(x).Name == companyName).FirstOrDefault();                              
+                return Utility.CachedCompanyDirPath.Where(x => new DirectoryInfo(x).Name == companyName).FirstOrDefault();
             }
             else
             {
@@ -355,8 +355,8 @@ namespace VirtualCredit
         {
             ConcurrentBag<string> result = new ConcurrentBag<string>();
             string targetDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories)[0];
-
-            foreach (var dir in Directory.GetDirectories(targetDir))
+            var dirs = Directory.GetDirectories(targetDir);
+            foreach (var dir in dirs)
             {
                 var dirInfo = new DirectoryInfo(dir);
                 if (!DateTime.TryParse(dirInfo.Name, out DateTime date))

@@ -81,7 +81,7 @@
                                     @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
                                     {
                                         <td>
-                                            @if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+                                            @if (currentUser.AccessLevel == 0)
                                             {
                                                 <button type="button" class="btn btn-danger" data-toggle="modal" data-company="@item.Name" data-target="#confirmDeleteCompany">
                                                     删除
