@@ -143,7 +143,7 @@ namespace Insurance.Controllers
 
                 if (mode == "add")
                 {
-                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{GetCurrentUser().UserName}@Add@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + "@0@.xls"; //命名规则： 上传日期_保费_上传账号_加/减保_GUID_时间_已结保费.xls
+                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{currUser.UserName}@Add@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + "@0@.xls"; //命名规则： 上传日期_保费_上传账号_加/减保_GUID_时间_已结保费.xls
                     string newfilepath = Path.Combine(excelsDirectory, plan, month, fileName);
                     try
                     {
@@ -187,7 +187,7 @@ namespace Insurance.Controllers
                         DailyDetailModel detail = new DailyDetailModel()
                         {
                             Company = targetcompany,
-                            SubmittedBy = GetCurrentUser().UserName,
+                            SubmittedBy = currUser.UserName,
                             Product = plan,
                             TotalPrice = price,
                             Date = DateTime.Now.Date,
@@ -217,7 +217,7 @@ namespace Insurance.Controllers
                 }
                 else if (mode == "sub")
                 {
-                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{GetCurrentUser().UserName}@Sub@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + "@0@.xls"; //命名规则： 上传日期_保费_上传账号_加/减保_GUID_时间_已结保费_.xls
+                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{currUser.UserName}@Sub@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + "@0@.xls"; //命名规则： 上传日期_保费_上传账号_加/减保_GUID_时间_已结保费_.xls
                     string newfilepath = Path.Combine(excelsDirectory, plan, month, fileName);
                     try
                     {
@@ -302,8 +302,8 @@ namespace Insurance.Controllers
             }
             finally
             {
-                if (GetCurrentUser().MyLocker.RWLocker.IsWriteLockHeld)
-                    GetCurrentUser().MyLocker.RWLocker.ExitWriteLock(); //退出写锁
+                if (currUser.MyLocker.RWLocker.IsWriteLockHeld)
+                    currUser.MyLocker.RWLocker.ExitWriteLock(); //退出写锁
             }
         }
 

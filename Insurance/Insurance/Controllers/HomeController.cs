@@ -121,14 +121,13 @@ namespace VirtualCredit.Controllers
         {
             ReaderWriterLockSlim r_locker = null;
             bool isSelf = false;
-
+            var currUser = GetCurrentUser();
             try
             {
-                r_locker = GetCurrentUser().MyLocker.RWLocker;
+                r_locker = currUser.MyLocker.RWLocker;
                 r_locker.EnterReadLock();
                 //获取该公司历史表单详细
                 List<NewExcel> allMonthlyExcels = new List<NewExcel>();
-                var currUser = GetCurrentUser();
                 if (currUser.CompanyName == companyName)
                 {
                     isSelf = true;
@@ -430,9 +429,11 @@ namespace VirtualCredit.Controllers
                 List<string> monthDirs = new List<string>();
                 if (!string.IsNullOrEmpty(currUser._Plan))
                 {
-                    foreach (var plan in currUser._Plan.Split('_'))
+                    foreach (var plan in currUser._Plan.Split(' '))
                     {
-                        monthDirs.AddRange(Directory.GetDirectories(Path.Combine(companyDir, plan), month, so));
+                        DirectoryInfo di = new DirectoryInfo(Path.Combine(companyDir, plan));
+                        if (di.Exists)
+                            monthDirs.AddRange(Directory.GetDirectories(Path.Combine(companyDir, plan), month, so));
                     }
                 }
                 else
@@ -755,7 +756,7 @@ namespace VirtualCredit.Controllers
                 errorrow["续保后到期日"] = string.Empty;
                 result.Rows.Add(errorrow);
                 rm.MonthInfo = result;
-                return View(nameof(AutoRenew),rm);
+                return View(nameof(AutoRenew), rm);
             }
             ExcelTool et = new ExcelTool(summary, "Sheet1");
             int headcount = et.GetEmployeeNumber(); //总人数
@@ -783,7 +784,7 @@ namespace VirtualCredit.Controllers
                 errorrow["续保后到期日"] = string.Empty;
                 result.Rows.Add(errorrow);
                 rm.MonthInfo = result;
-                return View(nameof(AutoRenew),rm);
+                return View(nameof(AutoRenew), rm);
             }
 
             foreach (DataRow row in tbl.Rows)
@@ -812,7 +813,7 @@ namespace VirtualCredit.Controllers
             newrow["续保后到期日"] = nextMonth.ToString("yyyy-MM-dd");
             result.Rows.Add(newrow);
             rm.MonthInfo = result;
-            return View(nameof(AutoRenew),rm);
+            return View(nameof(AutoRenew), rm);
         }
 
         [HttpGet]
@@ -822,7 +823,7 @@ namespace VirtualCredit.Controllers
             HttpContext.Session.Set<List<Employee>>("searchResult", null);
             try
             {
-                return View(nameof(SearchPeople),model);
+                return View(nameof(SearchPeople), model);
             }
             catch (Exception e)
             {
@@ -994,7 +995,7 @@ namespace VirtualCredit.Controllers
                 sm.PlanList = new List<Plan>();
                 foreach (var plan in Plans)
                 {
-                    Plan p = new Plan();
+                    Plan p = new Plan();fd
                     p.Name = plan;
                     var comp = GetChildrenCompanies(currUser, plan);
                     p.TotalCost = comp.Sum(x => x.TotalCost);
@@ -1877,34 +1878,55 @@ namespace VirtualCredit.Controllers
             }
         }
 
+        /// <summary>
+        /// 删除该公司文件及所有账号
+        /// </summary>
+        /// <param name="companyName"></param>
         private void RemoveCompanyFiles(string companyName)
         {
             string targetDir = GetSearchExcelsInDir(companyName);
+            DirectoryInfo di = new DirectoryInfo(targetDir);
+            di.Delete(true);
 
-            foreach (string directory in Directory.GetDirectories(targetDir))
+            var accounts = DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", companyName);
+            if (accounts == null) return;
+            List<string> account2Delete = new List<string>();
+            foreach (DataRow row in accounts.Rows)
             {
-                DirectoryInfo di = new DirectoryInfo(directory);
-                if (!DateTime.TryParse(di.Name, out DateTime dateTime))
-                {
-                    RemoveCompanyFiles(di.Name);
-                }
-                else
-                {
-                    Directory.Delete(directory, true);
-                }
+                string usrName = row["userName"].ToString();
+                var user = DatabaseService.SelectUser(usrName);
+                account2Delete.Add(usrName);
+                user.SpringAccounts.ForEach(x => account2Delete.Add(x.UserName));
             }
 
-            string summaryFile = Path.Combine(targetDir, companyName + ".xls");
-            System.IO.File.Delete(summaryFile);
-            string template = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", "SummaryTemplate.xls");
-            System.IO.File.Copy(template, summaryFile, true);
-            var file = Directory.GetFiles(targetDir).Where(x => new FileInfo(x).Extension.Contains("txt"));
-            string txtPath = Path.Combine(targetDir, companyName + "_0.txt");
-            System.IO.File.Delete(file.First());
-            using (System.IO.File.Create(txtPath))
+            foreach (var u in account2Delete)
             {
-
+                DatabaseService.Delete("UserInfo", u);
             }
+            //foreach (string directory in Directory.GetDirectories(targetDir))
+            //{
+            //    DirectoryInfo di = new DirectoryInfo(directory);
+            //    if (!DateTime.TryParse(di.Name, out DateTime dateTime))
+            //    {
+            //        RemoveCompanyFiles(di.Name);
+            //    }
+            //    else
+            //    {
+            //        Directory.Delete(directory, true);
+            //    }
+            //}
+
+            //string summaryFile = Path.Combine(targetDir, companyName + ".xls");
+            //System.IO.File.Delete(summaryFile);
+            //string template = Path.Combine(_hostingEnvironment.WebRootPath, "Excel", "SummaryTemplate.xls");
+            //System.IO.File.Copy(template, summaryFile, true);
+            //var file = Directory.GetFiles(targetDir).Where(x => new FileInfo(x).Extension.Contains("txt"));
+            //string txtPath = Path.Combine(targetDir, companyName + "_0.txt");
+            //System.IO.File.Delete(file.First());
+            //using (System.IO.File.Create(txtPath))
+            //{
+
+            //}
         }
 
         /// <summary>
@@ -2103,7 +2125,7 @@ namespace VirtualCredit.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View("Error",new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return View("Error", new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 

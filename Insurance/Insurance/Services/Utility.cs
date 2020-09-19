@@ -66,7 +66,7 @@ namespace VirtualCredit.Services
         public static int DailySub;
 
 
-        static DateTime lastestDate = new DateTime(2020, 9, 18); //DateTime.Now; //
+        static DateTime lastestDate = DateTime.Now.Date; //DateTime.Now; //
         public static void DailyUpdate()
         {
             while (true)

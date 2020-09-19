@@ -92,8 +92,10 @@ namespace VirtualCredit.Models
         public int StartDate { get; set; }
         public bool AllowEdit { get; set; }
 
+
         private List<UserInfoModel> GetSpringAccounts(UserInfoModel user)
         {
+            if (springAccounts != null && springAccounts.Count > 0) return springAccounts;
             List<UserInfoModel> result = new List<UserInfoModel>();
             if (user.ChildAccounts != null && user.ChildAccounts.Count > 0)
             {
@@ -102,6 +104,7 @@ namespace VirtualCredit.Models
                     result.Add(item);
                     result.AddRange(GetSpringAccounts(item));
                 }
+                springAccounts = result;
             }
             return result;
         }
