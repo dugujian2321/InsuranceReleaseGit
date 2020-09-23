@@ -995,7 +995,7 @@ namespace VirtualCredit.Controllers
                 sm.PlanList = new List<Plan>();
                 foreach (var plan in Plans)
                 {
-                    Plan p = new Plan();fd
+                    Plan p = new Plan();
                     p.Name = plan;
                     var comp = GetChildrenCompanies(currUser, plan);
                     p.TotalCost = comp.Sum(x => x.TotalCost);
