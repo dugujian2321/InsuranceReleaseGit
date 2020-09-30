@@ -313,16 +313,19 @@ namespace VirtualCredit.Controllers
             try
             {
                 r_locker = GetCurrentUser().MyLocker.RWLocker;
-                r_locker.EnterReadLock();
+                if (!r_locker.IsReadLockHeld)
+                    r_locker.EnterReadLock();
                 DataTable tbl_summary = new DataTable();
                 string targetDirectory = _hostingEnvironment.WebRootPath;
                 string template = Path.Combine(targetDirectory, "Excel", "AllEmployeeTemplate.xls");
                 allemployees = Path.Combine(targetDirectory, "Excel", "all_employees.xls");
                 System.IO.File.Copy(template, allemployees, true);
-                foreach (string company in Directory.GetDirectories(Path.Combine(targetDirectory, "Excel")))
+                foreach (string company in Directory.GetDirectories(Path.Combine(targetDirectory, "Excel", "管理员"), "*", SearchOption.AllDirectories))
                 {
                     DirectoryInfo di = new DirectoryInfo(company);
-                    string comp_summary = Path.Combine(company, di.Name + ".xls");
+                    if (!Plans.Contains(di.Name)) continue;
+                    string companyName = di.Parent.Name;
+                    string comp_summary = Path.Combine(company, companyName + ".xls");
                     ExcelTool et = new ExcelTool(comp_summary, "Sheet1");
                     DataTable tbl_companySummary = et.ExcelToDataTable("Sheet1", true);
                     if (tbl_summary.Rows.Count <= 0)
@@ -662,7 +665,7 @@ namespace VirtualCredit.Controllers
                 DateTime now = DateTime.Now;
                 summary_bk = Path.Combine(companyDir, plan, company + $"_{now.ToString("yyyy-MM")}_" + ".xls");
                 DateTime startdate = DateTime.Parse(now.AddMonths(1).ToString("yyyy-MM-01"));
-                System.IO.File.Copy(summaryPath, summary_bk, true); //备份当月总表
+                //System.IO.File.Copy(summaryPath, summary_bk, true); //备份当月总表
                 if (!Directory.Exists(monDir))
                 {
                     Directory.CreateDirectory(monDir);
@@ -702,8 +705,8 @@ namespace VirtualCredit.Controllers
             }
             finally
             {
-                if (currUser != null && currUser.MyLocker.RWLocker.IsReadLockHeld)
-                    currUser.MyLocker.RWLocker.ExitReadLock(); //退出写锁
+                if (currUser != null && currUser.MyLocker != null && currUser.MyLocker.RWLocker.IsWriteLockHeld)
+                    currUser.MyLocker.RWLocker.ExitWriteLock(); //退出写锁
             }
 
         }
