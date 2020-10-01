@@ -356,7 +356,7 @@ namespace Insurance.Controllers
             //TODO: 添加验证格式代码
             //将FormFile中的Sheet1转换成DataTable
             string template = Path.Combine(Utility.Instance.TemplateFolder, "employee_download.xls");
-            string uploadedExcel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
+            string uploadedExcel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + Path.GetExtension(newExcel.FileName));
             FileStream ms = System.IO.File.Create(uploadedExcel);
             HttpContext.Session.Set("readyToSubmit", "N");
             newExcel.CopyTo(ms);

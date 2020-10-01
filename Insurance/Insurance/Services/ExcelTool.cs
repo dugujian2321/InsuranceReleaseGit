@@ -29,7 +29,9 @@ namespace Insurance.Services
             using (FileStream fs = new FileStream(fileName, FileMode.Open, FileAccess.Read))
             {
                 if (fileName.IndexOf(".xlsx") > 0) // 2007版本
-                    workbook = new XSSFWorkbook(fs);
+                {
+                    workbook = new XSSFWorkbook(fileName);
+                }
                 else if (fileName.IndexOf(".xls") > 0) // 2003版本
                     workbook = new HSSFWorkbook(fs);
                 else
@@ -45,7 +47,11 @@ namespace Insurance.Services
             SetCulture();
             fileName = (stream as FileStream).Name;
             if (fileName.IndexOf(".xlsx") > 0) // 2007版本
-                workbook = new XSSFWorkbook(stream);
+            {
+                stream.Close();
+                stream.Dispose();
+                workbook = new XSSFWorkbook(fileName);
+            }
             else if (fileName.IndexOf(".xls") > 0) // 2003版本
                 workbook = new HSSFWorkbook(stream);
             else
@@ -1059,6 +1065,7 @@ namespace Insurance.Services
 
         public void Dispose()
         {
+            workbook.Close();
             m_main = null;
             workbook = null;
         }
