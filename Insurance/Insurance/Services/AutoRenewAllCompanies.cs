@@ -15,15 +15,22 @@ namespace Insurance.Services
         private static bool shouldRenew = false;
         string rootpath = Utility.Instance.WebRootFolder;
         static DateTime nextEndDate;
+        public AutoRenewAllCompanies()
+        {
+            nextEndDate = DateTime.Now;
+        }
 
         private void RenewAllCompanies()
         {
-            string excelDir = Path.Combine(rootpath, "Excel");
-            foreach (string company in Directory.GetDirectories(excelDir))
+            string excelDir = Path.Combine(rootpath, "Excel", "管理员");
+            foreach (string company in Directory.GetDirectories(excelDir, "*", SearchOption.AllDirectories))
             {
-                string companyName = new DirectoryInfo(company).Name;
+                DirectoryInfo di = new DirectoryInfo(company);
+                if (!VC_ControllerBase.Plans.Contains(di.Name)) continue;
+                string plan = di.Name;
+                string companyName = di.Parent.Name;
                 string summary = Path.Combine(company, companyName + ".xls");
-                string summary_bk_file = Path.Combine(company, companyName + "_" + DateTime.Now.AddMonths(-1).ToString("yyyy-MM") + "_bk.xls");
+                string summary_bk_file = Path.Combine(company, companyName + "_" + DateTime.Now.AddMonths(-1).ToString("yyyy-MM") + "_renewbk.xls");
                 File.Copy(summary, summary_bk_file, true);
 
                 ExcelTool et = new ExcelTool(summary, "Sheet1");
@@ -52,22 +59,22 @@ namespace Insurance.Services
                     row["生效日期"] = new DateTime(dt.Year, dt.Month, 1).ToString("yyyy-MM-dd");
                 }
                 et.DatatableToExcel(tbl_summary);
-                GenerateNewExcelForRenewAsync(companyName, true);
+                GenerateNewExcelForRenewAsync(companyName, plan, true);
             }
         }
 
-        private bool GenerateNewExcelForRenewAsync(string company, bool auto = false)
+        private bool GenerateNewExcelForRenewAsync(string company, string plan, bool auto = false)
         {
             LogService.Log($"{company}开始自动流转");
             string summary_bk = string.Empty;
             try
             {
-                UserInfoModel currUser = DatabaseService.SelectUserByCompany(company);
+                UserInfoModel currUser = DatabaseService.SelectUserByCompanyAndPlan(company, plan);
                 if (currUser == null)
                 {
                     return false;
                 }
-                string companyDir = Path.Combine(rootpath, "Excel", company);
+                string companyDir = Path.Combine(rootpath, "Excel", "管理员", company, plan);
                 string summaryPath = Path.Combine(companyDir, company + ".xls");
 
                 string monDir = Path.Combine(companyDir, DateTime.Now.ToString("yyyy-MM"));
@@ -116,7 +123,7 @@ namespace Insurance.Services
         {
             do
             {
-                if (configuration["AutoRenew"].ToString().Equals("False",StringComparison.CurrentCultureIgnoreCase))
+                if (configuration["AutoRenew"].ToString().Equals("False", StringComparison.CurrentCultureIgnoreCase))
                 {
                     Thread.Sleep(1000);
                     continue;

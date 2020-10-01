@@ -173,7 +173,7 @@ namespace Insurance.Controllers
                         {
                             Employee em = employees[i - startrow];                            
                             summary.SetCellText(i, 0, i.ToString()); //序号
-                            summary.SetCellText(i, 1, company); //单位
+                            summary.SetCellText(i, 1, targetcompany); //单位
                             summary.SetCellText(i, 2, em.Name); //姓名
                             summary.SetCellText(i, 3, em.ID); //ID
                             summary.SetCellText(i, 4, em.JobType); //险种
@@ -339,6 +339,14 @@ namespace Insurance.Controllers
             return Json(dt.ToString("yyyy-MM-dd"));
         }
 
+        /// <summary>
+        /// 验证保单文件，返回验证结果
+        /// </summary>
+        /// <param name="newExcel"></param>
+        /// <param name="mode"></param>
+        /// <param name="company"></param>
+        /// <param name="plan"></param>
+        /// <returns></returns>
         [UserLoginFilters]
         public JsonResult UpdateEmployees([FromForm]IFormFile newExcel, string mode, string company, string plan)
         {

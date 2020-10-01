@@ -915,7 +915,7 @@ namespace VirtualCredit.Controllers
                     string[] excelInfo = fi.Name.Split("@");
                     string mode = excelInfo[3].Equals("Add", StringComparison.CurrentCultureIgnoreCase) ? "加保" : "减保";
                     string uploadtime = excelInfo[0] + " " + excelInfo[5].Replace('-', ':');
-                    string comp = fi.Directory.Parent.Name;
+                    string comp = fi.Directory.Parent.Parent.Name;
                     string uploader = excelInfo[2];
                     using (ExcelTool et = new ExcelTool(file, "Sheet1"))
                     {
