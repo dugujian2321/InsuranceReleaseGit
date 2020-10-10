@@ -277,13 +277,7 @@ namespace Insurance.Controllers
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "当前用户权限不足");
                 return View("../User/AccountManagement");
             }
-            //if (currUser.AccessLevel == 1) //如果允许创建账号
-            //{
-            //    if (user.CompanyName != currUser.CompanyName)
-            //    {
-            //        return View("Error");
-            //    }
-            //}
+
             if (!ModelState.IsValid)
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "输入信息不合规范");
@@ -347,15 +341,14 @@ namespace Insurance.Controllers
             long temp = Convert.ToInt64(ts1.TotalSeconds);
             user.Father = currUser.UserName;
             user.AccessLevel = currUser.AccessLevel + 1;
-
+            user.CompanyName = user.CompanyName.Trim();
+            user.CompanyNameAbb = user.CompanyNameAbb.Trim();
             //var t = companies.Where(p => p.Name == user.CompanyName); //是否已有同名公司
-
 
             if (!ExcelTool.CreateNewCompanyTable(user, out string compDir))
             {
                 return View("Error");
             }
-
 
             if (DatabaseService.InsertStory("UserInfo", user))
             {
