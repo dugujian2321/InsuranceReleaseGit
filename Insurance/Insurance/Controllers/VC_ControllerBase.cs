@@ -299,56 +299,66 @@ namespace VirtualCredit
         /// <returns></returns>
         public List<Company> GetChildAccountsCompany()
         {
-            UserInfoModel currUser = GetCurrentUser();
-            string companiesDirectory = GetCurrentUserRootDir(currUser);
-            List<Company> result = new List<Company>();
-            var children = currUser.ChildAccounts;
-            var companyAccounts = GroupAccountByCompanyName(children);
-            foreach (var companyAccount in companyAccounts)
+            try
             {
-                var companyName = companyAccount[0].CompanyName;
-                var companyDir = GetCompanyDir(currUser, companyName);
-                if (string.IsNullOrEmpty(companyDir)) continue;
-                if (!Directory.Exists(companyDir)) continue;
-                Company company = new Company();
-                company.Name = companyName;
-
-                foreach (var account in companyAccount)
+                UserInfoModel currUser = GetCurrentUser();
+                string companiesDirectory = GetCurrentUserRootDir(currUser);
+                List<Company> result = new List<Company>();
+                var children = currUser.ChildAccounts;
+                var companyAccounts = GroupAccountByCompanyName(children);
+                foreach (var companyAccount in companyAccounts)
                 {
-                    ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, account._Plan);
-                    company.EmployeeNumber += edr.GetCurrentEmployeeNumber();
-                    company.StartDate = From;
-                    company.PaidCost += edr.GetPaidCost();
-                    company.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
-                    company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
-                    company.TotalCost += edr.GetTotalCost();
-                }
-                result.Add(company);
-            }
+                    var companyName = companyAccount[0].CompanyName;
+                    var companyDir = GetCompanyDir(currUser, companyName);
+                    if (string.IsNullOrEmpty(companyDir)) continue;
+                    if (!Directory.Exists(companyDir)) continue;
+                    Company company = new Company();
+                    company.Name = companyName;
 
-            Company self = new Company();
-            self.Name = currUser.CompanyName;
-            string thisSummary = Path.Combine(companiesDirectory, currUser._Plan, self.Name + ".xls");
-            if (System.IO.File.Exists(thisSummary))
-            {
-                ExcelTool et = new ExcelTool(thisSummary, "Sheet1");
-                self.EmployeeNumber = et.GetEmployeeNumber();
-                self.StartDate = From;
-                self.PaidCost = et.GetPaidCost();
-                self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
-                self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
-                self.TotalCost = et.GetCostFromJuneToMay(Path.Combine(companiesDirectory, currUser._Plan), From.Year);
-                result.Add(self);
-                //ExcelDataReader et = new ExcelDataReader(self.Name,From.Year,currUser._Plan);
-                //self.EmployeeNumber = et.GetEmployeeNumber();
-                //self.StartDate = From;
-                //self.PaidCost = et.GetPaidCost();
-                //self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaid();
-                //self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
-                //self.TotalCost = et.GetTotalCost();
-                //result.Add(self);
+                    foreach (var account in companyAccount)
+                    {
+                        ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, account._Plan);
+                        company.EmployeeNumber += edr.GetCurrentEmployeeNumber();
+                        company.StartDate = From;
+                        company.PaidCost += edr.GetPaidCost();
+                        company.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
+                        company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
+                        company.TotalCost += edr.GetTotalCost();
+                    }
+                    result.Add(company);
+                }
+
+                Company self = new Company();
+                self.Name = currUser.CompanyName;
+                string thisSummary = Path.Combine(companiesDirectory, currUser._Plan, self.Name + ".xls");
+                if (System.IO.File.Exists(thisSummary))
+                {
+                    ExcelTool et = new ExcelTool(thisSummary, "Sheet1");
+                    self.EmployeeNumber = et.GetEmployeeNumber();
+                    self.StartDate = From;
+                    self.PaidCost = et.GetPaidCost();
+                    self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
+                    self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
+                    self.TotalCost = et.GetCostFromJuneToMay(Path.Combine(companiesDirectory, currUser._Plan), From.Year);
+                    result.Add(self);
+                    //ExcelDataReader et = new ExcelDataReader(self.Name,From.Year,currUser._Plan);
+                    //self.EmployeeNumber = et.GetEmployeeNumber();
+                    //self.StartDate = From;
+                    //self.PaidCost = et.GetPaidCost();
+                    //self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaid();
+                    //self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
+                    //self.TotalCost = et.GetTotalCost();
+                    //result.Add(self);
+                }
+                return result;
             }
-            return result;
+            catch(Exception e)
+            {
+                LogService.Log(e.Message);
+                return null;
+                throw new Exception(e.StackTrace);
+            }
+            
         }
 
         public IEnumerable<string> GetChildrenCompanies(string companyName)

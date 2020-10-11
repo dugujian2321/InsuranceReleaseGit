@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing.Constraints;
 using Microsoft.EntityFrameworkCore.Storage;
+using Newtonsoft.Json;
 using NPOI.HSSF.Extractor;
 using NPOI.OpenXmlFormats.Wordprocessing;
 using NPOI.XWPF.UserModel;
@@ -56,7 +57,8 @@ namespace VirtualCredit.Controllers
             {
                 HistoricalModel model = new HistoricalModel();
                 model.CompanyList = GetChildAccountsCompany();
-                model.CompanyList = model.CompanyList.OrderBy(c => c.Name).ToList();
+                if (model.CompanyList != null)
+                    model.CompanyList = model.CompanyList.OrderBy(c => c.Name).ToList();
                 ViewBag.PageInfo = "保单列表";
                 return View("HistoricalList", model);
             }
@@ -650,11 +652,12 @@ namespace VirtualCredit.Controllers
         {
             UserInfoModel currUser = null;
             string summary_bk = string.Empty;
+            currUser = GetCurrentUser();
+            var locker = currUser.MyLocker.RWLocker;
             try
             {
-                currUser = GetCurrentUser();
                 //=========================================进入读锁=====================================================//
-                var locker = currUser.MyLocker.RWLocker;
+
                 if (!locker.IsWriteLockHeld)
                     locker.EnterWriteLock();
 
@@ -705,8 +708,8 @@ namespace VirtualCredit.Controllers
             }
             finally
             {
-                if (currUser != null && currUser.MyLocker != null && currUser.MyLocker.RWLocker.IsWriteLockHeld)
-                    currUser.MyLocker.RWLocker.ExitWriteLock(); //退出写锁
+                if (locker != null && locker.IsWriteLockHeld)
+                    locker.ExitWriteLock(); //退出写锁
             }
 
         }
@@ -1451,15 +1454,12 @@ namespace VirtualCredit.Controllers
 
         private static readonly object doclocker = new object();
 
+
         [UserLoginFilters]
-        public FileStreamResult GenerateInsuranceRecipet(string company, string date)
+        public string ProofTable(string company, string date)
         {
             UserInfoModel currUser = GetCurrentUser();
-            string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
-            string template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", "Insurance_recipet.docx");
             string companyDir = GetSearchExcelsInDir(company);
-            //List<string> childCompanies = GetChildrenCompanies(company).Where(_ => !Plans.Contains(_)).ToList();
-            //childCompanies.Add(company);
             List<string> summaries = new List<string>();
             foreach (var plan in Plans)
             {
@@ -1468,20 +1468,23 @@ namespace VirtualCredit.Controllers
                 //compDir = Directory.GetDirectories(companyDir, comp, SearchOption.AllDirectories).FirstOrDefault();
                 summaries.Add(Path.Combine(planDir, company + ".xls"));
             }
+
+            DataTable dt = new DataTable();
+            foreach (var summary in summaries)
+            {
+                dt.Merge(new ExcelTool(summary, "Sheet1").ExcelToDataTable("Sheet1", true));
+            }
+            return JsonConvert.SerializeObject(dt);
+        }
+
+        [UserLoginFilters]
+        public FileStreamResult GenerateInsuranceRecipet(string company, string date)
+        {
+            UserInfoModel currUser = GetCurrentUser();
+            string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
+            string template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", "Insurance_recipet.docx");
+
             string newdoc = Path.Combine(_hostingEnvironment.WebRootPath, "Word", company + DateTime.Now.ToString("yyyy-MM-dd-HH-hh-ss-mm") + ".docx");
-
-            string companyName_Abb = string.Empty;
-            if (currUser.AccessLevel == 0)
-            {
-                DataTable comps = DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company);
-                DataRow row = comps.Rows[0];
-                companyName_Abb = row["CompanyNameAbb"].ToString();
-            }
-            else
-            {
-                companyName_Abb = currUser.CompanyNameAbb;
-            }
-
             XWPFDocument document = null;
 
             lock (doclocker)
@@ -1506,45 +1509,63 @@ namespace VirtualCredit.Controllers
                     break;
                 }
             }
-
+            string companyName_Abb = string.Empty;
+            if (currUser.AccessLevel == 0)
+            {
+                DataTable comps = DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company);
+                DataRow row = comps.Rows[0];
+                companyName_Abb = row["CompanyNameAbb"].ToString();
+            }
+            else
+            {
+                companyName_Abb = currUser.CompanyNameAbb;
+            }
             //读取表格
 
             currUser.MyLocker.RWLocker.EnterReadLock();
-            int index = 1;
-            DataTable dt = new DataTable();
-            foreach (var summary in summaries)
+            try
             {
-                dt.Merge(new ExcelTool(summary, "Sheet1").ExcelToDataTable("Sheet1", true));
-            }
-            //foreach (XWPFTable table in document.Tables)
+                int index = 1;
+                DataTable dt = new DataTable();
+                dt = JsonConvert.DeserializeObject<DataTable>(ProofTable(company, date));
+                //foreach (XWPFTable table in document.Tables)
 
-            var table = document.Tables[1];
-            foreach (DataRow row in dt.Rows)
+                var table = document.Tables[1];
+                foreach (DataRow row in dt.Rows)
+                {
+                    XWPFTableRow newrow = table.CreateRow();
+                    newrow.GetCell(0).SetText(index++.ToString());
+                    newrow.GetCell(1).SetText(companyName_Abb);
+                    newrow.GetCell(2).SetText(row[2].ToString());
+                    newrow.GetCell(3).SetText(row[3].ToString());
+                    newrow.GetCell(4).SetText(row[4].ToString());
+                    newrow.GetCell(5).SetText(row[5].ToString());
+                    newrow.GetCell(6).SetText(row[6].ToString());
+                }
+                table.SetBottomBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+                table.SetTopBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+                table.SetLeftBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+                table.SetRightBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+                table.SetInsideHBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+                table.SetInsideVBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
+
+                currUser.MyLocker.RWLocker.ExitReadLock();
+                using (FileStream output = new FileStream(newdoc, FileMode.Create, FileAccess.ReadWrite))
+                {
+                    document.Write(output);
+                }
+
+                FileStream downloadStream = new FileStream(newdoc, FileMode.Open, FileAccess.Read);
+                return File(downloadStream, "text/plain", $"{company}_{monthDir}_保险凭证.docx");
+            }
+            finally
             {
-                XWPFTableRow newrow = table.CreateRow();
-                newrow.GetCell(0).SetText(index++.ToString());
-                newrow.GetCell(1).SetText(companyName_Abb);
-                newrow.GetCell(2).SetText(row[2].ToString());
-                newrow.GetCell(3).SetText(row[3].ToString());
-                newrow.GetCell(4).SetText(row[4].ToString());
-                newrow.GetCell(5).SetText(row[5].ToString());
-                newrow.GetCell(6).SetText(row[6].ToString());
-            }
-            table.SetBottomBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-            table.SetTopBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-            table.SetLeftBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-            table.SetRightBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-            table.SetInsideHBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-            table.SetInsideVBorder(XWPFTable.XWPFBorderType.SINGLE, 1, 1, "0 0 0");
-
-            GetCurrentUser().MyLocker.RWLocker.ExitReadLock();
-            using (FileStream output = new FileStream(newdoc, FileMode.Create, FileAccess.ReadWrite))
-            {
-                document.Write(output);
+                if (currUser.MyLocker.RWLocker.IsReadLockHeld)
+                {
+                    currUser.MyLocker.RWLocker.ExitReadLock();
+                }
             }
 
-            FileStream downloadStream = new FileStream(newdoc, FileMode.Open, FileAccess.Read);
-            return File(downloadStream, "text/plain", $"{company}_{monthDir}_保险凭证.docx");
         }
 
         [HttpPost]

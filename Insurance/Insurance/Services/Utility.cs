@@ -2,6 +2,7 @@
 using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using NPOI.SS.Formula.Functions;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -74,9 +75,11 @@ namespace VirtualCredit.Services
                 DateTime now = DateTime.Now.Date;
                 if (now > lastestDate)
                 {
+                    LogServices.LogService.Log($"开始每日数据备份，时间{now}");
                     LockerList.ForEach(l => l.RWLocker.EnterReadLock());
                     if (UpdateDailyData()) lastestDate = now;
                     LockerList.ForEach(l => l.RWLocker.ExitReadLock());
+                    LogServices.LogService.Log($"每日数据备份成功,下一次更新时间为{lastestDate}");
                 }
                 else
                 {
@@ -144,6 +147,7 @@ namespace VirtualCredit.Services
             }
             catch
             {
+                LogServices.LogService.Log("每日数据备份失败");
                 return false;
             }
 

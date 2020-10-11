@@ -6,6 +6,7 @@
     <ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
     <OutputType>Exe</OutputType>
     <StartupObject />
+    <UserSecretsId>5ad2097a-d48e-4725-8ea6-9e3725c49c34</UserSecretsId>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

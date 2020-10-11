@@ -82,11 +82,14 @@ namespace Insurance.Services
         {
             int result = 0;
             string companyName = string.Empty;
+            string summaryExcel = string.Empty;
             dirsContainExcel.ForEach(planDir =>
             {
                 var di = new DirectoryInfo(planDir);
                 if (di.Exists)
                 {
+                    companyName = di.Parent.Name;
+                    summaryExcel = Path.Combine(planDir, companyName + ".xls");
                     foreach (string monthDir in Directory.GetDirectories(planDir))
                     {
                         DirectoryInfo info = new DirectoryInfo(monthDir);
@@ -98,12 +101,11 @@ namespace Insurance.Services
                         {
                             continue;
                         }
-                        companyName = di.Parent.Name;
-                        string summaryExcel = Path.Combine(planDir, companyName + ".xls");
+                        
                         if (!File.Exists(summaryExcel)) continue;
-                        ExcelTool et = new ExcelTool(summaryExcel, "Sheet1");
-                        result += et.GetEmployeeNumber();
                     }
+                    ExcelTool et = new ExcelTool(summaryExcel, "Sheet1");
+                    result += et.GetEmployeeNumber();
                 }
             });
             return result;
@@ -117,7 +119,7 @@ namespace Insurance.Services
             int result = 0;
             string planDir = Path.Combine(CompanyDir, Plan);
             string summaryFile = Path.Combine(planDir, CompanyName + ".xls");
-            using(ExcelTool et = new ExcelTool(summaryFile, "Sheet1"))
+            using (ExcelTool et = new ExcelTool(summaryFile, "Sheet1"))
             {
                 result = et.GetEmployeeNumber();
             }
