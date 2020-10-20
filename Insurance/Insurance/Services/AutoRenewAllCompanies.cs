@@ -30,9 +30,12 @@ namespace Insurance.Services
                 string plan = di.Name;
                 string companyName = di.Parent.Name;
                 string summary = Path.Combine(company, companyName + ".xls");
-                string summary_bk_file = Path.Combine(company, companyName + "_" + DateTime.Now.AddMonths(-1).ToString("yyyy-MM") + "_renewbk.xls");
+                string summary_bk_file = Path.Combine(company, companyName + "_" + DateTime.Now.AddMonths(-1).ToString("yyyy-MM") + "_bk.xls");
+                if (File.Exists(summary_bk_file))
+                {
+                    continue;
+                }
                 File.Copy(summary, summary_bk_file, true);
-
                 ExcelTool et = new ExcelTool(summary, "Sheet1");
                 DateTime currDate;
 
@@ -52,6 +55,7 @@ namespace Insurance.Services
                 {
                     continue;
                 }
+                
                 DataTable tbl_summary = et.ExcelToDataTable("Sheet1", true);
                 foreach (DataRow row in tbl_summary.Rows)
                 {

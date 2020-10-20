@@ -171,7 +171,7 @@ namespace Insurance.Controllers
                         string company = currUser.CompanyName;
                         for (int i = startrow; i < startrow + employees.Count; i++)
                         {
-                            Employee em = employees[i - startrow];                            
+                            Employee em = employees[i - startrow];
                             summary.SetCellText(i, 0, i.ToString()); //序号
                             summary.SetCellText(i, 1, targetcompany); //单位
                             summary.SetCellText(i, 2, em.Name); //姓名
@@ -348,7 +348,7 @@ namespace Insurance.Controllers
         /// <param name="plan"></param>
         /// <returns></returns>
         [UserLoginFilters]
-        public JsonResult UpdateEmployees([FromForm]IFormFile newExcel, string mode, string company, string plan)
+        public JsonResult UpdateEmployees([FromForm] IFormFile newExcel, string mode, string company, string plan)
         {
             HttpContext.Session.Set("validationResult", new List<Employee>());
             HttpContext.Session.Set("company", string.Empty);
@@ -399,11 +399,16 @@ namespace Insurance.Controllers
         {
             DataTable res = new DataTable();
             ReaderWriterLockSlim r_locker = null;
-            string dirPath = Path.Combine(ExcelDirectory, "Excel");
+            string dirPath = ExcelRoot;
             string tempDir = Path.Combine(ExcelDirectory, "Temp");
             string temp_file = "SummaryTemplate.xls";
+            if (exportEnd < exportStart)
+            {
+                return File(new FileStream(Path.Combine(dirPath, temp_file), FileMode.Open, FileAccess.Read), "text/plain", "错误.xls");
+            }
             string summary_file = Path.Combine(dirPath, DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss") + ".xls");
             string summary_file_temp = Path.Combine(dirPath, DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss") + "_temp.xls");
+
             try
             {
                 r_locker = GetCurrentUser().MyLocker.RWLocker;
@@ -416,23 +421,35 @@ namespace Insurance.Controllers
 
                 System.IO.File.Copy(Path.Combine(dirPath, temp_file), summary_file_temp, true);
                 ExcelTool summary = new ExcelTool(summary_file_temp, "Sheet1");
-                foreach (string dir in Directory.GetDirectories(dirPath))
+                var companies = GetSpringCompaniesName(true);
+                foreach (string company in companies) //获取所有后代公司的文件夹
                 {
-                    foreach (string month in Directory.GetDirectories(dir))
+                    if (company == "管理员") continue;
+                    var companyDir = GetSearchExcelsInDir(company);
+                    foreach (var plan in Plans)
                     {
-                        foreach (string excel in Directory.GetFiles(month))
+                        string planDir = Path.Combine(companyDir, plan);
+                        if (!System.IO.Directory.Exists(planDir)) continue;
+                        foreach (string month in Directory.GetDirectories(planDir)) //遍历各方案下月份文件夹
                         {
-                            DateTime date;
-                            FileInfo fi = new FileInfo(excel);
-                            string uploadDate = fi.Name.Split('@')[0];
-                            if (DateTime.TryParse(uploadDate, out date))
+                            DirectoryInfo di = new DirectoryInfo(month);
+                            if (!DateTime.TryParse(di.Name, out DateTime dt)) continue;
+                            if (dt.Month < exportStart.Month || dt.Month > exportEnd.Month) continue;
+                            foreach (string excel in Directory.GetFiles(month))
                             {
-                                if (date.Date >= exportStart.Date && date.Date <= exportEnd.Date)
-                                    summary.GainDataFromNewFile(excel, fi.Directory.Parent.Name);
+                                DateTime date;
+                                FileInfo fi = new FileInfo(excel);
+                                string uploadDate = fi.Name.Split('@')[0];
+                                if (DateTime.TryParse(uploadDate, out date))
+                                {
+                                    if (date.Date >= exportStart.Date && date.Date <= exportEnd.Date)
+                                        summary.GainDataFromNewFile(excel, company);
+                                }
                             }
-                        }
 
+                        }
                     }
+
                 }
                 summary.CreateAndSave(summary_file);
                 System.IO.File.Delete(summary_file_temp);
@@ -591,7 +608,7 @@ namespace Insurance.Controllers
             }
         }
 
-        public double CalculatePrice([FromForm]DateTime startdate, string company, string plan)
+        public double CalculatePrice([FromForm] DateTime startdate, string company, string plan)
         {
             var currUser = GetCurrentUser();
             if (string.IsNullOrEmpty(summaryFilePath))

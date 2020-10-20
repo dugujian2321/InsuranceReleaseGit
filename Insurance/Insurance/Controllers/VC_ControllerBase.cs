@@ -3,6 +3,7 @@ using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NPOI.SS.Util;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -16,6 +17,7 @@ namespace VirtualCredit
 {
     public class VC_ControllerBase : Controller
     {
+        public static ConcurrentDictionary<string, string> CachedCompanyDir = new ConcurrentDictionary<string, string>();
         protected IHostingEnvironment _hostingEnvironment;
         public static List<string> Plans = new List<string> { "30万", "60万", "80万" };
         public static long CustomersCount = 0;
@@ -116,15 +118,33 @@ namespace VirtualCredit
 
         public string GetSearchExcelsInDir(string companyName)
         {
+            string result = string.Empty;
+            CachedCompanyDir.TryAdd("管理员", Path.Combine(ExcelRoot, "管理员"));
+            if (CachedCompanyDir.TryGetValue(companyName, out result))
+            {
+                if (Directory.Exists(result))
+                {
+                    return result;
+                }
+                else
+                {
+                    CachedCompanyDir.Remove(companyName, out result);
+                }
+            }
             var currUser = GetCurrentUser();
             if (currUser.CompanyName == companyName)
             {
-                return GetCurrentUserRootDir(currUser);
+                result = GetCurrentUserRootDir(currUser);
             }
             else
             {
-                return Directory.GetDirectories(GetCurrentUserRootDir(currUser), companyName, SearchOption.AllDirectories).FirstOrDefault();
+                result = Directory.GetDirectories(GetCurrentUserRootDir(currUser), companyName, SearchOption.AllDirectories).FirstOrDefault();
             }
+            if (!CachedCompanyDir.ContainsKey(companyName))
+            {
+                CachedCompanyDir.TryAdd(companyName, result);
+            }
+            return result;
         }
 
         /// <summary>
@@ -146,7 +166,10 @@ namespace VirtualCredit
         /// <returns></returns>
         public string GetCurrentUserRootDir(UserInfoModel currUser)
         {
+            string compName = currUser.CompanyName;
+            if (CachedCompanyDir.ContainsKey(compName)) return CachedCompanyDir[compName];
             string result = Directory.GetDirectories(ExcelRoot, currUser.CompanyName, SearchOption.AllDirectories).FirstOrDefault();
+            CachedCompanyDir.TryAdd(compName, result);
             return result;
         }
         public string GetCurrentUserHistoryRootDir(int year)
@@ -251,24 +274,33 @@ namespace VirtualCredit
         /// <returns></returns>
         public AccountData GetAccountData(UserInfoModel account)
         {
-            AccountData ad = new AccountData();
-            ad.Account = account;
-            ad.PricePerMonth = account.UnitPrice;
-            string company = account.CompanyName;
-            if (company == "管理员")
+            try
             {
+                AccountData ad = new AccountData();
+                ad.Account = account;
+                ad.PricePerMonth = account.UnitPrice;
+                string company = account.CompanyName;
+                if (company == "管理员")
+                {
+                    return null;
+                }
+                string plan = account._Plan;
+                string companyDir = Directory.GetDirectories(Path.Combine(ExcelRoot, "管理员"), company, SearchOption.AllDirectories).FirstOrDefault();
+                string accountDir = Directory.GetDirectories(companyDir, plan, SearchOption.AllDirectories).FirstOrDefault();
+                string accountSummaryFile = Path.Combine(accountDir, company + ".xls");
+                if (!System.IO.File.Exists(accountSummaryFile)) return ad;
+                using (ExcelTool et = new ExcelTool(accountSummaryFile, "Sheet1"))
+                {
+                    ad.HeadCount = et.GetEmployeeNumber();
+                }
+                return ad;
+            }
+            catch (Exception e)
+            {
+                LogService.Log(e.Message);
                 return null;
             }
-            string plan = account._Plan;
-            string companyDir = Directory.GetDirectories(Path.Combine(ExcelRoot, "管理员"), company, SearchOption.AllDirectories).FirstOrDefault();
-            string accountDir = Directory.GetDirectories(companyDir, plan, SearchOption.AllDirectories).FirstOrDefault();
-            string accountSummaryFile = Path.Combine(accountDir, company + ".xls");
-            if (!System.IO.File.Exists(accountSummaryFile)) return ad;
-            using (ExcelTool et = new ExcelTool(accountSummaryFile, "Sheet1"))
-            {
-                ad.HeadCount = et.GetEmployeeNumber();
-            }
-            return ad;
+
         }
 
         /// <summary>
@@ -352,13 +384,13 @@ namespace VirtualCredit
                 }
                 return result;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 LogService.Log(e.Message);
                 return null;
                 throw new Exception(e.StackTrace);
             }
-            
+
         }
 
         public IEnumerable<string> GetChildrenCompanies(string companyName)

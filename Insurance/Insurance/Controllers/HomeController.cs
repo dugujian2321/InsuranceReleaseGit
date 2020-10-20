@@ -617,6 +617,7 @@ namespace VirtualCredit.Controllers
                 System.IO.File.Copy(summary, summary_backup, true);
                 using (ExcelTool et = new ExcelTool(summary, "Sheet1"))
                 {
+                    System.IO.File.Copy(summary, summary_backup, true);
                     if (et.GetEmployeeNumber() <= 0)
                     {
                         return Json("无人参保");
@@ -1461,12 +1462,18 @@ namespace VirtualCredit.Controllers
             UserInfoModel currUser = GetCurrentUser();
             string companyDir = GetSearchExcelsInDir(company);
             List<string> summaries = new List<string>();
+            DateTime month = DateTime.Parse(date);
+            bool isCurrentMonth = month.Month == DateTime.Now.Month;
             foreach (var plan in Plans)
             {
                 string planDir = Path.Combine(companyDir, plan);
                 if (!Directory.Exists(planDir)) continue;
+
                 //compDir = Directory.GetDirectories(companyDir, comp, SearchOption.AllDirectories).FirstOrDefault();
-                summaries.Add(Path.Combine(planDir, company + ".xls"));
+                if (isCurrentMonth)
+                    summaries.AddRange(Directory.GetFiles(planDir, company + ".xls"));
+                else
+                    summaries.AddRange(Directory.GetFiles(planDir, company + "_" + month.ToString("yyyy-MM") + "_bk.xls"));
             }
 
             DataTable dt = new DataTable();
