@@ -1,4 +1,5 @@
-﻿using Insurance;
+﻿using ICSharpCode.SharpZipLib.Zip;
+using Insurance;
 using Insurance.Models;
 using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
@@ -112,6 +113,43 @@ namespace VirtualCredit.Controllers
             ViewBag.PageInfo = $"{year}年数据";
             ViewBag.IsHistory = true;
             return View("HistoricalList", model);
+        }
+
+        [UserLoginFilters]
+        public ActionResult AllProofs(HistoricalModel historicalModel)
+        {
+            List<string> files = new List<string>();
+            var currUser = GetCurrentUser();
+            if (historicalModel.ProofDate.Year < 2000)
+            {
+                Response.StatusCode = 400;
+                return Json("请选择日期后再试");
+            }
+            string date = historicalModel.ProofDate.ToString("yyyy-MM");
+
+            var childAccounts = currUser.ChildAccounts;
+            foreach (var account in childAccounts)
+            {
+                string company = account.CompanyName;
+                files.Add(GenerateProofFile(company, date, currUser));
+            }
+            string zipFile = Path.Combine(ExcelRoot, "zip_temp.zip");
+            if (System.IO.File.Exists(zipFile))
+            {
+                System.IO.File.Delete(zipFile);
+            }
+            using (ZipFile zip = ZipFile.Create(zipFile))
+            {
+                zip.BeginUpdate();
+                foreach (var file in files)
+                {
+                    zip.Add(file, new FileInfo(file).Name);
+                }
+                zip.CommitUpdate();
+                zip.Close();
+            }
+            FileStream downloadStream = new FileStream(zipFile, FileMode.Open, FileAccess.Read);
+            return File(downloadStream, "application/zip", $"{date}_保险凭证.zip");
         }
 
         /// <summary>
@@ -1485,9 +1523,8 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
-        public FileStreamResult GenerateInsuranceRecipet(string company, string date)
+        public string GenerateProofFile(string company, string date, UserInfoModel currUser)
         {
-            UserInfoModel currUser = GetCurrentUser();
             string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
             string template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", "Insurance_recipet.docx");
 
@@ -1561,9 +1598,7 @@ namespace VirtualCredit.Controllers
                 {
                     document.Write(output);
                 }
-
-                FileStream downloadStream = new FileStream(newdoc, FileMode.Open, FileAccess.Read);
-                return File(downloadStream, "text/plain", $"{company}_{monthDir}_保险凭证.docx");
+                return newdoc;
             }
             finally
             {
@@ -1572,7 +1607,15 @@ namespace VirtualCredit.Controllers
                     currUser.MyLocker.RWLocker.ExitReadLock();
                 }
             }
+        }
 
+        [UserLoginFilters]
+        public FileStreamResult GenerateInsuranceRecipet(string company, string date)
+        {
+            string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
+            string newdoc = GenerateProofFile(company, date, GetCurrentUser());
+            FileStream downloadStream = new FileStream(newdoc, FileMode.Open, FileAccess.Read);
+            return File(downloadStream, "text/plain", $"{company}_{monthDir}_保险凭证.docx");
         }
 
         [HttpPost]

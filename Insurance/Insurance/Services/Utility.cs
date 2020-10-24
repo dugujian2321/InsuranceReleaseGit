@@ -67,19 +67,19 @@ namespace VirtualCredit.Services
         public static int DailySub;
 
 
-        static DateTime lastestDate = DateTime.Now.Date; //DateTime.Now; //
+        static DateTime lastUpdateDate = DateTime.Now.Date; //DateTime.Now; //
         public static void DailyUpdate()
         {
             while (true)
             {
                 DateTime now = DateTime.Now.Date;
-                if (now > lastestDate)
+                if (now > lastUpdateDate)
                 {
-                    LogServices.LogService.Log($"开始每日数据备份，时间{now}");
+                    LogServices.LogService.Log($"开始每日数据备份，当前时间{DateTime.Now},上次备份时间{lastUpdateDate}");
                     LockerList.ForEach(l => l.RWLocker.EnterReadLock());
-                    if (UpdateDailyData()) lastestDate = now;
+                    if (UpdateDailyData()) lastUpdateDate = lastUpdateDate.AddDays(1);
                     LockerList.ForEach(l => l.RWLocker.ExitReadLock());
-                    LogServices.LogService.Log($"每日数据备份成功,下一次更新时间为{lastestDate}");
+                    LogServices.LogService.Log($"每日数据备份成功,下次备份时间{lastUpdateDate}");
                 }
                 else
                 {
@@ -128,10 +128,10 @@ namespace VirtualCredit.Services
                             continue;
                         using (ExcelTool et = new ExcelTool(Path.Combine(planDir, compInfo.Name + ".xls"), "Sheet1"))
                         {
-                            DateTime dt = lastestDate;
+                            DateTime dt = lastUpdateDate;
                             string compName = compInfo.Name;
                             int headcount = et.GetEmployeeNumber();
-                            double dailyPrice = MathEx.ToCurrency(headcount * account.UnitPrice / DateTime.DaysInMonth(lastestDate.Year, lastestDate.Month));
+                            double dailyPrice = MathEx.ToCurrency(headcount * account.UnitPrice / DateTime.DaysInMonth(lastUpdateDate.Year, lastUpdateDate.Month));
                             DataRow dr = todayDataTable.NewRow();
                             dr["YMDDate"] = dt.Date;
                             dr["Company"] = compName;
