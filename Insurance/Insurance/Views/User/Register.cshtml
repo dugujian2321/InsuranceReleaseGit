@@ -85,6 +85,7 @@
                             <span class="input-group-text" id="inputGroup-sizing-default">公司名称</span>
                         </div>
                         <input class="inputBox" id="cpName" type="text" asp-for="CompanyName" value="@cn" autocomplete="off" />
+                        <span id="companyNameMsg" class="warningMessage">@ViewBag.CompanyNameIncorrect</span>
                     </div>
                     <div class="input-group mb-3">
                         <div class="input-group-prepend">

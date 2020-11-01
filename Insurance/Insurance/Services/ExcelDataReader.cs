@@ -111,18 +111,25 @@ namespace Insurance.Services
             return result;
         }
         /// <summary>
-        /// 获取保单方案下的当前在保人数
+        /// 获取保单方案下的当前在保人数,包含后代公司
         /// </summary>
         /// <returns></returns>
         public int GetCurrentEmployeeNumber()
         {
             int result = 0;
-            string planDir = Path.Combine(CompanyDir, Plan);
-            string summaryFile = Path.Combine(planDir, CompanyName + ".xls");
-            using (ExcelTool et = new ExcelTool(summaryFile, "Sheet1"))
+            string[] planDirs = Directory.GetDirectories(CompanyDir, Plan, SearchOption.AllDirectories);
+            string compName = string.Empty;
+            foreach (var planDir in planDirs)
             {
-                result = et.GetEmployeeNumber();
+                DirectoryInfo di = new DirectoryInfo(planDir);
+                compName = di.Parent.Name;
+                string summaryFile = Path.Combine(planDir, compName + ".xls");
+                using (ExcelTool et = new ExcelTool(summaryFile, "Sheet1"))
+                {
+                    result += et.GetEmployeeNumber();
+                }
             }
+
             return result;
         }
 

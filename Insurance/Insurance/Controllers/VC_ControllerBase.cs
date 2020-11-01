@@ -401,7 +401,7 @@ namespace VirtualCredit
             foreach (var dir in dirs)
             {
                 var dirInfo = new DirectoryInfo(dir);
-                if (!DateTime.TryParse(dirInfo.Name, out DateTime date))
+                if (!DateTime.TryParse(dirInfo.Name, out DateTime date) && !Plans.Contains(dirInfo.Name))
                 {
                     result.Add(dirInfo.Name);
                     GetChildrenCompanies(dirInfo.Name).ToList().ForEach(_ => result.Add(new DirectoryInfo(_).Name));

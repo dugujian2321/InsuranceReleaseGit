@@ -79,7 +79,7 @@ namespace VirtualCredit.Services
                     LockerList.ForEach(l => l.RWLocker.EnterReadLock());
                     if (UpdateDailyData()) lastUpdateDate = lastUpdateDate.AddDays(1);
                     LockerList.ForEach(l => l.RWLocker.ExitReadLock());
-                    LogServices.LogService.Log($"每日数据备份成功,下次备份时间{lastUpdateDate}");
+                    LogServices.LogService.Log($"每日数据备份成功,下次备份时间{DateTime.Now.AddDays(1).ToString("yyyy-MM-dd 00:00:00")}");
                 }
                 else
                 {

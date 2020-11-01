@@ -63,12 +63,13 @@ namespace Insurance.Services
                     row["生效日期"] = new DateTime(dt.Year, dt.Month, 1).ToString("yyyy-MM-dd");
                 }
                 et.DatatableToExcel(tbl_summary);
-                GenerateNewExcelForRenewAsync(companyName, plan, true);
+                GenerateNewExcelForRenewAsync(company, plan, true);
             }
         }
 
-        private bool GenerateNewExcelForRenewAsync(string company, string plan, bool auto = false)
+        private bool GenerateNewExcelForRenewAsync(string companyFolder, string plan, bool auto = false)
         {
+            string company = new DirectoryInfo(companyFolder).Parent.Name;
             LogService.Log($"{company}开始自动流转");
             string summary_bk = string.Empty;
             try
@@ -78,7 +79,7 @@ namespace Insurance.Services
                 {
                     return false;
                 }
-                string companyDir = Path.Combine(rootpath, "Excel", "管理员", company, plan);
+                string companyDir = companyFolder;
                 string summaryPath = Path.Combine(companyDir, company + ".xls");
 
                 string monDir = Path.Combine(companyDir, DateTime.Now.ToString("yyyy-MM"));
@@ -135,6 +136,7 @@ namespace Insurance.Services
                 if (nextEndDate.Year < 2000)
                 {
                     nextEndDate = DateTime.Now;
+                    //nextEndDate = new DateTime(2020, 10, 30, 23, 59, 59);
                 }
                 DateTime monthLastDay = new DateTime(nextEndDate.Year, nextEndDate.Month, DateTime.DaysInMonth(nextEndDate.Year, nextEndDate.Month));
                 string monthlastsecond = monthLastDay.ToString("yyyy-MM-dd 23:59:59");

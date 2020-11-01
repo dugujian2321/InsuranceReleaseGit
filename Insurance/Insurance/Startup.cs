@@ -23,12 +23,14 @@ namespace VirtualCredit
             Environment = hostingEnvironment;
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             new Utility().Initial(configuration, hostingEnvironment);
-            Task.Factory.StartNew(()=> {
+            Task.Factory.StartNew(() =>
+            {
                 new AutoRenewAllCompanies().StartListening(configuration);
-            });
-            Task.Factory.StartNew(() => {
+            }, TaskCreationOptions.LongRunning);
+            Task.Factory.StartNew(() =>
+            {
                 Utility.DailyUpdate();
-            });
+            }, TaskCreationOptions.LongRunning);
         }
 
         public IConfiguration Configuration { get; }

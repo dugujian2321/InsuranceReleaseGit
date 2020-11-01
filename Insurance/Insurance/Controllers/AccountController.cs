@@ -122,7 +122,7 @@ namespace Insurance.Controllers
             ViewBag.LoginResult = msg;
         }
 
-        public JsonResult ValidateDaysBefore([FromQuery]string days)
+        public JsonResult ValidateDaysBefore([FromQuery] string days)
         {
             string result = "√";
             if (!int.TryParse(days, out int res))
@@ -271,6 +271,7 @@ namespace Insurance.Controllers
         [AdminFilters]
         public ActionResult Register(NewUserModel user)
         {
+            ViewBag.Plans = new SelectList(new List<string>() { "30万", "60万", "80万" });
             UserInfoModel currUser = GetCurrentUser();
             if (currUser is null || /*currUser.AccessLevel > 1 ||*/ currUser.AllowCreateAccount != "1")
             {
@@ -282,7 +283,7 @@ namespace Insurance.Controllers
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "输入信息不合规范");
                 ActionAfterReload("输入信息不合规范");
-                return View();
+                return View("../User/Register");
             }
             bool pass = true;
 
@@ -325,15 +326,21 @@ namespace Insurance.Controllers
                 if (user._Plan != currUser._Plan)
                 {
                     HttpContext.Session.Set<string>("noAccessCreateAccout", "子账户方案必须与其父账户相同");
-                    ViewBag.PlanIncorrect = "方案不正确";
+                    ViewBag.PlanIncorrect = "子账户方案必须与其父账户相同";
                     pass = false;
                 }
+            }
+            if (currUser.CompanyName == user.CompanyName)
+            {
+                HttpContext.Session.Set<string>("noAccessCreateAccout", "子账号公司名称不能与父账号相同");
+                ViewBag.CompanyNameIncorrect = "子账号公司名称不能与父账号相同";
+                pass = false;
             }
             if (!pass)
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "输入信息不合规范");
                 ActionAfterReload("输入信息不合规范");
-                return View();
+                return View("../User/Register", user);
             }
             MD5Helper md5 = new MD5Helper();
             //user.userPassword = md5.EncryptNTimesWithBackendSalt(user.userPassword, 500);

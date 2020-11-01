@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using VirtualCredit.Services;
 
 namespace VirtualCredit.Models
@@ -92,17 +93,21 @@ namespace VirtualCredit.Models
         public int StartDate { get; set; }
         public bool AllowEdit { get; set; }
 
-
         private List<UserInfoModel> GetSpringAccounts(UserInfoModel user)
         {
-            if (springAccounts != null && springAccounts.Count > 0) return springAccounts;
             List<UserInfoModel> result = new List<UserInfoModel>();
             if (user.ChildAccounts != null && user.ChildAccounts.Count > 0)
             {
                 foreach (var item in user.ChildAccounts)
                 {
                     result.Add(item);
-                    result.AddRange(GetSpringAccounts(item));
+                    foreach (var spring in GetSpringAccounts(item))
+                    {
+                        if (!result.Any(x => x.CompanyName == spring.CompanyName))
+                        {
+                            result.Add(spring);
+                        }
+                    }
                 }
                 springAccounts = result;
             }
