@@ -659,7 +659,7 @@ namespace Insurance.Controllers
                 }
                 if (mode == "add")
                 {
-                    double temp = CalculateAddPrice(startdate);
+                    double temp = CalculateAddPrice(targetUser, startdate);
                     HttpContext.Session.Set("price", temp);
                     HttpContext.Session.Set("readyToSubmit", "Y");
                     return temp;
@@ -675,7 +675,7 @@ namespace Insurance.Controllers
                         {
                             return -9999995;
                         }
-                        result += CalculateSubPrice(start.Date, startdate, currUser.UnitPrice);
+                        result += CalculateSubPrice(start.Date, startdate, targetUser.UnitPrice);
                     }
                     double temp = Math.Round(result, 2);
                     HttpContext.Session.Set("price", temp);

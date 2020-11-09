@@ -92,7 +92,7 @@ namespace VirtualCredit
             return payback;
         }
 
-        protected double CalculateAddPrice(DateTime dt)
+        protected double CalculateAddPrice(UserInfoModel account,DateTime dt)
         {
             //对于添加新的保费信息，按生效日期至本月底的天数收费
             double result = 0;
@@ -107,7 +107,7 @@ namespace VirtualCredit
             int year_specified = dt.Year;
             int month_specified = dt.Month;
             int day_sepecified = dt.Day;
-            double totalPrice = GetCurrentUser().UnitPrice;
+            double totalPrice = account.UnitPrice;
             int monthDays = DateTime.DaysInMonth(year_specified, month_specified); //计算生效日期所在月份的天数
             double unitPrice = (double)totalPrice / monthDays;
             int totalNumber = newEmployees.Count;
