@@ -210,14 +210,16 @@ namespace Insurance.Controllers
             if (model.AllowCreateAccount == "1")
             {
                 uim.AllowCreateAccount = "1";
+                uim.AccessLevel = 1;
             }
             else
             {
                 uim.AllowCreateAccount = "2";
+                uim.AccessLevel = 2;
             }
             List<string> paras = new List<string>()
             {
-                /*"AccessLevel",*/"AllowCreateAccount","DaysBefore","_Plan","UnitPrice"
+                /*"AccessLevel",*/"AllowCreateAccount","AccessLevel","DaysBefore","_Plan","UnitPrice"
             };
             if (DatabaseService.UpdateUserInfo(uim, paras))
             {
