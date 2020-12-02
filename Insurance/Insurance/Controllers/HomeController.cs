@@ -57,7 +57,7 @@ namespace VirtualCredit.Controllers
             try
             {
                 HistoricalModel model = new HistoricalModel();
-                model.CompanyList = GetChildAccountsCompany();
+                model.CompanyList = GetSpringAccountsCompany();
                 if (model.CompanyList != null)
                     model.CompanyList = model.CompanyList.OrderBy(c => c.Name).ToList();
                 ViewBag.PageInfo = "保单列表";
@@ -80,6 +80,7 @@ namespace VirtualCredit.Controllers
         [UserLoginFilters]
         public IActionResult YearHistory([FromQuery] int year)
         {
+            var curUser = GetCurrentUser();
             if (year == From.Year)
             {
                 return HistoricalList();
@@ -104,7 +105,7 @@ namespace VirtualCredit.Controllers
                 {
                     ExcelDataReader edr = new ExcelDataReader(di, year, plan);
                     comp.PaidCost += edr.GetPaidCost();
-                    comp.TotalCost += edr.GetTotalCost();
+                    comp.TotalCost += edr.ReadTotalCost(0, true);
                     comp.EmployeeNumber += edr.GetEmployeeNumber();
                 }
                 compList.Add(comp);

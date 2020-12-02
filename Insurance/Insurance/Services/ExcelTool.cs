@@ -274,7 +274,7 @@ namespace Insurance.Services
             }
             return Math.Round(cost, 2);
         }
-        public double GetCostFromJuneToMay(string companyDir, int year)
+        public double GetCostFromJuneToMay(string companyDir, int year, double unitPriceEveryMonth)
         {
             DateTime now = DateTime.Now;
             DateTime from = new DateTime();
@@ -297,10 +297,19 @@ namespace Insurance.Services
                     dirDate = new DateTime(dirDate.Year, dirDate.Month, 1);
                     if (dirDate >= from && dirDate <= to)
                     {
+                        int days = DateTime.DaysInMonth(dateTime.Year, dateTime.Month); //当月天数
+                        double unitPriceEveryday = unitPriceEveryMonth / days;
                         foreach (string file in Directory.GetFiles(monthDir))
                         {
                             string[] excelinfo = file.Split('@');
-                            cost += Convert.ToDouble(excelinfo[1]);
+                            if (excelinfo.Length > 8)
+                            {
+                                cost += Convert.ToDouble(excelinfo[7]) * unitPriceEveryday;
+                            }
+                            else
+                            {
+                                cost += Convert.ToDouble(excelinfo[1]);
+                            }
                         }
                     }
                 }
@@ -945,7 +954,7 @@ namespace Insurance.Services
             {
                 throw;
             }
-            
+
         }
 
         public static bool CreateNewCompanyTable(NewUserModel user, out string companyDir)
