@@ -74,7 +74,7 @@ namespace Insurance.Services
             string summary_bk = string.Empty;
             try
             {
-                UserInfoModel currUser = DatabaseService.SelectUserByCompanyAndPlan(company, plan);
+                UserInfoModel currUser = InsuranceDatabaseService.SelectUserByCompanyAndPlan(company, plan);
                 if (currUser == null)
                 {
                     return false;

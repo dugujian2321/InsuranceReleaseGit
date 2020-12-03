@@ -84,39 +84,41 @@
                         {
                             @foreach (Company item in Model.CompanyList)
                             {
-                                <tr style="text-align:center">
-                                    @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
-                                    {
-                                        <td>
-                                            @if (currentUser.AccessLevel == 0)
-                                            {
-                                                <button type="button" class="btn btn-danger" data-toggle="modal" data-company="@item.Name" data-target="#confirmDeleteCompany">
-                                                    删除
-                                                </button>
-                                            }
-                                        </td>
-                                    }
-                                    <td class="td_middle">@item.Name</td>
-                                    <td class="td_middle">@item.EmployeeNumber</td>
-                                    <td class="td_middle">@item.TotalCost</td>
-                                    <td class="td_middle">@item.StartDate.ToShortDateString()</td>
-                                    @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
-                                    {
-                                        <td class="td_middle"><input type="text" value="@item.PaidCost" onchange="SaveCost('@item.Name',this)" /></td>
-                                    }
-                                    else
-                                    {
-                                        <td class="td_middle"><span>@item.PaidCost</span></td>
-                                    }
-                                    @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
-                                    {
-                                        <td class="td_middle"><a href="/Home/CompanyHisitoryByMonth?name=@item.Name" class="btn btn-primary">详细</a></td>
-                                    }
-                                    else
-                                    {
-                                        <td class="td_middle"><a href="/Home/YearlyHistoryData?companyName=@item.Name&year=@item.StartDate.Year" class="btn btn-primary">历史详细</a></td>
-                                    }
-                                </tr>
+                    <tr style="text-align:center">
+                        @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
+                        {
+                            <td>
+                                @if (currentUser.AccessLevel == 0)
+                                {
+                                    <button type="button" class="btn btn-danger" data-toggle="modal" data-company="@item.Name" data-target="#confirmDeleteCompany">
+                                        删除
+                                    </button>
+                                }
+                            </td>
+                        }
+                        <td class="td_middle">@item.Name</td>
+                        <td class="td_middle">@item.EmployeeNumber</td>
+                        <td class="td_middle">@item.TotalCost</td>
+                        <td class="td_middle">@item.StartDate.ToShortDateString()</td>
+                        @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
+                        {
+                            <td class="td_middle"><input type="text" value="@item.PaidCost" onchange="SaveCost('@item.Name',this)" /></td>
+                        }
+                        else
+                        {
+                            <td class="td_middle"><span>@item.PaidCost</span></td>
+                        }
+                        @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
+                        {
+
+                                <td class="td_middle"><a href="/Home/CompanyHisitoryByMonth?name=@item.Name&viewdetail=@item.ViewDetail" class="btn btn-primary">详细</a></td>
+
+                        }
+                        else
+                        {
+                            <td class="td_middle"><a href="/Home/YearlyHistoryData?companyName=@item.Name&year=@item.StartDate.Year" class="btn btn-primary">历史详细</a></td>
+                        }
+                    </tr>
                             }
                         }
                     </tbody>

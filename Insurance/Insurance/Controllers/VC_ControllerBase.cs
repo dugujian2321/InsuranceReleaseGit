@@ -507,15 +507,44 @@ namespace VirtualCredit
             return 1;
         }
 
+        protected UserInfoModel GetChildAccountOfCurrentUserFromCompanyName(string companyName, UserInfoModel curUser)
+        {
+            UserInfoModel user = InsuranceDatabaseService.SelectUserByCompany(companyName);
+            if (user is null) return user;
+            while (!curUser.ChildAccounts.Any(u => u.UserName == user.UserName) && !string.IsNullOrEmpty(user.Father))
+            {
+                user = InsuranceDatabaseService.SelectUser(user.Father);
+            }
+            return user;
+        }
+
+        protected decimal GetCostFromFileName(string filePath, decimal priceEveryMonth = 0)
+        {
+            string[] info = filePath.Split("@");
+            if (info.Length > 8)
+            {
+                FileInfo fi = new FileInfo(filePath);
+                string dateStr = fi.Directory.Name;
+                DateTime dt = DateTime.Parse(dateStr);
+                int daysInMonth = DateTime.DaysInMonth(dt.Year, dt.Month);
+                decimal priceEveryDay = priceEveryMonth / daysInMonth;
+                int effectiveDays = int.Parse(info[7]);
+                return effectiveDays * priceEveryDay;
+            }
+            else
+            {
+                return decimal.Parse(info[1]);
+            }
+        }
+
         /// <summary>
         /// 获取当前账号所有子公司（包括所有后代账号）的信息,包括当前账号自身的数据
         /// </summary>
         /// <returns></returns>
-        public List<Company> GetSpringAccountsCompany()
+        public List<Company> GetSpringAccountsCompanyInfo(UserInfoModel currUser)
         {
             try
             {
-                UserInfoModel currUser = GetCurrentUser();
                 string companiesDirectory = GetCurrentUserRootDir(currUser);
                 List<Company> result = new List<Company>();
                 var children = currUser.ChildAccounts;
@@ -545,7 +574,7 @@ namespace VirtualCredit
                         company.StartDate = From;
                         company.PaidCost += edr.GetPaidCost();
                         company.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
-                        company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
+                        company.UnitPrice = Convert.ToDouble(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
                         company.TotalCost += edr.ReadTotalCost(companyUnitPrice);
                     }
                     result.Add(company);
@@ -561,7 +590,7 @@ namespace VirtualCredit
                     self.StartDate = From;
                     self.PaidCost = et.GetPaidCost();
                     self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
-                    self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
+                    self.UnitPrice = Convert.ToDouble(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
                     self.TotalCost = et.GetCostFromJuneToMay(Path.Combine(companiesDirectory, currUser._Plan), From.Year, currUser.UnitPrice);
                     result.Add(self);
                     //ExcelDataReader et = new ExcelDataReader(self.Name,From.Year,currUser._Plan);
@@ -632,12 +661,12 @@ namespace VirtualCredit
                     com.EmployeeNumber = edr.GetEmployeeNumber();
                     com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(Path.Combine(companyDir.FullName, plan), From.Year);
                     com.StartDate = From;
-                    com.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
+                    com.UnitPrice = Convert.ToDouble(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
                     result.Add(com);
                 }
                 else
                 {
-                    double price = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", companyDir.Name).Rows[0]["UnitPrice"]);
+                    double price = Convert.ToDouble(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", companyDir.Name).Rows[0]["UnitPrice"]);
                     Company com = new Company();
                     com.Name = companyDir.Name;
                     com.StartDate = From;
@@ -646,7 +675,7 @@ namespace VirtualCredit
                     com.TotalCost += edr.ReadTotalCost(price);
                     com.EmployeeNumber += edr.GetEmployeeNumber();
                     com.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
-                    var temp = DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name);
+                    var temp = InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name);
                     if (temp != null)
                         com.UnitPrice += Convert.ToDouble(temp.Rows[0]["UnitPrice"]);
                     result.Add(com);
@@ -723,14 +752,14 @@ namespace VirtualCredit
             var currUser = HttpContext.Session.Get<UserInfoModel>("CurrentUser");
             user.UserName = currUser.UserName;
             user.userPassword = currUser.userPassword;
-            UserInfoModel uim = DatabaseService.UserMatchUserNamePassword(user);
+            UserInfoModel uim = InsuranceDatabaseService.UserMatchUserNamePassword(user);
             uim.MyLocker = Utility.GetCompanyLocker(uim.CompanyName);
             if (uim.ChildAccounts == null || uim.ChildAccounts.Count == 0)
             {
-                var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
+                var children = InsuranceDatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
                 foreach (var item in children)
                 {
-                    uim.ChildAccounts.Add(DatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
+                    uim.ChildAccounts.Add(InsuranceDatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
                 }
             }
 
@@ -794,7 +823,7 @@ namespace VirtualCredit
                     return true;
                 }
 
-                if (!DatabaseService.IsMailUsed(_mail))
+                if (!InsuranceDatabaseService.IsMailUsed(_mail))
                 {
                     return false;
                 }

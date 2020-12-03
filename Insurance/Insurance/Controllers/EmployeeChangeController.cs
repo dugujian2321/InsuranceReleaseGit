@@ -305,7 +305,7 @@ namespace Insurance.Controllers
 
         private bool UpdateDailyDetail(DailyDetailModel model)
         {
-            return DatabaseService.InsertDailyDetail(model);
+            return InsuranceDatabaseService.InsertDailyDetail(model);
         }
 
         private void ClearSession()
@@ -328,7 +328,7 @@ namespace Insurance.Controllers
 
         public JsonResult UserDaysBefore([FromQuery] string company)
         {
-            var user = DatabaseService.SelectUserByCompany(company);
+            var user = InsuranceDatabaseService.SelectUserByCompany(company);
 
             int days = user.DaysBefore;
             DateTime dt = DateTime.Now.Date.AddDays(-1 * days);
@@ -501,7 +501,7 @@ namespace Insurance.Controllers
             {
                 Initialize(company, plan);
             }
-            var targetUser = DatabaseService.SelectUserByCompanyAndPlan(targetCompany, plan);
+            var targetUser = InsuranceDatabaseService.SelectUserByCompanyAndPlan(targetCompany, plan);
             if (targetUser == null)
             {
                 if (!currUser.ChildAccounts.Any(_ => _.CompanyName == company))

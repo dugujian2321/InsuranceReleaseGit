@@ -67,7 +67,7 @@ namespace VirtualCredit.Controllers
             userInputValidation = HttpContext.Request.Form["validationResult"];
             int backendValidation = HttpContext.Session.Get<int>("ValidationResult");
             UserInfoModel uim = new UserInfoModel();
-            uim = DatabaseService.UserMatchUserNamePassword(user);
+            uim = InsuranceDatabaseService.UserMatchUserNamePassword(user);
             if (Convert.ToInt16(userInputValidation) != backendValidation)
             {
                 ActionAfterReload("验证码计算错误，请重新输入！");
@@ -79,7 +79,7 @@ namespace VirtualCredit.Controllers
                 user.CompanyName = uim.CompanyName;
                 user.IsOnline = HttpContext.Session.Id;
                 user.IPAddress = ip;
-                if (!DatabaseService.UpdateUserInfo(user, new List<string>() { "IPAddress", "IsOnline" }))
+                if (!InsuranceDatabaseService.UpdateUserInfo(user, new List<string>() { "IPAddress", "IsOnline" }))
                 {
                     LogServices.LogService.Log($"Failed updating userinfo.{user.CompanyName} {user.UserName}");
                     return View();
@@ -103,7 +103,7 @@ namespace VirtualCredit.Controllers
                 user.ChildAccounts = new List<UserInfoModel>();
                 user._Plan = uim._Plan;
                 user.Father = uim.Father;
-                var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
+                var children = InsuranceDatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
                 //foreach (var item in children)
                 //{
                 //    user.ChildAccounts.Add(DatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));

@@ -962,7 +962,7 @@ namespace Insurance.Services
             bool result = true;
             string name = user.CompanyName;
             string dir = string.Empty;
-            UserInfoModel father = DatabaseService.SelectUser(user.Father);
+            UserInfoModel father = InsuranceDatabaseService.SelectUser(user.Father);
             try
             {
                 string fatherDir = Directory.GetDirectories(Utility.Instance.ExcelRoot, father.CompanyName, SearchOption.AllDirectories).FirstOrDefault();
