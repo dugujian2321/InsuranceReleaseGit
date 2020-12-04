@@ -66,7 +66,7 @@ namespace VirtualCredit.Controllers
                 {
                     user = InsuranceDatabaseService.SelectUserByCompany(name);
                 }
-                model.CompanyList = GetSpringAccountsCompanyInfo(user);
+                model.CompanyList = GetSpringAccountsCompanyInfo(user, name);
                 if (model.CompanyList != null)
                     model.CompanyList = model.CompanyList.OrderBy(c => c.Name).ToList();
                 if (!string.IsNullOrEmpty(name))
@@ -275,7 +275,7 @@ namespace VirtualCredit.Controllers
             UserInfoModel user = InsuranceDatabaseService.SelectUserByCompany(name);
             if (user.ChildAccounts.Count > 0 && !viewdetail)
             {
-                return HistoricalList(name); 
+                return HistoricalList(name);
             }
             try
             {
@@ -304,19 +304,25 @@ namespace VirtualCredit.Controllers
                 }
                 else
                 {
+
                     UserInfoModel targetUser = GetChildAccountOfCurrentUserFromCompanyName(name, currUser);
                     priceEveryMonth = (decimal)targetUser.UnitPrice;
                     targetCompanyDir = Directory.GetDirectories(currUserDir, companyName, SearchOption.AllDirectories)[0];
+                    if (user.ChildAccounts.Count > 0 && viewdetail)
+                    {
+                        targetCompanyDir = Path.Combine(targetCompanyDir, targetUser._Plan);
+                    }
                 }
 
                 for (DateTime date = From; date <= To; date = date.AddMonths(1))
                 {
                     string dirName = date.ToString("yyyy-MM");
                     SearchOption so = SearchOption.AllDirectories;
-                    if (isSelf)
+                    if (isSelf || (user.ChildAccounts.Count > 0 && viewdetail))
                     {
                         so = SearchOption.TopDirectoryOnly;
                     }
+
                     var monthDirs = Directory.GetDirectories(targetCompanyDir, dirName, so);
                     if (monthDirs.Length == 0 || !Directory.Exists(monthDirs[0])) continue;
                     NewExcel excel = null;
@@ -546,15 +552,15 @@ namespace VirtualCredit.Controllers
                     {
                         excel.Mode = "加保";
                         excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
-                        excel.Cost = decimal.Parse(fileinfo[1]);
                     }
                     else //若结束时间不为空，则为减员文档
                     {
                         excel.Mode = "减保";
                         excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
                         excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
-                        excel.Cost = decimal.Parse(fileinfo[1]);
                     }
+                    var user = GetChildAccountOfCurrentUserFromCompanyName(name, currUser);
+                    excel.Cost = GetCostFromFileName(fileName, (decimal)user.UnitPrice);
                     allexcels.Add(excel);
                 }
                 allexcels.Sort((l, r) =>

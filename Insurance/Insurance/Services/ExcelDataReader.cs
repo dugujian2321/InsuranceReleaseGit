@@ -188,7 +188,12 @@ namespace Insurance.Services
                             {
                                 if (excelinfo.Length > 8)
                                 {
-                                    result += Convert.ToDouble(excelinfo[7]) * unitPriceEveryday;
+                                    if (excelinfo[3].Equals("sub", StringComparison.CurrentCultureIgnoreCase))
+                                    {
+                                        result -= Convert.ToDouble(excelinfo[7]) * unitPriceEveryday;
+                                    }
+                                    else
+                                        result += Convert.ToDouble(excelinfo[7]) * unitPriceEveryday;
                                 }
                                 else
                                 {

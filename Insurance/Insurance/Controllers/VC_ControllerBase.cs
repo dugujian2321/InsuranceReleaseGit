@@ -100,10 +100,11 @@ namespace VirtualCredit
         {
             //对于退保人员，计算退费
             double unitPrice = price / DateTime.DaysInMonth(end.Year, end.Month); //当月每天保费，元/天
-            double received = MathEx.ToCurrency((DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) * unitPrice);//已赚取保费
+            double received = MathEx.ToCurrency((DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) * unitPrice);//月初收费时已收取的保费
             effectiveDays = end.Day - start.Day + 1; //当月已生效天数
-            double earned = MathEx.ToCurrency(effectiveDays * unitPrice);
+            double earned = MathEx.ToCurrency(effectiveDays * unitPrice); //截止至退费当天已赚取的保费
             double payback = earned - received;
+            effectiveDays = (DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) - effectiveDays;//
             return payback;
         }
 
@@ -529,7 +530,12 @@ namespace VirtualCredit
                 int daysInMonth = DateTime.DaysInMonth(dt.Year, dt.Month);
                 decimal priceEveryDay = priceEveryMonth / daysInMonth;
                 int effectiveDays = int.Parse(info[7]);
-                return effectiveDays * priceEveryDay;
+                if (info[3].Equals("sub", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    return -1 * effectiveDays * priceEveryDay;
+                }
+                else
+                    return effectiveDays * priceEveryDay;
             }
             else
             {
@@ -541,31 +547,33 @@ namespace VirtualCredit
         /// 获取当前账号所有子公司（包括所有后代账号）的信息,包括当前账号自身的数据
         /// </summary>
         /// <returns></returns>
-        public List<Company> GetSpringAccountsCompanyInfo(UserInfoModel currUser)
+        public List<Company> GetSpringAccountsCompanyInfo(UserInfoModel user, string targetCompany)
         {
             try
             {
-                string companiesDirectory = GetCurrentUserRootDir(currUser);
+                UserInfoModel curUser = GetCurrentUser();
+                string companiesDirectory = GetCurrentUserRootDir(user);
                 List<Company> result = new List<Company>();
-                var children = currUser.ChildAccounts;
+                var children = user.ChildAccounts;
                 var companyAccounts = GroupAccountByCompanyName(children);
                 foreach (var companyAccount in companyAccounts)
                 {
                     var companyName = companyAccount[0].CompanyName;
-                    var companyDir = GetCompanyDir(currUser, companyName);
+                    var companyDir = GetCompanyDir(user, companyName);
                     if (string.IsNullOrEmpty(companyDir)) continue;
                     if (!Directory.Exists(companyDir)) continue;
                     Company company = new Company();
                     company.Name = companyName;
                     double companyUnitPrice = 0;
-                    foreach (var account in companyAccount)
-                    {
-                        if (currUser.ChildAccounts.Contains(account))
-                        {
-                            companyUnitPrice = account.UnitPrice; //读取保费时，按照当前账号为子账号的定价计算保费
-                            break;
-                        }
-                    }
+                    //foreach (var account in companyAccount)
+                    //{
+                    //    if (user.ChildAccounts.Contains(account))
+                    //    {
+                    //        companyUnitPrice = account.UnitPrice; //读取保费时，按照当前账号为子账号的定价计算保费
+                    //        break;
+                    //    }
+                    //}
+                    companyUnitPrice = GetChildAccountOfCurrentUserFromCompanyName(companyName, curUser).UnitPrice;//读取保费时，按照当前账号为子账号的定价计算保费
 
                     foreach (var account in companyAccount)
                     {
@@ -581,8 +589,8 @@ namespace VirtualCredit
                 }
 
                 Company self = new Company();
-                self.Name = currUser.CompanyName;
-                string thisSummary = Path.Combine(companiesDirectory, currUser._Plan, self.Name + ".xls");
+                self.Name = user.CompanyName;
+                string thisSummary = Path.Combine(companiesDirectory, user._Plan, self.Name + ".xls");
                 if (System.IO.File.Exists(thisSummary))
                 {
                     ExcelTool et = new ExcelTool(thisSummary, "Sheet1");
@@ -591,7 +599,7 @@ namespace VirtualCredit
                     self.PaidCost = et.GetPaidCost();
                     self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
                     self.UnitPrice = Convert.ToDouble(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
-                    self.TotalCost = et.GetCostFromJuneToMay(Path.Combine(companiesDirectory, currUser._Plan), From.Year, currUser.UnitPrice);
+                    self.TotalCost = et.GetCostFromJuneToMay(Path.Combine(companiesDirectory, user._Plan), From.Year, user.UnitPrice);
                     result.Add(self);
                     //ExcelDataReader et = new ExcelDataReader(self.Name,From.Year,currUser._Plan);
                     //self.EmployeeNumber = et.GetEmployeeNumber();

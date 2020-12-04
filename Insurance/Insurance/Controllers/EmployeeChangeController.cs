@@ -213,7 +213,7 @@ namespace Insurance.Controllers
                 }
                 else if (mode == "sub")
                 {
-                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{currUser.UserName}@Sub@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + $"@0@{HttpContext.Session.Get<int>("effectiveDays")}@.xls"; //命名规则： 上传日期_投保时保费_上传账号_加/减保_GUID_时间_已结保费_投保日次.xls
+                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{currUser.UserName}@Sub@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + $"@0@{HttpContext.Session.Get<int>("effectiveDays")}@.xls"; //命名规则： 上传日期_投保时保费_上传账号_加/减保_GUID_时间_已结保费_退费日次.xls
                     string newfilepath = Path.Combine(excelsDirectory, plan, month, fileName);
                     try
                     {
