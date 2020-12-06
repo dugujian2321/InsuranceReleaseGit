@@ -37,5 +37,7 @@ namespace Insurance.Models
         }
 
         public int HeadCount { get; set; }
+
+        public double ProductionCost { get; set; }
     }
 }

@@ -73,6 +73,13 @@ namespace VirtualCredit.Controllers
                 {
                     model.CompanyList.Where(c => c.Name == name).FirstOrDefault().ViewDetail = true;
                 }
+                else if (model.CompanyList.Any(c => c.Name == user.CompanyName))
+                {
+                    model.CompanyList.Where(c => c.Name == user.CompanyName).FirstOrDefault().ViewDetail = true;
+                }
+
+
+
                 ViewBag.PageInfo = "保单列表";
                 return View("HistoricalList", model);
             }
@@ -1077,6 +1084,7 @@ namespace VirtualCredit.Controllers
                     p.TotalCost = comp.Sum(x => x.TotalCost);
                     p.TotalPaid = comp.Sum(x => x.CustomerAlreadyPaid);
                     p.HeadCount = comp.Sum(x => x.EmployeeNumber);
+                    p.ProductionCost = comp.Sum(x => x.ProductionCost);
                     sm.PlanList.Add(p);
                 }
 
@@ -1120,6 +1128,9 @@ namespace VirtualCredit.Controllers
         [AdminFilters]
         public IActionResult BanlanceAccount([FromQuery] string companyName)
         {
+            var currUser = GetCurrentUser();
+            UserInfoModel childAccount = GetChildAccountOfCurrentUserFromCompanyName(companyName, currUser);
+
             string plan = HttpContext.Session.Get<string>("plan");
             ViewBag.Plan = plan;
             ViewBag.Company = companyName;
@@ -1159,7 +1170,7 @@ namespace VirtualCredit.Controllers
             {
                 foreach (var file in Directory.GetFiles(dir))
                 {
-                    var excel = GetExcelInfo(file, companyName);
+                    var excel = GetExcelInfo(file, companyName, childAccount.UnitPrice, currUser.UnitPrice);
                     if (excel != null && excel.Cost != excel.Paid)
                     {
                         detailModel.Excels.Add(excel);
@@ -1176,6 +1187,7 @@ namespace VirtualCredit.Controllers
         {
             string plan = string.Empty;
             var currUser = GetCurrentUser();
+            UserInfoModel childAccount = GetChildAccountOfCurrentUserFromCompanyName(name, currUser);
             if (currUser.ChildAccounts.Count == 0)
             {
                 plan = currUser._Plan;
@@ -1237,18 +1249,13 @@ namespace VirtualCredit.Controllers
             }
             foreach (string fileName in excels)
             {
-                NewExcel excel = GetExcelInfo(fileName, companyName);
+                NewExcel excel = GetExcelInfo(fileName, companyName, childAccount.UnitPrice, currUser.UnitPrice);
                 if (excel != null)
                 {
                     allexcels.Add(excel);
                 }
             }
             dm.Company = name;
-            //allexcels.Sort((a, b) =>
-            //{
-            //    return a.Cost - a.Paid != b.Cost - b.Paid ? Math.Abs(b.Cost - b.Paid).CompareTo(Math.Abs(a.Cost - a.Paid)) :
-            //            DateTime.Parse(a.UploadDate).CompareTo(DateTime.Parse(b.UploadDate)); //先按结算状态排序，再按时间排序
-            //});
             allexcels = allexcels.OrderBy(x => x.Status).ThenBy(x => x.UploadDate).ToList();
             dm.Excels = allexcels;
             return View("RecipeSummaryDetail", dm);
@@ -1256,37 +1263,41 @@ namespace VirtualCredit.Controllers
 
 
 
-        private NewExcel GetExcelInfo(string fileFullName, string companyName)
+        private NewExcel GetExcelInfo(string fileFullName, string companyName, double childAccountPricePerMonth = 0, double currAccountPricePerMonth = 0)
         {
             FileInfo fi = new FileInfo(fileFullName);
             if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
                 return null;
 
             NewExcel excel = new NewExcel();
+            DateTime month = DateTime.Parse(fi.Directory.Name);
+            int daysInMonth = DateTime.DaysInMonth(month.Year, month.Month);
             excel.FileName = fi.Name;
             excel.Company = companyName;
 
-            ExcelTool et = new ExcelTool(fileFullName, "Sheet1");
-            excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
-            string[] fileinfo = fi.Name.Split('@');
-            excel.Submitter = fileinfo[2];
-            DateTime dt;
-            DateTime.TryParse(fileinfo[0] + " " + fileinfo[5].Replace('-', ':'), out dt);
-            excel.UploadDate = dt.ToString("yyyy-MM-dd HH:mm:ss");
-            excel.HeadCount = et.GetEmployeeNumber();
-            if (fileinfo[3].Equals("add", StringComparison.CurrentCultureIgnoreCase))
+            using (ExcelTool et = new ExcelTool(fileFullName, "Sheet1"))
             {
-                excel.Mode = "加保";
-                excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
-                excel.Cost = decimal.Parse(fileinfo[1]);
-            }
-            else
-            {
-                excel.Mode = "减保";
                 excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
-                excel.Cost = decimal.Parse(fileinfo[1]);
+                string[] fileinfo = fi.Name.Split('@');
+                excel.Submitter = fileinfo[2];
+                DateTime dt;
+                DateTime.TryParse(fileinfo[0] + " " + fileinfo[5].Replace('-', ':'), out dt);
+                excel.UploadDate = dt.ToString("yyyy-MM-dd HH:mm:ss");
+                excel.HeadCount = et.GetEmployeeNumber();
+                if (fileinfo[3].Equals("add", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    excel.Mode = "加保";
+                    excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
+                }
+                else
+                {
+                    excel.Mode = "减保";
+                    excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
+                }
+                excel.Paid = decimal.Parse(fileinfo[6]);
             }
-            excel.Paid = decimal.Parse(fileinfo[6]);
+            excel.Cost = GetCostFromFileName(fileFullName, (decimal)childAccountPricePerMonth);
+            excel.ProductionCost = GetCostFromFileName(fileFullName, (decimal)currAccountPricePerMonth);
             return excel;
         }
 
@@ -1749,6 +1760,7 @@ namespace VirtualCredit.Controllers
                 }
                 string companyName = name;
                 string targetCompDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories).FirstOrDefault();
+                UserInfoModel childAccount = GetChildAccountOfCurrentUserFromCompanyName(companyName, currUser);
                 for (DateTime date = From; date <= To; date = date.AddMonths(1))
                 {
                     string monthDir = date.ToString("yyyy-MM");
@@ -1771,7 +1783,7 @@ namespace VirtualCredit.Controllers
                     {
                         DirectoryInfo di = new DirectoryInfo(month);
                         if (di.Parent.Name != plan || !di.Exists) continue;
-                        var tempexcel = GetMonthlyDetail(month, name);
+                        var tempexcel = GetMonthlyDetail(month, name, childAccount.UnitPrice, currUser.UnitPrice);
                         if (tempexcel == null) continue;
                         excel.StartDate = tempexcel.StartDate;
                         excel.EndDate = tempexcel.EndDate;
@@ -1780,6 +1792,7 @@ namespace VirtualCredit.Controllers
                         excel.Paid += tempexcel.Paid;
                         excel.Unpaid += tempexcel.Unpaid;
                         excel.UploadDate = tempexcel.UploadDate;
+                        excel.ProductionCost += tempexcel.ProductionCost;
                     }
                     if (excel != null && excel.StartDate != null)
                     {
@@ -1809,7 +1822,7 @@ namespace VirtualCredit.Controllers
 
         }
 
-        private NewExcel GetMonthlyDetail(string dir, string companyName)
+        private NewExcel GetMonthlyDetail(string dir, string companyName, double childAccountPricePerMonth, double currAccountPricePerMonth)
         {
             if (Directory.GetFiles(dir).Length <= 0)
             {
@@ -1820,6 +1833,11 @@ namespace VirtualCredit.Controllers
             decimal cost = 0;
             decimal unpaid = 0;
             decimal paid = 0;
+            decimal productionCost = 0;
+            int effectiveDays = 0;
+            DateTime dt;
+            DateTime.TryParse(new DirectoryInfo(dir).Name, out dt);
+            int daysInMonth = DateTime.DaysInMonth(dt.Year, dt.Month);
             foreach (string fileName in Directory.GetFiles(dir))
             {
                 FileInfo fi = new FileInfo(fileName);
@@ -1829,22 +1847,26 @@ namespace VirtualCredit.Controllers
                 ExcelTool et = new ExcelTool(fileName, "Sheet1");
                 excel = new NewExcel();
                 excel.Company = companyName;
-                DateTime dt;
+
                 string[] fileinfo = fi.Name.Split('@');
                 //DateTime.TryParse(fileinfo[0].Replace(fi.Extension, string.Empty), out dt);
-                DateTime.TryParse(new DirectoryInfo(dir).Name, out dt);
-                excel.EndDate = new DateTime(dt.Year, dt.Month, DateTime.DaysInMonth(dt.Year, dt.Month)).ToShortDateString();
+
+                excel.EndDate = new DateTime(dt.Year, dt.Month, daysInMonth).ToShortDateString();
                 headcount += et.GetEmployeeNumber();
                 excel.StartDate = new DateTime(dt.Year, dt.Month, 1).ToShortDateString();
                 paid += decimal.Parse(fileinfo[6]);
-                unpaid += decimal.Parse(fileinfo[1]) - decimal.Parse(fileinfo[6]);
-                cost += decimal.Parse(fileinfo[1]);
+                cost += GetCostFromFileName(fileName, (decimal)childAccountPricePerMonth);
+                productionCost += GetCostFromFileName(fileName, (decimal)currAccountPricePerMonth);
+                unpaid += cost - paid;
+                effectiveDays += int.Parse(fileinfo[7]);
             }
+
             excel.UploadDate = new DirectoryInfo(dir).Name;
             excel.HeadCount = headcount;
             excel.Cost = cost;
             excel.Unpaid = unpaid;
             excel.Paid = paid;
+            excel.ProductionCost = productionCost;
             return excel;
         }
         public FileStreamResult EmployeeDownload()

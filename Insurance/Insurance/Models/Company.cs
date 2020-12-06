@@ -29,7 +29,7 @@ namespace Insurance.Models
         public double PaidCost { get; set; }
         public DateTime StartDate { get; set; }
         public double UnitPrice { get; set; }
-        public double DailyCost { get; set; }
+        public double ProductionCost { get; set; } //每月成本
         public bool ViewDetail { get; set; } = false;
     }
 }

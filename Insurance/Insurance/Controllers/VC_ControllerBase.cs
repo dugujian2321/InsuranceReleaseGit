@@ -422,7 +422,8 @@ namespace VirtualCredit
                     return null;
                 }
                 string plan = account._Plan;
-                string companyDir = Directory.GetDirectories(Path.Combine(ExcelRoot, "管理员"), company, SearchOption.AllDirectories).FirstOrDefault();
+                string companyDir = GetCompanyDir(account, company);
+                if (!Directory.Exists(companyDir)) return null;
                 string accountDir = Directory.GetDirectories(companyDir, plan, SearchOption.AllDirectories).FirstOrDefault();
                 string accountSummaryFile = Path.Combine(accountDir, company + ".xls");
                 if (!System.IO.File.Exists(accountSummaryFile)) return ad;
@@ -521,6 +522,7 @@ namespace VirtualCredit
 
         protected decimal GetCostFromFileName(string filePath, decimal priceEveryMonth = 0)
         {
+            decimal result = 0;
             string[] info = filePath.Split("@");
             if (info.Length > 8)
             {
@@ -532,15 +534,16 @@ namespace VirtualCredit
                 int effectiveDays = int.Parse(info[7]);
                 if (info[3].Equals("sub", StringComparison.CurrentCultureIgnoreCase))
                 {
-                    return -1 * effectiveDays * priceEveryDay;
+                    result = -1 * effectiveDays * priceEveryDay;
                 }
                 else
-                    return effectiveDays * priceEveryDay;
+                    result = effectiveDays * priceEveryDay;
             }
             else
             {
-                return decimal.Parse(info[1]);
+                result = decimal.Parse(info[1]);
             }
+            return Math.Round(result, 2);
         }
 
         /// <summary>
@@ -669,6 +672,7 @@ namespace VirtualCredit
                     com.EmployeeNumber = edr.GetEmployeeNumber();
                     com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(Path.Combine(companyDir.FullName, plan), From.Year);
                     com.StartDate = From;
+                    com.ProductionCost = com.TotalCost;
                     com.UnitPrice = Convert.ToDouble(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
                     result.Add(com);
                 }
@@ -681,6 +685,7 @@ namespace VirtualCredit
                     ExcelDataReader edr = new ExcelDataReader(companyDir.Name, From.Year, plan);
                     com.PaidCost += edr.GetPaidCost();
                     com.TotalCost += edr.ReadTotalCost(price);
+                    com.ProductionCost += edr.ReadTotalCost(curUser.UnitPrice);
                     com.EmployeeNumber += edr.GetEmployeeNumber();
                     com.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
                     var temp = InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name);

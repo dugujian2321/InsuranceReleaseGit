@@ -93,6 +93,15 @@ namespace VirtualCredit.Models
         public int StartDate { get; set; }
         public bool AllowEdit { get; set; }
 
+
+        public bool HasChildren
+        {
+            get
+            {
+                return ChildAccounts.Count > 0 && this.AccessLevel != 0;
+            }
+        }
+
         private List<UserInfoModel> GetSpringAccounts(UserInfoModel user)
         {
             List<UserInfoModel> result = new List<UserInfoModel>();
