@@ -64,11 +64,11 @@ namespace VirtualCredit.Models
             get
             {
                 if (childAccounts != null && childAccounts.Count > 0) return childAccounts;
-                var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(Father)].ToString() == UserName);
+                var children = InsuranceDatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(Father)].ToString() == UserName);
                 childAccounts = new List<UserInfoModel>();
                 foreach (var item in children)
                 {
-                    childAccounts.Add(DatabaseService.SelectUser(item[nameof(UserName)].ToString()));
+                    childAccounts.Add(InsuranceDatabaseService.SelectUser(item[nameof(UserName)].ToString()));
                 }
                 return childAccounts;
             }

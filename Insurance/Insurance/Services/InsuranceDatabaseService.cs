@@ -26,11 +26,11 @@ namespace VirtualCredit
     }
 
 
-    public static class DatabaseService
+    public static class InsuranceDatabaseService
     {
         public static string ConnStr;
         public static string userInfoTableName;
-        static DatabaseService()
+        static InsuranceDatabaseService()
         {
             userInfoTableName = "UserInfo";
         }

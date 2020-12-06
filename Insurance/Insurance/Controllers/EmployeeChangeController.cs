@@ -18,13 +18,9 @@ namespace Insurance.Controllers
 {
     public class EmployeeChangeController : VC_ControllerBase
     {
-        private readonly int idCol = 1;
-        private readonly int jobCol = 2;
-        public static string ExcelDirectory;
-        string companyFolder;
-        string summaryFileName;
-        string summaryFilePath;
-        string targetCompany;
+        protected string companyFolder;
+        protected string summaryFileName;
+        protected string targetCompany;
         private static readonly object summaryLocker = new object();
 
         public EmployeeChangeController(IHostingEnvironment hostingEnvironment)
@@ -143,7 +139,7 @@ namespace Insurance.Controllers
 
                 if (mode == "add")
                 {
-                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{currUser.UserName}@Add@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + "@0@.xls"; //命名规则： 上传日期_保费_上传账号_加/减保_GUID_时间_已结保费.xls
+                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{currUser.UserName}@Add@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + $"@0@{HttpContext.Session.Get<int>("effectiveDays")}@.xls"; //命名规则： 上传日期_投保时保费_上传账号_加/减保_GUID_时间_已结保费_投保日次.xls
                     string newfilepath = Path.Combine(excelsDirectory, plan, month, fileName);
                     try
                     {
@@ -217,7 +213,7 @@ namespace Insurance.Controllers
                 }
                 else if (mode == "sub")
                 {
-                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{currUser.UserName}@Sub@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + "@0@.xls"; //命名规则： 上传日期_保费_上传账号_加/减保_GUID_时间_已结保费_.xls
+                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{currUser.UserName}@Sub@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + $"@0@{HttpContext.Session.Get<int>("effectiveDays")}@.xls"; //命名规则： 上传日期_投保时保费_上传账号_加/减保_GUID_时间_已结保费_退费日次.xls
                     string newfilepath = Path.Combine(excelsDirectory, plan, month, fileName);
                     try
                     {
@@ -309,7 +305,7 @@ namespace Insurance.Controllers
 
         private bool UpdateDailyDetail(DailyDetailModel model)
         {
-            return DatabaseService.InsertDailyDetail(model);
+            return InsuranceDatabaseService.InsertDailyDetail(model);
         }
 
         private void ClearSession()
@@ -317,6 +313,7 @@ namespace Insurance.Controllers
             HttpContext.Session.Set<List<Employee>>("validationResult", null);
             HttpContext.Session.Set<string>("readyToSubmit", "N");
             HttpContext.Session.Set<string>("company", string.Empty);
+            HttpContext.Session.Set<int>("effectiveDays", 0);
         }
 
         private void RevertSummaryFile(string path, string backup)
@@ -331,7 +328,7 @@ namespace Insurance.Controllers
 
         public JsonResult UserDaysBefore([FromQuery] string company)
         {
-            var user = DatabaseService.SelectUserByCompany(company);
+            var user = InsuranceDatabaseService.SelectUserByCompany(company);
 
             int days = user.DaysBefore;
             DateTime dt = DateTime.Now.Date.AddDays(-1 * days);
@@ -495,127 +492,16 @@ namespace Insurance.Controllers
             }
         }
 
-        public List<Employee> ValidateExcel(FileStream formFile, string sheetName, string mode, string companyName, string plan)
-        {
-            formFile.Position = 0;
-            ReaderWriterLockSlim r_locker = null;
-            string companyDir = GetSearchExcelsInDir(companyName);
-            var currUser = GetCurrentUser();
-            var result = new List<Employee>();
-            try
-            {
-                r_locker = currUser.MyLocker.RWLocker;
-                r_locker.EnterReadLock();
-                string summaryPath = Path.Combine(companyDir, plan, companyName + ".xls");
-                if (!System.IO.File.Exists(summaryPath))
-                {
-                    result.Add(
-                    new Employee()
-                    {
-                        Valid = false,
-                        Name = $"{companyName}尚未开通{plan}账号"
-                    }
-                    );
-                    return result;
-
-                }
-                ExcelTool summary = new ExcelTool(summaryPath, sheetName);
-                DataTable sourceDT = summary.ExcelToDataTable("Sheet1", true);
-                r_locker.ExitReadLock();
-
-                string fileName = Guid.NewGuid().ToString() + ".xls";
-
-                using (FileStream fs = System.IO.File.Create(Path.Combine(companyDir, fileName)))
-                {
-                    formFile.CopyTo(fs);
-                    fs.Flush();
-                }
-                ExcelTool et = new ExcelTool(Path.Combine(companyDir, fileName), sheetName);
-
-                result = et.ValidateIDs(idCol); // 验证身份证号码
-                for (int i = 0; i < result.Count - 1; i++)
-                {
-                    for (int j = i + 1; j < result.Count; j++)
-                    {
-                        if (result[i].ID == result[j].ID)
-                        {
-                            result[i].Valid = false;
-                            result[i].DataDesc = "所提交的表格中存在人员重复：" + result[i].ID;
-                            result[j].Valid = false;
-                            result[j].DataDesc = "所提交的表格中存在人员重复：" + result[j].ID;
-                        }
-                    }
-                }
-                MergeList(et.CheckJobType(jobCol), result); //验证岗位类型
-
-                if (!System.IO.File.Exists(summaryFilePath)) //如果汇总表格不存在，则新建一个
-                {
-                    string source = Path.Combine(ExcelDirectory, "templates", "recipe.xls");
-                    System.IO.File.Copy(source, summaryFilePath);
-                }
-
-                var temp = et.CheckDuplcateWithSummary(sourceDT, 3, idCol, mode); //验证总表中是否有重复
-                MergeList(temp, result);
-                HttpContext.Session.Set("mode", mode);
-                HttpContext.Session.Set("plan", plan);
-                HttpContext.Session.Set("newTable", et.ExcelToDataTable("Sheet1", true));
-                System.IO.File.Delete(Path.Combine(companyDir, fileName));
-                return result;
-            }
-            catch
-            {
-                result.Add(
-                    new Employee()
-                    {
-                        Valid = false,
-                        Name = "未知错误，请刷新页面并确保表格内容无误后重试"
-                    }
-                    );
-                return result;
-            }
-            finally
-            {
-                if (r_locker != null && r_locker.IsReadLockHeld)
-                {
-                    r_locker.ExitReadLock();
-                }
-            }
-
-        }
-
-        private void MergeList(List<Employee> newEmployees, List<Employee> employees)
-        {
-            if (newEmployees != null)
-            {
-                bool isSame = false;
-                foreach (Employee item in newEmployees)
-                {
-                    isSame = false;
-                    foreach (Employee item1 in employees)
-                    {
-                        if (item.ID == item1.ID && item.DataDesc == item1.DataDesc)
-                        {
-                            isSame = true;
-                            item1.StartDate = item.StartDate;
-                            break;
-                        }
-                    }
-                    if (!isSame)
-                    {
-                        employees.Add(item);
-                    }
-                }
-            }
-        }
 
         public double CalculatePrice([FromForm] DateTime startdate, string company, string plan)
         {
+            int effectiveDays = 0;
             var currUser = GetCurrentUser();
             if (string.IsNullOrEmpty(summaryFilePath))
             {
                 Initialize(company, plan);
             }
-            var targetUser = DatabaseService.SelectUserByCompanyAndPlan(targetCompany, plan);
+            var targetUser = InsuranceDatabaseService.SelectUserByCompanyAndPlan(targetCompany, plan);
             if (targetUser == null)
             {
                 if (!currUser.ChildAccounts.Any(_ => _.CompanyName == company))
@@ -635,6 +521,7 @@ namespace Insurance.Controllers
             }
 
             HttpContext.Session.Set("price", 0);
+            HttpContext.Session.Set("effectiveDays", 0);
             var validationResult = HttpContext.Session.Get<List<Employee>>("validationResult");
             var mode = HttpContext.Session.Get<string>("mode");
 
@@ -659,9 +546,10 @@ namespace Insurance.Controllers
                 }
                 if (mode == "add")
                 {
-                    double temp = CalculateAddPrice(targetUser, startdate);
+                    double temp = CalculateAddPrice(targetUser, startdate, out effectiveDays);
                     HttpContext.Session.Set("price", temp);
                     HttpContext.Session.Set("readyToSubmit", "Y");
+                    HttpContext.Session.Set("effectiveDays", effectiveDays);
                     return temp;
                 }
                 else if (mode == "sub")
@@ -670,17 +558,20 @@ namespace Insurance.Controllers
                     var employees = HttpContext.Session.Get<List<Employee>>("validationResult");
                     foreach (Employee item in employees)
                     {
+                        int tempEffectiveDays = 0;
                         DateTime start = DateTime.Parse(item.StartDate);
                         if (startdate < start.Date)
                         {
                             return -9999995;
                         }
-                        result += CalculateSubPrice(start.Date, startdate, targetUser.UnitPrice);
+                        result += CalculateSubPrice(start.Date, startdate, targetUser.UnitPrice, out tempEffectiveDays);
+                        effectiveDays += tempEffectiveDays;
                     }
                     double temp = Math.Round(result, 2);
                     HttpContext.Session.Set("price", temp);
                     HttpContext.Session.Set("readyToSubmit", "Y");
                     HttpContext.Session.Set("plan", plan);
+                    HttpContext.Session.Set("effectiveDays", effectiveDays);
                     return temp;
                 }
                 else
@@ -688,6 +579,7 @@ namespace Insurance.Controllers
                     HttpContext.Session.Set("price", 0);
                     return 0;
                 }
+
             }
             catch
             {

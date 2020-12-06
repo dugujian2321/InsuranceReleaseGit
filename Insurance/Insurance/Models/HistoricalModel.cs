@@ -13,5 +13,6 @@ namespace Insurance.Models
         public List<Company> CompanyList { get; set; }
         public DataTable SummaryByYearTable { get; set; }
         public DateTime ProofDate { get; set; }
+        public bool IsRedirecFromFather { get; set; } //当前页面是否是从上级页面跳转而来
     }
 }

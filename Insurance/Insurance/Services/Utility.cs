@@ -29,7 +29,7 @@ namespace VirtualCredit.Services
         {
             UtilitiesModel myOwn = new UtilitiesModel();
             //注意：可以使用冒号来获取内层的配置项
-            DatabaseService.ConnStr = configuration["ConnectionStrings:Insurance"];
+            InsuranceDatabaseService.ConnStr = configuration["ConnectionStrings:Insurance"];
             myOwn.TemplateFolder = configuration["TemplatesFolder"];
             myOwn.WebRootFolder = environment.WebRootPath;
             myOwn.ExcelRoot = Path.Combine(myOwn.WebRootFolder, "Excel");
@@ -119,10 +119,10 @@ namespace VirtualCredit.Services
                         string summary = Path.Combine(planDir, compInfo.Name + ".xls");
                         if (!System.IO.File.Exists(summary)) continue;
                         UserInfoModel account = null;
-                        var table = DatabaseService.SelectMultiPropFromTable("UserInfo", new string[] { "CompanyName", "_Plan" }, new string[] { compInfo.Name, plan });
+                        var table = InsuranceDatabaseService.SelectMultiPropFromTable("UserInfo", new string[] { "CompanyName", "_Plan" }, new string[] { compInfo.Name, plan });
                         if (table != null && table.Rows.Count > 0)
                         {
-                            account = DatabaseService.SelectUser(table.Rows[0]["userName"].ToString());
+                            account = InsuranceDatabaseService.SelectUser(table.Rows[0]["userName"].ToString());
                         }
                         else
                             continue;
@@ -142,7 +142,7 @@ namespace VirtualCredit.Services
                         }
                     }
                 }
-                DatabaseService.BulkInsert("DailyDetailData", todayDataTable);
+                InsuranceDatabaseService.BulkInsert("DailyDetailData", todayDataTable);
                 return true;
             }
             catch

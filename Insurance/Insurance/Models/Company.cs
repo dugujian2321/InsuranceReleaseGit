@@ -30,5 +30,6 @@ namespace Insurance.Models
         public DateTime StartDate { get; set; }
         public double UnitPrice { get; set; }
         public double DailyCost { get; set; }
+        public bool ViewDetail { get; set; } = false;
     }
 }

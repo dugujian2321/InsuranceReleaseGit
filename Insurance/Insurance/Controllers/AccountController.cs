@@ -51,7 +51,7 @@ namespace Insurance.Controllers
             try
             {
                 UserInfoModel currUser = GetCurrentUser();
-                DataTable dt = DatabaseService.SelectChildAccounts(currUser);
+                DataTable dt = InsuranceDatabaseService.SelectChildAccounts(currUser);
                 ResetPwdModel model = new ResetPwdModel();
                 model.CompanyName = currUser.CompanyName;
                 model.CompanyNameAbb = currUser.CompanyNameAbb;
@@ -82,7 +82,7 @@ namespace Insurance.Controllers
         public IActionResult ResetPassword(ResetPwdModel model)
         {
             HttpContext.Session.Set<string>("msg", string.Empty);
-            var user = DatabaseService.SelectUser(model.userName);
+            var user = InsuranceDatabaseService.SelectUser(model.userName);
             UserInfoModel currUser = GetCurrentUser();
             if (user is null)
             {
@@ -105,7 +105,7 @@ namespace Insurance.Controllers
             user.ResetPwd = string.Empty;
             user.Token_Reset = string.Empty;
             user.ExpiredTime = 0;
-            bool res = DatabaseService.UpdateUserInfo(user, new List<string>() { "userPassword" });
+            bool res = InsuranceDatabaseService.UpdateUserInfo(user, new List<string>() { "userPassword" });
             if (res)
             {
                 HttpContext.Session.Set<string>("msg", "密码修改成功");
@@ -151,7 +151,7 @@ namespace Insurance.Controllers
             {
                 return Json("fail");
             }
-            UserInfoModel uim = DatabaseService.SelectUser(userName);
+            UserInfoModel uim = InsuranceDatabaseService.SelectUser(userName);
             uim.userPassword = string.Empty;
             uim.UserNameEdit = userName;
             if (currUser.AccessLevel == 0) //超级管理员账号读取其他公司账号
@@ -185,7 +185,7 @@ namespace Insurance.Controllers
                 return false;
             }
 
-            if (!DatabaseService.UserMatchUserNameOnly(new UserInfoModel() { UserName = userName }))
+            if (!InsuranceDatabaseService.UserMatchUserNameOnly(new UserInfoModel() { UserName = userName }))
             {
                 return false;
             }
@@ -203,7 +203,7 @@ namespace Insurance.Controllers
                 return false;
             }
 
-            UserInfoModel uim = DatabaseService.SelectUser(user);
+            UserInfoModel uim = InsuranceDatabaseService.SelectUser(user);
             uim._Plan = model._Plan;
             uim.UnitPrice = model.UnitPrice;
             uim.DaysBefore = model.DaysBefore;
@@ -221,7 +221,7 @@ namespace Insurance.Controllers
             {
                 /*"AccessLevel",*/"AllowCreateAccount","AccessLevel","DaysBefore","_Plan","UnitPrice"
             };
-            if (DatabaseService.UpdateUserInfo(uim, paras))
+            if (InsuranceDatabaseService.UpdateUserInfo(uim, paras))
             {
                 return true;
             }
@@ -242,7 +242,7 @@ namespace Insurance.Controllers
                 return false;
             }
 
-            UserInfoModel uim = DatabaseService.SelectUser(user);
+            UserInfoModel uim = InsuranceDatabaseService.SelectUser(user);
             uim.CompanyNameAbb = model.CompanyNameAbb;
             uim.Mail = model.Mail;
             uim.TaxNum = model.TaxNum;
@@ -259,7 +259,7 @@ namespace Insurance.Controllers
                 "CompanyNameAbb","Mail","TaxNum","Telephone","Name","RecipeAccount",
                 "RecipeAddress","RecipeBank","RecipeCompany","RecipePhone","RecipeType"
             };
-            if (DatabaseService.UpdateUserInfo(uim, paras))
+            if (InsuranceDatabaseService.UpdateUserInfo(uim, paras))
             {
                 return true;
             }
@@ -302,7 +302,7 @@ namespace Insurance.Controllers
             }
             #endregion
 
-            if (DatabaseService.UserMatchUserNameOnly(user))
+            if (InsuranceDatabaseService.UserMatchUserNameOnly(user))
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "用户名已存在");
                 ViewBag.UserNameUsed = "用户名已存在";
@@ -359,7 +359,7 @@ namespace Insurance.Controllers
                 return View("Error");
             }
 
-            if (DatabaseService.InsertStory("UserInfo", user))
+            if (InsuranceDatabaseService.InsertStory("UserInfo", user))
             {
                 LogService.Log($"New User {user.UserName} Registered");
                 return View("../User/RegisterSucceed");

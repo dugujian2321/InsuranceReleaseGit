@@ -7,8 +7,10 @@ using NPOI.SS.Util;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using VirtualCredit.LogServices;
 using VirtualCredit.Models;
 using VirtualCredit.Services;
@@ -17,6 +19,10 @@ namespace VirtualCredit
 {
     public class VC_ControllerBase : Controller
     {
+        protected string summaryFilePath;
+        public static string ExcelDirectory;
+        public readonly int idCol = 1;
+        public readonly int jobCol = 2;
         public static ConcurrentDictionary<string, string> CachedCompanyDir = new ConcurrentDictionary<string, string>();
         protected IHostingEnvironment _hostingEnvironment;
         public static List<string> Plans = new List<string> { "30万", "60万", "80万" };
@@ -82,23 +88,153 @@ namespace VirtualCredit
             return base.View(viewName, model);
         }
 
-        protected double CalculateSubPrice(DateTime start, DateTime end, double price)
+        /// <summary>
+        /// 计算每个人的应退保费
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
+        /// <param name="price">每月保费定价</param>
+        /// <param name="effectiveDays"></param>
+        /// <returns></returns>
+        protected double CalculateSubPrice(DateTime start, DateTime end, double price, out int effectiveDays)
         {
             //对于退保人员，计算退费
-            double unitPrice = price / DateTime.DaysInMonth(end.Year, end.Month);
-            double received = MathEx.ToCurrency((DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) * unitPrice);
-            double earned = MathEx.ToCurrency((end.Day - start.Day + 1) * unitPrice);
+            double unitPrice = price / DateTime.DaysInMonth(end.Year, end.Month); //当月每天保费，元/天
+            double received = MathEx.ToCurrency((DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) * unitPrice);//月初收费时已收取的保费
+            effectiveDays = end.Day - start.Day + 1; //当月已生效天数
+            double earned = MathEx.ToCurrency(effectiveDays * unitPrice); //截止至退费当天已赚取的保费
             double payback = earned - received;
+            effectiveDays = (DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) - effectiveDays;//
             return payback;
         }
 
-        protected double CalculateAddPrice(UserInfoModel account,DateTime dt)
+        public List<Employee> ValidateExcel(FileStream formFile, string sheetName, string mode, string companyName, string plan)
         {
+            formFile.Position = 0;
+            ReaderWriterLockSlim r_locker = null;
+            string companyDir = GetSearchExcelsInDir(companyName);
+            var currUser = GetCurrentUser();
+            var result = new List<Employee>();
+            try
+            {
+                r_locker = currUser.MyLocker.RWLocker;
+                r_locker.EnterReadLock();
+                string summaryPath = Path.Combine(companyDir, plan, companyName + ".xls");
+                if (!System.IO.File.Exists(summaryPath))
+                {
+                    result.Add(
+                    new Employee()
+                    {
+                        Valid = false,
+                        Name = $"{companyName}尚未开通{plan}账号"
+                    }
+                    );
+                    return result;
+
+                }
+                ExcelTool summary = new ExcelTool(summaryPath, sheetName);
+                DataTable sourceDT = summary.ExcelToDataTable("Sheet1", true);
+                r_locker.ExitReadLock();
+
+                string fileName = Guid.NewGuid().ToString() + ".xls";
+
+                using (FileStream fs = System.IO.File.Create(Path.Combine(companyDir, fileName)))
+                {
+                    formFile.CopyTo(fs);
+                    fs.Flush();
+                }
+                ExcelTool et = new ExcelTool(Path.Combine(companyDir, fileName), sheetName);
+
+                result = et.ValidateIDs(idCol); // 验证身份证号码
+                for (int i = 0; i < result.Count - 1; i++)
+                {
+                    for (int j = i + 1; j < result.Count; j++)
+                    {
+                        if (result[i].ID == result[j].ID)
+                        {
+                            result[i].Valid = false;
+                            result[i].DataDesc = "所提交的表格中存在人员重复：" + result[i].ID;
+                            result[j].Valid = false;
+                            result[j].DataDesc = "所提交的表格中存在人员重复：" + result[j].ID;
+                        }
+                    }
+                }
+                MergeList(et.CheckJobType(jobCol), result); //验证岗位类型
+
+                if (!System.IO.File.Exists(summaryFilePath)) //如果汇总表格不存在，则新建一个
+                {
+                    string source = Path.Combine(ExcelDirectory, "templates", "recipe.xls");
+                    System.IO.File.Copy(source, summaryFilePath);
+                }
+
+                var temp = et.CheckDuplcateWithSummary(sourceDT, 3, idCol, mode); //验证总表中是否有重复
+                MergeList(temp, result);
+                HttpContext.Session.Set("mode", mode);
+                HttpContext.Session.Set("plan", plan);
+                HttpContext.Session.Set("newTable", et.ExcelToDataTable("Sheet1", true));
+                System.IO.File.Delete(Path.Combine(companyDir, fileName));
+                return result;
+            }
+            catch
+            {
+                result.Add(
+                    new Employee()
+                    {
+                        Valid = false,
+                        Name = "未知错误，请刷新页面并确保表格内容无误后重试"
+                    }
+                    );
+                return result;
+            }
+            finally
+            {
+                if (r_locker != null && r_locker.IsReadLockHeld)
+                {
+                    r_locker.ExitReadLock();
+                }
+            }
+
+        }
+
+        private void MergeList(List<Employee> newEmployees, List<Employee> employees)
+        {
+            if (newEmployees != null)
+            {
+                bool isSame = false;
+                foreach (Employee item in newEmployees)
+                {
+                    isSame = false;
+                    foreach (Employee item1 in employees)
+                    {
+                        if (item.ID == item1.ID && item.DataDesc == item1.DataDesc)
+                        {
+                            isSame = true;
+                            item1.StartDate = item.StartDate;
+                            break;
+                        }
+                    }
+                    if (!isSame)
+                    {
+                        employees.Add(item);
+                    }
+                }
+            }
+        }
+
+        protected double CalculateAddPrice(UserInfoModel account, DateTime dt, out int effectiveDays, List<Employee> employees = null)
+        {
+            List<Employee> newEmployees;
             //对于添加新的保费信息，按生效日期至本月底的天数收费
             double result = 0;
-            var newEmployees = HttpContext.Session.Get<List<Employee>>("validationResult");
+            if (employees != null)
+            {
+                newEmployees = employees;
+            }
+            else
+                newEmployees = HttpContext.Session.Get<List<Employee>>("validationResult");
             if (newEmployees is null || newEmployees.Count <= 0)
             {
+                effectiveDays = 0;
                 return 0;
             }
             int year_now = DateTime.Now.Year;
@@ -112,7 +248,8 @@ namespace VirtualCredit
             double unitPrice = (double)totalPrice / monthDays;
             int totalNumber = newEmployees.Count;
             double pricedDays = monthDays - day_sepecified + 1; //收费天数
-            result = pricedDays * unitPrice * totalNumber;
+            effectiveDays = (int)pricedDays * totalNumber;
+            result = (double)effectiveDays * unitPrice;
             return MathEx.ToCurrency(result);
         }
 
@@ -204,52 +341,52 @@ namespace VirtualCredit
             return result;
         }
 
-        public List<Company> GetSpringAccountsCompany()
-        {
-            UserInfoModel currUser = GetCurrentUser();
-            string companiesDirectory = GetCurrentUserRootDir(currUser);
-            List<Company> result = new List<Company>();
-            var springs = currUser.SpringAccounts;
-            foreach (var account in springs)
-            {
-                var companyName = account.CompanyName;
-                if (result.Any(_ => _.Name == companyName))
-                {
-                    continue;
-                }
-                var companyDir = Directory.GetDirectories(companiesDirectory, companyName, SearchOption.AllDirectories).FirstOrDefault();
-                if (string.IsNullOrEmpty(companyDir)) continue;
-                if (!Directory.Exists(companyDir)) continue;
-                var dirInfo = new DirectoryInfo(companyDir);
-                Company company = new Company();
-                company.Name = dirInfo.Name;
-                ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, "");
-                company.EmployeeNumber = edr.GetEmployeeNumber();
-                company.StartDate = From;
-                company.PaidCost = edr.GetPaidCost();
-                company.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
-                company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
-                company.TotalCost = edr.GetTotalCost();
-                result.Add(company);
-            }
-            Company self = new Company();
-            self.Name = currUser.CompanyName;
-            string thisSummary = Path.Combine(companiesDirectory, currUser.CompanyName + ".xls");
+        //public List<Company> GetSpringAccountsCompany()
+        //{
+        //    UserInfoModel currUser = GetCurrentUser();
+        //    string companiesDirectory = GetCurrentUserRootDir(currUser);
+        //    List<Company> result = new List<Company>();
+        //    var springs = currUser.SpringAccounts;
+        //    foreach (var account in springs)
+        //    {
+        //        var companyName = account.CompanyName;
+        //        if (result.Any(_ => _.Name == companyName))
+        //        {
+        //            continue;
+        //        }
+        //        var companyDir = Directory.GetDirectories(companiesDirectory, companyName, SearchOption.AllDirectories).FirstOrDefault();
+        //        if (string.IsNullOrEmpty(companyDir)) continue;
+        //        if (!Directory.Exists(companyDir)) continue;
+        //        var dirInfo = new DirectoryInfo(companyDir);
+        //        Company company = new Company();
+        //        company.Name = dirInfo.Name;
+        //        ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, "");
+        //        company.EmployeeNumber = edr.GetEmployeeNumber();
+        //        company.StartDate = From;
+        //        company.PaidCost = edr.GetPaidCost();
+        //        company.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
+        //        company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
+        //        company.TotalCost = edr.GetTotalCost();
+        //        result.Add(company);
+        //    }
+        //    Company self = new Company();
+        //    self.Name = currUser.CompanyName;
+        //    string thisSummary = Path.Combine(companiesDirectory, currUser.CompanyName + ".xls");
 
-            if (System.IO.File.Exists(thisSummary))
-            {
-                ExcelTool et = new ExcelTool(thisSummary, "Sheet1");
-                self.EmployeeNumber = et.GetEmployeeNumber();
-                self.StartDate = From;
-                self.PaidCost = et.GetPaidCost();
-                self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
-                self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
-                self.TotalCost = et.GetCostFromJuneToMay(companiesDirectory, From.Year);
-                result.Add(self);
-            }
+        //    if (System.IO.File.Exists(thisSummary))
+        //    {
+        //        ExcelTool et = new ExcelTool(thisSummary, "Sheet1");
+        //        self.EmployeeNumber = et.GetEmployeeNumber();
+        //        self.StartDate = From;
+        //        self.PaidCost = et.GetPaidCost();
+        //        self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
+        //        self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
+        //        self.TotalCost = et.GetCostFromJuneToMay(companiesDirectory, From.Year);
+        //        result.Add(self);
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
 
         private List<UserInfoModel[]> GroupAccountByCompanyName(List<UserInfoModel> accounts)
         {
@@ -320,32 +457,123 @@ namespace VirtualCredit
             else
             {
                 string result = Directory.GetDirectories(companiesDirectory, companyName, SearchOption.AllDirectories).FirstOrDefault();
-                Utility.CachedCompanyDirPath.Add(result);
+                if (result != null)
+                    Utility.CachedCompanyDirPath.Add(result);
                 return result;
             }
         }
 
+        private bool IsSpringNotChildAccount(UserInfoModel father, UserInfoModel child)
+        {
+            return !father.ChildAccounts.Any(a => a.UserName == child.UserName);
+        }
+
+        public double CalculatePrice(string filePath, decimal unitPrice)
+        {
+            List<Employee> es = new List<Employee>();
+            ExcelTool et = new ExcelTool(filePath, "Sheet1");
+            var table = et.ExcelToDataTable("Sheet1", true);
+            foreach (DataRow row in table.Rows)
+            {
+                Employee e = new Employee();
+                e.Name = row[0].ToString();
+                e.ID = row[1].ToString();
+                e.JobType = row[2].ToString();
+                e.Job = row[3].ToString();
+                e.StartDate = row[4].ToString();
+                e.EndDate = row[5].ToString();
+                es.Add(e);
+            }
+            var curUser = GetCurrentUser();
+            FileInfo fi = new FileInfo(filePath);
+            string fileName = fi.Name;
+            var info = fileName.Split("@");
+            string mode = info[3];
+            int a = 0;
+            switch (mode)
+            {
+                case "Add":
+
+                    return CalculateAddPrice(curUser, DateTime.Parse(es[0].StartDate), out a, employees: es); ;
+                case "Sub":
+                    double result = 0;
+                    DateTime end = DateTime.Parse(es[0].EndDate);
+                    foreach (Employee item in es)
+                    {
+                        DateTime start = DateTime.Parse(item.StartDate);
+                        result += CalculateSubPrice(start.Date, end, curUser.UnitPrice, out a);
+                    }
+                    return result;
+            }
+            return 1;
+        }
+
+        protected UserInfoModel GetChildAccountOfCurrentUserFromCompanyName(string companyName, UserInfoModel curUser)
+        {
+            UserInfoModel user = InsuranceDatabaseService.SelectUserByCompany(companyName);
+            if (user is null) return user;
+            while (!curUser.ChildAccounts.Any(u => u.UserName == user.UserName) && !string.IsNullOrEmpty(user.Father))
+            {
+                user = InsuranceDatabaseService.SelectUser(user.Father);
+            }
+            return user;
+        }
+
+        protected decimal GetCostFromFileName(string filePath, decimal priceEveryMonth = 0)
+        {
+            string[] info = filePath.Split("@");
+            if (info.Length > 8)
+            {
+                FileInfo fi = new FileInfo(filePath);
+                string dateStr = fi.Directory.Name;
+                DateTime dt = DateTime.Parse(dateStr);
+                int daysInMonth = DateTime.DaysInMonth(dt.Year, dt.Month);
+                decimal priceEveryDay = priceEveryMonth / daysInMonth;
+                int effectiveDays = int.Parse(info[7]);
+                if (info[3].Equals("sub", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    return -1 * effectiveDays * priceEveryDay;
+                }
+                else
+                    return effectiveDays * priceEveryDay;
+            }
+            else
+            {
+                return decimal.Parse(info[1]);
+            }
+        }
+
         /// <summary>
-        /// 获取当前账号所有子公司（包括所有后代账号的信息）的信息,包括当前账号自身的数据
+        /// 获取当前账号所有子公司（包括所有后代账号）的信息,包括当前账号自身的数据
         /// </summary>
         /// <returns></returns>
-        public List<Company> GetChildAccountsCompany()
+        public List<Company> GetSpringAccountsCompanyInfo(UserInfoModel user, string targetCompany)
         {
             try
             {
-                UserInfoModel currUser = GetCurrentUser();
-                string companiesDirectory = GetCurrentUserRootDir(currUser);
+                UserInfoModel curUser = GetCurrentUser();
+                string companiesDirectory = GetCurrentUserRootDir(user);
                 List<Company> result = new List<Company>();
-                var children = currUser.ChildAccounts;
+                var children = user.ChildAccounts;
                 var companyAccounts = GroupAccountByCompanyName(children);
                 foreach (var companyAccount in companyAccounts)
                 {
                     var companyName = companyAccount[0].CompanyName;
-                    var companyDir = GetCompanyDir(currUser, companyName);
+                    var companyDir = GetCompanyDir(user, companyName);
                     if (string.IsNullOrEmpty(companyDir)) continue;
                     if (!Directory.Exists(companyDir)) continue;
                     Company company = new Company();
                     company.Name = companyName;
+                    double companyUnitPrice = 0;
+                    //foreach (var account in companyAccount)
+                    //{
+                    //    if (user.ChildAccounts.Contains(account))
+                    //    {
+                    //        companyUnitPrice = account.UnitPrice; //读取保费时，按照当前账号为子账号的定价计算保费
+                    //        break;
+                    //    }
+                    //}
+                    companyUnitPrice = GetChildAccountOfCurrentUserFromCompanyName(companyName, curUser).UnitPrice;//读取保费时，按照当前账号为子账号的定价计算保费
 
                     foreach (var account in companyAccount)
                     {
@@ -354,15 +582,15 @@ namespace VirtualCredit
                         company.StartDate = From;
                         company.PaidCost += edr.GetPaidCost();
                         company.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
-                        company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
-                        company.TotalCost += edr.GetTotalCost();
+                        company.UnitPrice = Convert.ToDouble(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
+                        company.TotalCost += edr.ReadTotalCost(companyUnitPrice);
                     }
                     result.Add(company);
                 }
 
                 Company self = new Company();
-                self.Name = currUser.CompanyName;
-                string thisSummary = Path.Combine(companiesDirectory, currUser._Plan, self.Name + ".xls");
+                self.Name = user.CompanyName;
+                string thisSummary = Path.Combine(companiesDirectory, user._Plan, self.Name + ".xls");
                 if (System.IO.File.Exists(thisSummary))
                 {
                     ExcelTool et = new ExcelTool(thisSummary, "Sheet1");
@@ -370,8 +598,8 @@ namespace VirtualCredit
                     self.StartDate = From;
                     self.PaidCost = et.GetPaidCost();
                     self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
-                    self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
-                    self.TotalCost = et.GetCostFromJuneToMay(Path.Combine(companiesDirectory, currUser._Plan), From.Year);
+                    self.UnitPrice = Convert.ToDouble(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
+                    self.TotalCost = et.GetCostFromJuneToMay(Path.Combine(companiesDirectory, user._Plan), From.Year, user.UnitPrice);
                     result.Add(self);
                     //ExcelDataReader et = new ExcelDataReader(self.Name,From.Year,currUser._Plan);
                     //self.EmployeeNumber = et.GetEmployeeNumber();
@@ -418,6 +646,7 @@ namespace VirtualCredit
         /// <returns></returns>
         public IEnumerable<Company> GetChildrenCompanies(UserInfoModel user, string plan)
         {
+            UserInfoModel curUser = GetCurrentUser();
             List<Company> result = new List<Company>();
             string companyName = user.CompanyName;
             string targetDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories).FirstOrDefault();
@@ -436,24 +665,25 @@ namespace VirtualCredit
                     if (!new FileInfo(summary).Exists) continue;
                     ExcelTool edr = new ExcelTool(summary, "Sheet1");
                     com.PaidCost = edr.GetPaidCost();
-                    com.TotalCost = edr.GetCostFromJuneToMay(Path.Combine(companyDir.FullName, plan), From.Year);
+                    com.TotalCost = edr.GetCostFromJuneToMay(Path.Combine(companyDir.FullName, plan), From.Year, curUser.UnitPrice);
                     com.EmployeeNumber = edr.GetEmployeeNumber();
                     com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(Path.Combine(companyDir.FullName, plan), From.Year);
                     com.StartDate = From;
-                    com.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
+                    com.UnitPrice = Convert.ToDouble(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
                     result.Add(com);
                 }
                 else
                 {
+                    double price = Convert.ToDouble(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", companyDir.Name).Rows[0]["UnitPrice"]);
                     Company com = new Company();
                     com.Name = companyDir.Name;
                     com.StartDate = From;
                     ExcelDataReader edr = new ExcelDataReader(companyDir.Name, From.Year, plan);
                     com.PaidCost += edr.GetPaidCost();
-                    com.TotalCost += edr.GetTotalCost();
+                    com.TotalCost += edr.ReadTotalCost(price);
                     com.EmployeeNumber += edr.GetEmployeeNumber();
                     com.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
-                    var temp = DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name);
+                    var temp = InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name);
                     if (temp != null)
                         com.UnitPrice += Convert.ToDouble(temp.Rows[0]["UnitPrice"]);
                     result.Add(com);
@@ -463,34 +693,34 @@ namespace VirtualCredit
             return result;
         }
 
-        public List<Company> GetAllCompanies()
-        {
-            List<Company> result = new List<Company>();
-            string companiesDirectory = GetSearchExcelsInDir("管理员");
-            foreach (string comp in Directory.GetDirectories(companiesDirectory))
-            {
-                DirectoryInfo di = new DirectoryInfo(comp);
-                ExcelDataReader edr;
-                if (System.IO.File.Exists(Path.Combine(comp, new DirectoryInfo(comp).Name + ".xls")))
-                {
-                    edr = new ExcelDataReader(di.Name, From.Year, "");
-                }
-                else
-                {
-                    continue;
-                }
-                Company company = new Company();
-                company.Name = Path.GetFileName(comp);
-                company.EmployeeNumber = edr.GetEmployeeNumber();
-                company.StartDate = new DateTime(DateTime.Now.Date.Year, DateTime.Now.Date.Month, 1);
-                company.PaidCost = edr.GetPaidCost();
-                company.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
-                company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
-                company.TotalCost = edr.GetTotalCost();
-                result.Add(company);
-            }
-            return result;
-        }
+        //public List<Company> GetAllCompanies()
+        //{
+        //    List<Company> result = new List<Company>();
+        //    string companiesDirectory = GetSearchExcelsInDir("管理员");
+        //    foreach (string comp in Directory.GetDirectories(companiesDirectory))
+        //    {
+        //        DirectoryInfo di = new DirectoryInfo(comp);
+        //        ExcelDataReader edr;
+        //        if (System.IO.File.Exists(Path.Combine(comp, new DirectoryInfo(comp).Name + ".xls")))
+        //        {
+        //            edr = new ExcelDataReader(di.Name, From.Year, "");
+        //        }
+        //        else
+        //        {
+        //            continue;
+        //        }
+        //        Company company = new Company();
+        //        company.Name = Path.GetFileName(comp);
+        //        company.EmployeeNumber = edr.GetEmployeeNumber();
+        //        company.StartDate = new DateTime(DateTime.Now.Date.Year, DateTime.Now.Date.Month, 1);
+        //        company.PaidCost = edr.GetPaidCost();
+        //        company.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
+        //        company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
+        //        company.TotalCost = edr.ReadTotalCost();
+        //        result.Add(company);
+        //    }
+        //    return result;
+        //}
         protected void AdaptModel(ViewModelBase model)
         {
             UserInfoModel uim = HttpContext.Session.Get<UserInfoModel>("CurrentUser");
@@ -530,14 +760,14 @@ namespace VirtualCredit
             var currUser = HttpContext.Session.Get<UserInfoModel>("CurrentUser");
             user.UserName = currUser.UserName;
             user.userPassword = currUser.userPassword;
-            UserInfoModel uim = DatabaseService.UserMatchUserNamePassword(user);
+            UserInfoModel uim = InsuranceDatabaseService.UserMatchUserNamePassword(user);
             uim.MyLocker = Utility.GetCompanyLocker(uim.CompanyName);
             if (uim.ChildAccounts == null || uim.ChildAccounts.Count == 0)
             {
-                var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
+                var children = InsuranceDatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
                 foreach (var item in children)
                 {
-                    uim.ChildAccounts.Add(DatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
+                    uim.ChildAccounts.Add(InsuranceDatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
                 }
             }
 
@@ -601,7 +831,7 @@ namespace VirtualCredit
                     return true;
                 }
 
-                if (!DatabaseService.IsMailUsed(_mail))
+                if (!InsuranceDatabaseService.IsMailUsed(_mail))
                 {
                     return false;
                 }

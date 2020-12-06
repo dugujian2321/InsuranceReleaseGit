@@ -7,6 +7,7 @@ using VirtualCredit.Models;
 using VirtualCredit.Services;
 using System.Linq;
 using NPOI.OpenXmlFormats.Dml;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Insurance.Services
 {
@@ -101,7 +102,7 @@ namespace Insurance.Services
                         {
                             continue;
                         }
-                        
+
                         if (!File.Exists(summaryExcel)) continue;
                     }
                     ExcelTool et = new ExcelTool(summaryExcel, "Sheet1");
@@ -153,7 +154,8 @@ namespace Insurance.Services
             return Math.Round(result, 2);
         }
 
-        public double GetTotalCost()
+
+        public double ReadTotalCost(double unitPriceEverymonth, bool isHistoryData = false)
         {
             double result = 0;
             dirsContainExcel.ForEach(x =>
@@ -173,10 +175,31 @@ namespace Insurance.Services
                         {
                             continue;
                         }
+                        int days = DateTime.DaysInMonth(dateTime.Year, dateTime.Month); //当月天数
+                        double unitPriceEveryday = unitPriceEverymonth / days;
                         foreach (FileInfo file in info.GetFiles())
                         {
                             string[] excelinfo = file.Name.Split('@');
-                            result += Convert.ToDouble(excelinfo[1]);
+                            if (isHistoryData)
+                            {
+                                result += Convert.ToDouble(excelinfo[1]);
+                            }
+                            else
+                            {
+                                if (excelinfo.Length > 8)
+                                {
+                                    if (excelinfo[3].Equals("sub", StringComparison.CurrentCultureIgnoreCase))
+                                    {
+                                        result -= Convert.ToDouble(excelinfo[7]) * unitPriceEveryday;
+                                    }
+                                    else
+                                        result += Convert.ToDouble(excelinfo[7]) * unitPriceEveryday;
+                                }
+                                else
+                                {
+                                    result += Convert.ToDouble(excelinfo[1]);
+                                }
+                            }
                         }
                     }
                 }

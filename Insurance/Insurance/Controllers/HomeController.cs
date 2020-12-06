@@ -52,14 +52,27 @@ namespace VirtualCredit.Controllers
 
         }
         [UserLoginFilters]
-        public IActionResult HistoricalList()
+        public IActionResult HistoricalList(string name = null)
         {
             try
             {
+                UserInfoModel user = null;
                 HistoricalModel model = new HistoricalModel();
-                model.CompanyList = GetChildAccountsCompany();
+                if (string.IsNullOrEmpty(name))
+                {
+                    user = GetCurrentUser();
+                }
+                else
+                {
+                    user = InsuranceDatabaseService.SelectUserByCompany(name);
+                }
+                model.CompanyList = GetSpringAccountsCompanyInfo(user, name);
                 if (model.CompanyList != null)
                     model.CompanyList = model.CompanyList.OrderBy(c => c.Name).ToList();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    model.CompanyList.Where(c => c.Name == name).FirstOrDefault().ViewDetail = true;
+                }
                 ViewBag.PageInfo = "保单列表";
                 return View("HistoricalList", model);
             }
@@ -68,7 +81,6 @@ namespace VirtualCredit.Controllers
                 LogServices.LogService.Log(e.Message);
                 return View("Error");
             }
-
         }
 
 
@@ -80,6 +92,7 @@ namespace VirtualCredit.Controllers
         [UserLoginFilters]
         public IActionResult YearHistory([FromQuery] int year)
         {
+            var curUser = GetCurrentUser();
             if (year == From.Year)
             {
                 return HistoricalList();
@@ -104,7 +117,7 @@ namespace VirtualCredit.Controllers
                 {
                     ExcelDataReader edr = new ExcelDataReader(di, year, plan);
                     comp.PaidCost += edr.GetPaidCost();
-                    comp.TotalCost += edr.GetTotalCost();
+                    comp.TotalCost += edr.ReadTotalCost(0, true);
                     comp.EmployeeNumber += edr.GetEmployeeNumber();
                 }
                 compList.Add(comp);
@@ -249,12 +262,21 @@ namespace VirtualCredit.Controllers
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name">company name</param>
+        /// <returns></returns>
         [UserLoginFilters]
-        public IActionResult CompanyHisitoryByMonth([FromQuery] string name)
+        public IActionResult CompanyHisitoryByMonth([FromQuery] string name, [FromQuery] bool viewdetail)
         {
             ReaderWriterLockSlim r_locker = null;
             bool isSelf = false;
-
+            UserInfoModel user = InsuranceDatabaseService.SelectUserByCompany(name);
+            if (user.ChildAccounts.Count > 0 && !viewdetail)
+            {
+                return HistoricalList(name);
+            }
             try
             {
                 r_locker = GetCurrentUser().MyLocker.RWLocker;
@@ -274,24 +296,33 @@ namespace VirtualCredit.Controllers
                 string targetCompanyDir;
 
                 string currUserDir = GetCurrentUserRootDir(currUser);
-
+                decimal priceEveryMonth = 0;
                 if (isSelf)
                 {
+                    priceEveryMonth = (decimal)currUser.UnitPrice;
                     targetCompanyDir = Path.Combine(currUserDir, currUser._Plan);
                 }
                 else
                 {
+
+                    UserInfoModel targetUser = GetChildAccountOfCurrentUserFromCompanyName(name, currUser);
+                    priceEveryMonth = (decimal)targetUser.UnitPrice;
                     targetCompanyDir = Directory.GetDirectories(currUserDir, companyName, SearchOption.AllDirectories)[0];
+                    if (user.ChildAccounts.Count > 0 && viewdetail)
+                    {
+                        targetCompanyDir = Path.Combine(targetCompanyDir, targetUser._Plan);
+                    }
                 }
 
                 for (DateTime date = From; date <= To; date = date.AddMonths(1))
                 {
                     string dirName = date.ToString("yyyy-MM");
                     SearchOption so = SearchOption.AllDirectories;
-                    if (isSelf)
+                    if (isSelf || (user.ChildAccounts.Count > 0 && viewdetail))
                     {
                         so = SearchOption.TopDirectoryOnly;
                     }
+
                     var monthDirs = Directory.GetDirectories(targetCompanyDir, dirName, so);
                     if (monthDirs.Length == 0 || !Directory.Exists(monthDirs[0])) continue;
                     NewExcel excel = null;
@@ -304,13 +335,13 @@ namespace VirtualCredit.Controllers
                     excel.EndDate = new DateTime(dt.Year, dt.Month, DateTime.DaysInMonth(dt.Year, dt.Month)).ToShortDateString();
                     foreach (var monthDir in monthDirs)
                     {
-                        foreach (string fileName in Directory.GetFiles(monthDir))
+                        foreach (string filePath in Directory.GetFiles(monthDir))
                         {
-                            FileInfo fi = new FileInfo(fileName);
-                            ExcelTool et = new ExcelTool(fileName, "Sheet1");
+                            FileInfo fi = new FileInfo(filePath);
+                            ExcelTool et = new ExcelTool(filePath, "Sheet1");
                             string[] fileinfo = fi.Name.Split('@');
                             headcount += et.GetEmployeeNumber();
-                            cost += decimal.Parse(fileinfo[1]);
+                            cost += GetCostFromFileName(filePath, priceEveryMonth);
                         }
                     }
                     if (excel != null)
@@ -521,15 +552,15 @@ namespace VirtualCredit.Controllers
                     {
                         excel.Mode = "加保";
                         excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
-                        excel.Cost = decimal.Parse(fileinfo[1]);
                     }
                     else //若结束时间不为空，则为减员文档
                     {
                         excel.Mode = "减保";
                         excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
                         excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
-                        excel.Cost = decimal.Parse(fileinfo[1]);
                     }
+                    var user = GetChildAccountOfCurrentUserFromCompanyName(name, currUser);
+                    excel.Cost = GetCostFromFileName(fileName, (decimal)user.UnitPrice);
                     allexcels.Add(excel);
                 }
                 allexcels.Sort((l, r) =>
@@ -1301,7 +1332,7 @@ namespace VirtualCredit.Controllers
             var currUser = GetCurrentUser();
             List<string> plans = currUser._Plan.Split(' ').ToList();
             DailyDetailModel ddm = new DailyDetailModel();
-            DataTable dataTable = DatabaseService.SelectPropFromTable("DailyDetailData", "YMDDate", date);
+            DataTable dataTable = InsuranceDatabaseService.SelectPropFromTable("DailyDetailData", "YMDDate", date);
             ddm.DetailTableByDate = dataTable.Clone();
             foreach (DataRow row in dataTable.Rows)
             {
@@ -1337,7 +1368,7 @@ namespace VirtualCredit.Controllers
             }
             if (!companies.Contains(currUser.CompanyName))
                 companies.Add(currUser.CompanyName);
-            DataTable dataTable = DatabaseService.SelectDailyDetailByDatetime(dateList, companies, plans);
+            DataTable dataTable = InsuranceDatabaseService.SelectDailyDetailByDatetime(dateList, companies, plans);
             DailyDetailModel ddm = new DailyDetailModel();
             ddm.DetailTable = dataTable;
             return View("DailyDetail", ddm);
@@ -1556,7 +1587,7 @@ namespace VirtualCredit.Controllers
             string companyName_Abb = string.Empty;
             if (currUser.AccessLevel == 0)
             {
-                DataTable comps = DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company);
+                DataTable comps = InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company);
                 DataRow row = comps.Rows[0];
                 companyName_Abb = row["CompanyNameAbb"].ToString();
             }
@@ -1890,7 +1921,7 @@ namespace VirtualCredit.Controllers
             {
                 UserInfoModel currUser = GetCurrentUser();
                 string[] fileinfo = new FileInfo(fileName).Name.Split("@");
-                UserInfoModel uploadUser = DatabaseService.SelectUser(fileinfo[2]);
+                UserInfoModel uploadUser = InsuranceDatabaseService.SelectUser(fileinfo[2]);
                 if (!uploadUser.UserName.Equals("期初自动流转"))
                 {
                     if (!IsChildCompany(currUser, company) && company != currUser.CompanyName)
@@ -1926,7 +1957,7 @@ namespace VirtualCredit.Controllers
             {
                 UserInfoModel currUser = GetCurrentUser();
                 string[] fileinfo = new FileInfo(fileName).Name.Split("@");
-                UserInfoModel uploadUser = DatabaseService.SelectUser(fileinfo[2]);
+                UserInfoModel uploadUser = InsuranceDatabaseService.SelectUser(fileinfo[2]);
                 if (!uploadUser.UserName.Equals("期初自动流转"))
                 {
                     if (!IsChildCompany(currUser, company) && company != currUser.CompanyName)
@@ -1962,20 +1993,20 @@ namespace VirtualCredit.Controllers
             DirectoryInfo di = new DirectoryInfo(targetDir);
             di.Delete(true);
 
-            var accounts = DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", companyName);
+            var accounts = InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", companyName);
             if (accounts == null) return;
             List<string> account2Delete = new List<string>();
             foreach (DataRow row in accounts.Rows)
             {
                 string usrName = row["userName"].ToString();
-                var user = DatabaseService.SelectUser(usrName);
+                var user = InsuranceDatabaseService.SelectUser(usrName);
                 account2Delete.Add(usrName);
                 user.SpringAccounts.ForEach(x => account2Delete.Add(x.UserName));
             }
 
             foreach (var u in account2Delete)
             {
-                DatabaseService.Delete("UserInfo", u);
+                InsuranceDatabaseService.Delete("UserInfo", u);
             }
             //foreach (string directory in Directory.GetDirectories(targetDir))
             //{
@@ -2156,14 +2187,14 @@ namespace VirtualCredit.Controllers
         public JsonResult UpdateCaseCost([FromQuery] string id, [FromQuery] string cost)
         {
             if (!double.TryParse(cost, out double price)) return Json("金额不正确");
-            bool res = DatabaseService.UpdateOneColumn("CaseInfo", "CaseId", id, "Price", price);
-            res = DatabaseService.UpdateOneColumn("CaseInfo", "CaseId", id, "State", "已结案");
+            bool res = InsuranceDatabaseService.UpdateOneColumn("CaseInfo", "CaseId", id, "Price", price);
+            res = InsuranceDatabaseService.UpdateOneColumn("CaseInfo", "CaseId", id, "State", "已结案");
             return res ? Json("成功") : Json("失败");
         }
 
         public IActionResult ViewCase()
         {
-            var result = DatabaseService.Select("CaseInfo");
+            var result = InsuranceDatabaseService.Select("CaseInfo");
             if (result == null || result.Rows.Count == 0) return Json("未找到报案信息");
             foreach (DataRow row in result.Rows)
             {
@@ -2185,7 +2216,7 @@ namespace VirtualCredit.Controllers
             caseModel.Detail = detail;
             caseModel.CaseId = Guid.NewGuid().ToString();
             caseModel.State = "未结案";
-            if (DatabaseService.InsertStory("CaseInfo", caseModel))
+            if (InsuranceDatabaseService.InsertStory("CaseInfo", caseModel))
                 return Json(true);
             else
                 return Json(false);

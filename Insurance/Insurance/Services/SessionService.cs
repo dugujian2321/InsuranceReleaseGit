@@ -14,7 +14,7 @@ namespace VirtualCredit.Services
         {
             UserInfoModel uim = new SessionService().CurrUser(hc);
             if (uim == null) return false;
-            UserInfoModel databaseUser = DatabaseService.UserInfo(uim);
+            UserInfoModel databaseUser = InsuranceDatabaseService.UserInfo(uim);
             if (databaseUser == null) return false;
             return databaseUser.IsOnline == hc.Session.Id;
         }
