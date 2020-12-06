@@ -20,7 +20,21 @@ namespace Insurance.Models
         [DataType(DataType.Currency)]
         public double TotalPaid { get; set; }
         [DataType(DataType.Currency)]
-        public double Unpaid { get { return (TotalCost - TotalPaid) == 0 ? 0 : 0.01 * (Math.Ceiling(100 * (TotalCost - TotalPaid)) + 1); } }
+        public double Unpaid
+        {
+            get
+            {
+                double result = TotalCost - TotalPaid;
+                if (result * 1000 > Math.Floor(result * 100) * 10)
+                {
+                    return (result * 1000 + 1) / 1000;
+                }
+                else
+                {
+                    return Math.Round(result, 2);
+                }
+            }
+        }
 
         public int HeadCount { get; set; }
     }
