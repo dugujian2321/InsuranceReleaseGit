@@ -219,7 +219,7 @@ namespace Insurance.Controllers
             }
             List<string> paras = new List<string>()
             {
-                /*"AccessLevel",*/"AllowCreateAccount","AccessLevel","DaysBefore","_Plan","UnitPrice"
+                "AccessLevel","AllowCreateAccount","AccessLevel","DaysBefore","_Plan","UnitPrice"
             };
             if (InsuranceDatabaseService.UpdateUserInfo(uim, paras))
             {

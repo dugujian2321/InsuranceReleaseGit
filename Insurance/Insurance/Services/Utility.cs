@@ -73,7 +73,7 @@ namespace VirtualCredit.Services
             while (true)
             {
                 DateTime now = DateTime.Now.Date;
-                if (now > lastUpdateDate)
+                if (now.Date > lastUpdateDate.Date)
                 {
                     LogServices.LogService.Log($"开始每日数据备份，当前时间{DateTime.Now},上次备份时间{lastUpdateDate}");
                     LockerList.ForEach(l => l.RWLocker.EnterReadLock());
