@@ -23,9 +23,14 @@ namespace VirtualCredit
             Environment = hostingEnvironment;
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             new Utility().Initial(configuration, hostingEnvironment);
-            Task.Factory.StartNew(()=> {
+            Task.Factory.StartNew(() =>
+            {
                 new AutoRenewAllCompanies().StartListening(configuration);
-            });
+            }, TaskCreationOptions.LongRunning);
+            Task.Factory.StartNew(() =>
+            {
+                Utility.DailyUpdate();
+            }, TaskCreationOptions.LongRunning);
         }
 
         public IConfiguration Configuration { get; }
@@ -78,22 +83,7 @@ namespace VirtualCredit
             app.UseStatusCodePagesWithReExecute("/Error/{0}");
             app.UseResponseCaching();
             app.UseHttpsRedirection();
-            app.UseStaticFiles(
-                new StaticFileOptions
-                {
-                    //ServeUnknownFileTypes=true,
-                    //DefaultContentType= "application/x-msdownload",
-                    OnPrepareResponse = context =>
-                    {
-                        context.Context.Response.GetTypedHeaders().CacheControl = new Microsoft.Net.Http.Headers.CacheControlHeaderValue
-                        {
-                            Public = true,
-                            //for 1 year
-                            MaxAge = TimeSpan.FromDays(7)
-                        };
-                    }
-                }
-                );
+            app.UseStaticFiles();
             app.UseCookiePolicy();
             app.UseSession();
 

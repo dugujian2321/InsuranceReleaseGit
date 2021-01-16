@@ -1,5 +1,7 @@
-﻿using Insurance.Services;
+﻿using Insurance.Models;
+using Insurance.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity.UI.V3.Pages.Internal.Account.Manage;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -65,7 +67,7 @@ namespace VirtualCredit.Controllers
             userInputValidation = HttpContext.Request.Form["validationResult"];
             int backendValidation = HttpContext.Session.Get<int>("ValidationResult");
             UserInfoModel uim = new UserInfoModel();
-            uim = DatabaseService.UserMatchUserNamePassword(user);
+            uim = InsuranceDatabaseService.UserMatchUserNamePassword(user);
             if (Convert.ToInt16(userInputValidation) != backendValidation)
             {
                 ActionAfterReload("验证码计算错误，请重新输入！");
@@ -77,6 +79,11 @@ namespace VirtualCredit.Controllers
                 user.CompanyName = uim.CompanyName;
                 user.IsOnline = HttpContext.Session.Id;
                 user.IPAddress = ip;
+                if (!InsuranceDatabaseService.UpdateUserInfo(user, new List<string>() { "IPAddress", "IsOnline" }))
+                {
+                    LogServices.LogService.Log($"Failed updating userinfo.{user.CompanyName} {user.UserName}");
+                    return View();
+                }
                 user.AccessLevel = uim.AccessLevel;
                 user.CompanyNameAbb = uim.CompanyNameAbb;
                 user.Mail = uim.Mail;
@@ -93,26 +100,41 @@ namespace VirtualCredit.Controllers
                 user.RecipePhone = uim.RecipePhone;
                 user.userPassword = uim.userPassword;
                 user.RecipeType = uim.RecipeType;
-                if (!DatabaseService.UpdateUserInfo(user, new List<string>() { "IPAddress", "IsOnline" }))
-                {
-                    LogServices.LogService.Log($"Failed updating userinfo.{user.CompanyName} {user.UserName}");
-                    return View();
-                }
+                user.ChildAccounts = new List<UserInfoModel>();
+                user._Plan = uim._Plan;
+                user.Father = uim.Father;
+                var children = InsuranceDatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(UserInfoModel.Father)].ToString() == uim.UserName);
+                //foreach (var item in children)
+                //{
+                //    user.ChildAccounts.Add(DatabaseService.SelectUser(item[nameof(UserInfoModel.UserName)].ToString()));
+                //}
 
-                HttpContext.Session.Set("CurrentUser", user);
-                HttpContext.Session.Set<string>("Frontend", null);
                 SessionService.UserOnline(HttpContext);
                 var locker = Utility.LockerList.Where(_ => _.LockerCompany == user.CompanyName);
                 if (locker == null || locker.Count() <= 0)
                 {
                     ReaderWriterLockerWithName newlocker = new ReaderWriterLockerWithName()
                     {
-                        LockerCompany = GetCurrentUser().CompanyName,
+                        LockerCompany = user.CompanyName,
                         RWLocker = new System.Threading.ReaderWriterLockSlim()
                     };
                     Utility.LockerList.Add(newlocker);
+                    foreach (var item in user.SpringAccounts)
+                    {
+                        if (Utility.LockerList.Any(_ => _.LockerCompany == item.CompanyName)) continue;
+                        newlocker = new ReaderWriterLockerWithName()
+                        {
+                            LockerCompany = item.CompanyName,
+                            RWLocker = new System.Threading.ReaderWriterLockSlim()
+                        };
+                        Utility.LockerList.Add(newlocker);
+                    }
                 }
-                GetCurrentUser().MyLocker = Utility.GetCompanyLocker(GetCurrentUser().CompanyName);
+                user.MyLocker = Utility.GetCompanyLocker(user.CompanyName);
+                currUser_temp = user;
+                HttpContext.Session.Set("CurrentUser", user);
+                HttpContext.Session.Set<string>("Frontend", null);
+                UpdateDailyData();
                 return RedirectToAction("Index", "Home", null);
             }
             else
@@ -121,6 +143,27 @@ namespace VirtualCredit.Controllers
                 ActionAfterReload("用户名或密码错误，请重新输入");
                 return View();
             }
+        }
+
+        private void UpdateDailyData()
+        {
+            double dailyPrice = 0;
+            int dailyHeadCount = 0;
+            var currUser = GetCurrentUser();
+            List<UserInfoModel> accounts = new List<UserInfoModel>();
+            accounts.Add(currUser);
+            accounts.AddRange(currUser.SpringAccounts);
+            foreach (var account in accounts)
+            {
+                AccountData ad = GetAccountData(account);
+                if (ad != null)
+                {
+                    dailyPrice += MathEx.ToCurrency(ad.PricePerDay * ad.HeadCount);
+                    dailyHeadCount += ad.HeadCount;
+                }
+            }
+            HttpContext.Session.Set("DailyHeadCount", dailyHeadCount);
+            HttpContext.Session.Set("DailyPrice", dailyPrice);
         }
 
         public IActionResult ForgetPassword()

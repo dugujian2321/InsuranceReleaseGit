@@ -1,4 +1,5 @@
 ﻿using Insurance.Services;
+using System.ComponentModel.DataAnnotations;
 using VirtualCredit.Services;
 
 namespace VirtualCredit.Models
@@ -8,7 +9,7 @@ namespace VirtualCredit.Models
         [DatabaseProp] public string Name { get; set; }
         [DatabaseProp] public string Telephone { get; set; }
         [DatabaseProp] public string Mail { get; set; }
-        [DatabaseProp] public string CompanyName { get; set; }
+        [DatabaseProp] [Required(ErrorMessage = "公司名称不能为空")] public string CompanyName { get; set; }
         [DatabaseProp] public string CompanyNameAbb { get; set; }
         [DatabaseProp] public string RecipeCompany { get; set; }
         [DatabaseProp] public string TaxNum { get; set; }

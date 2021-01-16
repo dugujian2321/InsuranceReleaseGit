@@ -4,13 +4,15 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 @model Insurance.Models.DetailModel
-<h1>@Model.Company 保费汇总</h1>
-
+    <div class="alert alert-primary" style="font-size:20px" role="alert">
+        保费汇总 @ViewBag.Plan @ViewBag.Company @ViewBag.Date @ViewBag.Page @ViewBag.Msg
+    </div>
 @{
+    UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
     if (Model.MonthlyExcel != null && Model.MonthlyExcel.Count > 0)
     {
-        <table class="table table-bordered">
-            <thead>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-dark">
                 <tr>
                     <th scope="col">操作日期</th>
                     <th scope="col">操作人次</th>
@@ -22,36 +24,54 @@
             </thead>
             <tbody>
                 @{
+                    
                     foreach (var item in Model.MonthlyExcel)
                     {
                         if (item != null)
                         {
                             <tr>
-                                <td>@item.UploadDate</td>
-                                <td>@item.HeadCount</td>
-                                <td>@item.Cost</td>
-                                <td>@item.Paid</td>
-                                <td>@item.Unpaid</td>
-                                <td><a href="/Home/RecipeSummary?date=@item.StartDate&name=@item.Company">详细</a></td>
+                                <td class="td_middle">@item.UploadDate</td>
+                                <td class="td_middle">@item.HeadCount</td>
+                                <td class="td_middle">@item.Cost</td>
+                                <td class="td_middle">@item.Paid</td>
+                                <td class="td_middle">@item.Unpaid</td>
+                                <td><a href="/Home/RecipeSummary?date=@item.StartDate&name=@item.Company" class="btn btn-primary">详细</a></td>
                             </tr>
                         }
                     }
+
+                    <tr>
+                        <td class="td_middle">合计</td>
+                        <td></td>
+                        <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Cost)</td>
+                        <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Paid)</td>
+                        <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Unpaid)</td>
+                        @if (currentUser.AccessLevel == 0)
+                        {
+                            <td><a href="/Home/BanlanceAccount?companyName=@Model.Company" class="btn btn-primary">结算</a></td>
+                        }
+                        else
+                        {
+                            <td></td>
+                        }
+
+                    </tr>
                 }
             </tbody>
         </table>
     }
     else if (Model.Excels != null && Model.Excels.Count > 0)
     {
-        if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+        if (currentUser.AccessLevel == 0)
         {
-            <button class="btn btn-warning" type="button" style="margin:5px" onclick="MarkPaid()">确认结算</button>
+            <button class="btn btn-warning" id="btn_balance" type="button" style="margin:5px" onclick="MarkPaid()">确认结算</button>
             <span>已选金额：</span><span id="totalCost">0</span>
         }
-        <table class="table table-bordered">
-            <thead>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-dark">
                 <tr>
                     @{
-                        if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+                        if (currentUser.AccessLevel == 0)
                         {
                             <th scope="col" style="text-align:center"><input type="checkbox" id="cbx_selectAll" onchange="SelectAll(this)" style="zoom:150%"></th>
                         }
@@ -88,7 +108,7 @@
                         double headcount = item.Mode.Equals("加保", StringComparison.CurrentCultureIgnoreCase) ? item.HeadCount : (item.HeadCount * -1);
                         <tr>
                             @{
-                                if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+                                if (currentUser.AccessLevel == 0)
                                 {
                                     string _id = item.FileName.Replace(".xls", "") + item.Company;
                                     if (state == "未结算")
@@ -128,6 +148,10 @@
                 }
             </tbody>
         </table>
+    }
+    else if (Model.Excels.Count == 0)
+    {
+        <span> 无未结保费 </span>
     }
 }
 

@@ -139,6 +139,52 @@ function UpdateAccountInfo() {
     $("#modal_close").click();
 }
 
+function UpdateAllowedStartDate() {
+    var selectedCompany = document.getElementById('companyGroup');
+    var company = selectedCompany.value;
+    $.ajax(
+        {
+            async: true,
+            url: '/EmployeeChange/UserDaysBefore?company=' + company,
+            data: company,
+            datatype: 'json',
+            contentType: false,
+            processData: false,
+            success: function (data) {
+                var dateControl = document.getElementById('startdate');
+                dateControl.min = data;
+                var des = document.getElementById('description');
+                des.innerText = '检测到投保公司发生变化，请重新上传保单';
+            }
+        }
+    );
+}
+
+function UpdatePlan() {
+    var selectedPlan = document.getElementById('planGroup');
+    var plan = selectedPlan.value;
+    var add = document.getElementById('add');
+    var sub = document.getElementById('sub');
+    if (add.files.length == 1) {
+        SubmitAdd(add);
+    }
+    if (sub.files.length == 1) {
+        SubmitAdd(sub);
+    }
+}
+function UpdateCompany() {
+    var selectedComp = document.getElementById('companyGroup');
+    var comp = selectedComp.value;
+    var add = document.getElementById('add');
+    var sub = document.getElementById('sub');
+    if (add.files.length == 1) {
+        SubmitAdd(add);
+    }
+    if (sub.files.length == 1) {
+        SubmitAdd(sub);
+    }
+}
+
 function SubmitRecipet(obj) {
     obj.disabled = !0;
     $.ajax(
@@ -221,13 +267,14 @@ function GetSelectedCost(obj, value) {
 }
 
 function MarkPaid() {
+    document.getElementById('btn_balance').disabled = true;
     var checkBoxes = $('input[type="checkbox"]:checked');
     var ids = new Array();
     var index = 0
     for (i = 0; i < checkBoxes.length; i++) {
         if (checkBoxes[i].id != "cbx_selectAll") {
             var folder = checkBoxes[i].parentNode.parentNode.children[6].innerText;
-            ids[index] =  folder + "#" + checkBoxes[i].id ;
+            ids[index] = folder + "#" + checkBoxes[i].id;
             index++;
         }
     }
@@ -245,11 +292,348 @@ function MarkPaid() {
             success: function (data) {
                 if (data == true) {
                     window.location.reload();
-                    alert("操作成功");
+                    alert("结算成功");
+                } else {
+                    alert("结算失败");
+                    window.location.reload();
                 }
             },
         }
     );
+}
+
+
+function DeleteReceipt(name, file, date, plan) {
+    document.getElementById('btn_deletereceipt').disabled = true;
+    $.ajax(
+        {
+            url: "/Home/DeleteReceipt?company=" + name + "&filename=" + file + "&startdate=" + date + "&plan=" + plan,
+            async: true,
+            processData: false,
+            type: 'get',
+            dataType: 'JSON',
+            success: function (data) {
+                if (data == true) {
+                    alert("删除成功！");
+                    window.location.reload();
+                } else {
+                    alert(data);
+                }
+            },
+            fail: function (data) {
+                alert("删除失败");
+            },
+            error: function (data) {
+                alert("错误");
+            }
+        }
+    );
+}
+
+function CreateCaseTable(table) {
+    var searchtbl = document.getElementById('tbl_search');
+    searchtbl.style.visibility = 'collapse';
+    var casetbl = document.getElementById('tbl_case');
+    casetbl.style.visibility = 'visible';
+    //casetbl.getElementsByTagName('tbody')[0].innerHTML = '';
+    //var count = table.length;
+    //for (i = 0; i < count; i++) {
+    //    var tr = document.createElement('tr');
+    //    var objlen = Object.values(table[i]).length;
+    //    for (j = 1; j < objlen - 1; j++) {
+    //        var td = document.createElement('td');
+    //        td.classList.add('td_middle');
+    //        td.innerText = Object.values(table[i])[j];
+    //        tr.appendChild(td);
+    //    }
+    //    var btn = document.createElement('button');
+    //    btn.innerText = '详细';
+    //    btn.classList.add('btn-primary');
+    //    btn.classList.add('btn');
+    //    btn.setAttribute('data-target', '#caseDetail');
+    //    btn.setAttribute('data-toggle', 'modal');
+    //    btn.setAttribute('data-casedate', Object.values(table[i])[4].split('T')[0]);
+    //    btn.setAttribute('data-person', Object.values(table[i])[3]);
+    //    btn.setAttribute('data-detail', Object.values(table[i])[7]);
+    //    btn.setAttribute('data-enable', 'false');
+    //    var td = document.createElement('td');
+    //    td.appendChild(btn);
+    //    tr.appendChild(td);
+    //    casetbl.getElementsByTagName('tbody')[0].appendChild(tr);
+    //}
+}
+
+function CaseCostChanged(id) {
+    var caseid = document.getElementById('case_' + id).innerText;
+    var cost = document.getElementById('price_' + id).value;
+    $.ajax(
+        {
+            type: "get",
+            url: '/Home/UpdateCaseCost?id=' + caseid + '&cost=' + cost,
+            async: true,
+            dataType: 'JSON',
+            success: function (data) {
+                alert(data);
+            },
+            fail: function (data) {
+                alert("失败");
+            },
+            error: function (data) {
+                alert("错误");
+            }
+        });
+}
+
+function CaseStatusChanged(id) {
+    var textbox = document.getElementById('price_' + id);
+    var obj = document.getElementById('status_' + id);
+    if (obj.value == '已结案') {
+        textbox.disabled = '';
+    } else {
+        textbox.disabled = 'disabled';
+    }
+}
+
+function ViewCase() {
+
+    $.ajax(
+        {
+            type: "get",
+            url: '/Home/ViewCase',
+            async: true,
+            dataType: 'JSON'
+            //success: function (data) {
+            //    if (data) {
+            //        CreateCaseTable(data);
+            //    } else {
+            //        alert(data);
+            //    }
+            //},
+            //fail: function (data) {
+            //    alert("报案失败");
+            //},
+            //error: function (data) {
+            //    alert("错误");
+            //}
+        });
+}
+
+function SubmitCase() {
+    var fd = new FormData();
+    var date = document.getElementById('casedate');
+    var person = document.getElementById('caseperson');
+    var detail = document.getElementById('casedetail');
+    fd.append("casedate", date.value);
+    fd.append("person", person.value);
+    fd.append("detail", detail.value);
+    $.ajax(
+        {
+            type: "post",
+            url: '/Home/SubmitCase',
+            async: true,
+            data: fd,
+            contentType: false,
+            processData: false,
+            dataType: 'JSON',
+            success: function (data) {
+                if (data == true) {
+                    alert("报案成功");
+                    window.location.reload();
+                } else {
+                    alert(data);
+                }
+            },
+            fail: function (data) {
+                alert("报案失败");
+            },
+            error: function (data) {
+                alert("错误");
+            }
+        });
+}
+
+function DeleteCompanyData(company) {
+    document.getElementById('btn_ok').disabled = true;
+    $.ajax(
+        {
+            url: "/Home/RemoveAccountData?accountName=" + company,
+            async: true,
+            processData: false,
+            type: 'get',
+            dataType: 'JSON',
+            success: function (data) {
+                if (data == true) {
+                    alert("删除成功！");
+                    window.location.reload();
+                } else {
+                    alert(data);
+                }
+            },
+            fail: function (data) {
+                alert("删除失败");
+            },
+            error: function (data) {
+                alert("错误");
+            }
+        }
+    );
+}
+
+function RegisterEvents() {
+    $('#confirmDeleteExcel').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        var company = button.data('company');
+        var filename = button.data('filename');
+        var uploaddate = button.data('uploaddate');
+        var startdate = button.data('startdate');
+        var plan = button.data('plan');
+        var modal = document.getElementById('confirmDeleteExcel');
+        modal.getElementsByClassName('modal-body')[0].innerHTML = "是否确认删除于 " + uploaddate + " 上传的保单?";
+        document.getElementById('btn_deletereceipt').onclick = function () { DeleteReceipt(company, filename, startdate, plan) };
+    });
+
+    $('#confirmDeleteCompany').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        var company = button.data('company');
+        var modal = document.getElementById('confirmDeleteCompany');
+        modal.getElementsByClassName('modal-body')[0].innerHTML = "是否确认删除 " + company + " 的所有保单数据?";
+        document.getElementById('btn_ok').onclick = function () { DeleteCompanyData(company) };
+    });
+
+
+    $('#proofPreview').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget) // Button that triggered the modal
+        var company = button.data('company') // Extract info from data-* attributes
+        var date = button.data('startdate') // Extract info from data-* attributes
+        // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+        // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+        var modal = $(this)
+        modal.find('.modal-title').text('数据预览')
+        var table = document.getElementById('proofTable');
+        var table_header = table.getElementsByTagName('thead')[0];
+        var table_body = table.getElementsByTagName('tbody')[0];
+        table_header.innerHTML = '';
+        table_body.innerHTML = '';
+        document.getElementById('downloadProof').href = "/Home/GenerateInsuranceRecipet?company=" + company + "&date=" + date;
+        $.ajax(
+            {
+                async: true,
+                processData: false,
+                type: 'get',
+                dataType: 'json',
+                url: '/Home/ProofTable?company=' + company + "&date=" + date,
+                success: function (data) {
+                    if (data) {
+
+                        var tr = document.createElement('tr');
+                        var theaderRow = table_header.appendChild(tr);
+                        for (var i = 0; i < 8; i++) {
+                            var th = document.createElement('th');
+                            th.innerHTML = Object.keys(data[0])[i];
+                            theaderRow.appendChild(th);
+                        }
+                        for (var j = 0; j < data.length; j++) {
+                            var tr = document.createElement('tr');
+                            for (var k = 0; k < 8; k++) {
+                                var td = document.createElement('td');
+                                td.innerHTML = Object.values(data[j])[k];
+                                tr.appendChild(td);
+                            }
+
+                            table_body.appendChild(tr);
+                        }
+                    }
+                },
+                fail: function (data) {
+                    alert("保存失败");
+                },
+                error: function (data) {
+                    alert("错误");
+                }
+            }
+        )
+    });
+
+    $('#dataPreview').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget) // Button that triggered the modal
+        var company = button.data('company') // Extract info from data-* attributes
+        var filename = button.data('fn') // Extract info from data-* attributes
+        var date = button.data('date') // Extract info from data-* attributes
+        // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+        // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+        var modal = $(this)
+        modal.find('.modal-title').text('数据预览')
+        var table = document.getElementById('previewTable');
+        var table_header = table.getElementsByTagName('thead')[0];
+        var table_body = table.getElementsByTagName('tbody')[0];
+        table_header.innerHTML = '';
+        table_body.innerHTML = '';
+        document.getElementById('download').href = "/Home/DownloadExcel?company=" + company + "&fileName=" + filename + "&date=" + date;
+        $.ajax(
+            {
+                async: true,
+                processData: false,
+                type: 'get',
+                dataType: 'json',
+                url: '/Home/PreviewTable?company=' + company + "&fileName=" + filename + "&date=" + date,
+                success: function (data) {
+                    if (data) {
+
+                        var tr = document.createElement('tr');
+                        var theaderRow = table_header.appendChild(tr);
+                        for (var i = 0; i < Object.values(data[0]).length; i++) {
+                            var th = document.createElement('th');
+                            th.innerHTML = Object.values(data[0])[i];
+                            theaderRow.appendChild(th);
+                        }
+                        for (var j = 1; j < data.length; j++) {
+                            var tr = document.createElement('tr');
+                            for (var k = 0; k < Object.values(data[j]).length; k++) {
+                                var td = document.createElement('td');
+                                td.innerHTML = Object.values(data[j])[k];
+                                tr.appendChild(td);
+                            }
+
+                            table_body.appendChild(tr);
+                        }
+                    }
+                },
+                fail: function (data) {
+                    alert("保存失败");
+                },
+                error: function (data) {
+                    alert("错误");
+                }
+            }
+        )
+
+        modal.find('.modal-body input').val("test")
+        modal.find('#download').href = "/Home/DownloadExcel?company=" + company + "&fileName=" + filename + "&date=" + date
+    });
+}
+
+function all_proof() {
+    var date = document.getElementById('proofDate').value;
+    $.ajax(
+        {
+            async: true,
+            processData: false,
+            type: 'get',
+            dataType: 'application/zip',
+            url: '/Home/AllProofs?filedate=' + date,
+            success: function (data) {
+                if (data == true) {
+                    alert("已开始下载");
+                }
+            },
+            fail: function (data) {
+                alert("下载失败");
+            },
+            error: function (data) {
+                alert("错误");
+            }
+        }
+    )
 }
 
 function SaveCost(company, obj) {
@@ -266,8 +650,9 @@ function SaveCost(company, obj) {
             dataType: 'json',
             url: '/Home/SaveCost?cost=' + obj.value + '&company=' + company,
             success: function (data) {
-                if (data = true) {
+                if (data == true) {
                     alert("保存成功");
+                    location.reload();
                 }
             },
             fail: function (data) {
@@ -310,7 +695,10 @@ function SubmitAdd(obj) {
         alert('文件格式不正确，请上传Excel文件')
     }
     var _formData = new FormData();
+    var selected = document.getElementById('companyGroup');
+    _formData.append('company', selected.value);
     _formData.append('mode', obj.id);
+    _formData.append('plan', document.getElementById('planGroup').value);
     for (var i = 0; i < obj.files.length; i++) {
         _formData.append('newExcel', obj.files[0]);
     }
@@ -394,9 +782,8 @@ function SubmitAdd(obj) {
         fail: function (data) {
             alert(data);
         },
-        error: function (xhr, textStatus, errorThrown) {
-            alert('出错了，请将下一个弹窗中的错误信息截图发给管理员');
-            alert(xhr.responseText);
+        error: function (data) {
+            alert('错误');
         }
     });
 }
@@ -408,6 +795,8 @@ function Calculate() {
         return;
     }
     fd.append('startDate', document.getElementById('startdate').value);
+    fd.append('company', document.getElementById('companyGroup').value);
+    fd.append('plan', document.getElementById('planGroup').value);
     $.ajax({
         type: 'post',
         url: '/EmployeeChange/CalculatePrice',
@@ -425,6 +814,9 @@ function Calculate() {
                 alert("所选月份的表单不存在");
             } else if (data == -9999995) {
                 alert("生效日期不正确，该月保单可能已被锁定");
+            }
+            else if (data == -9999996) {
+                alert("该公司尚未开通该方案账号或您无权投保该方案");
             }
             else {
                 document.getElementById('price').innerText = data;
@@ -445,13 +837,15 @@ function AutoRenew(obj) {
     var comp = $(obj).attr('data-company')
     var d = $(obj).attr('data-enddate')
     var cm = $(obj).attr('data-currentmonth')
+    var pl = $(obj).attr('data-plan')
     $.ajax(
         {
             async: true,
             data: {
                 CompanyName: comp,
                 NextMonthEndDay: d,
-                CurrentMonth: cm
+                CurrentMonth: cm,
+                Plan: pl
             },
             type: 'post',
             url: '/Home/StartRenew',
@@ -462,6 +856,38 @@ function AutoRenew(obj) {
         }
     );
 }
+
+function personDetail(detail) {
+    var histories = detail.split('+');
+    var body = document.getElementById('info');
+    body.innerHTML = '';
+    for (i = 0; i < histories.length; i++) {
+        var detail = histories[i].split('%');
+        var tr = document.createElement('tr');
+        var td1 = document.createElement('td');
+        var td2 = document.createElement('td');
+        var td3 = document.createElement('td');
+        var td4 = document.createElement('td');
+        var td5 = document.createElement('td');
+        var td6 = document.createElement('td');
+
+        td1.innerText = detail[1];
+
+        td2.innerText = detail[0];
+        td3.innerText = detail[2];
+        td4.innerText = detail[3];
+        td5.innerText = detail[4];
+        td6.innerText = detail[5];
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tr.appendChild(td3);
+        tr.appendChild(td4);
+        tr.appendChild(td5);
+        tr.appendChild(td6);
+        body.appendChild(tr);
+    }
+}
+
 
 function showPersonalInfo(company, id) {
     $.ajax({
@@ -474,26 +900,7 @@ function showPersonalInfo(company, id) {
         success: function (data) {
             var body = document.getElementById('info');
             body.innerHTML = '';
-            for (i = 0; i < data.length; i++) {
-                var tr = document.createElement('tr');
-                var td1 = document.createElement('td');
-                var td2 = document.createElement('td');
-                var td3 = document.createElement('td');
-                var td4 = document.createElement('td');
-                if (data[i].mode == 'Add') {
-                    td1.innerText = "加保";
-                } else {
-                    td1.innerText = "减保";
-                }
-                td2.innerText = data[i].uploadDate;
-                td3.innerText = data[i].start;
-                td4.innerText = data[i].end;
-                tr.appendChild(td1);
-                tr.appendChild(td2);
-                tr.appendChild(td3);
-                tr.appendChild(td4);
-                body.appendChild(tr);
-            }
+
         },
         fail: function (data) {
             alert('fail');
@@ -1429,6 +1836,7 @@ function async_Validate(callbk_validateFields) {
 var validationPass = false;
 var userNamePass = false;
 var pwdPass = false;
+var daysbeforePass = false;
 var canRegister = false;
 var canReset = false;
 var mailPass = false;
@@ -1455,6 +1863,10 @@ function ValidateFields_RegisterView() {
     }
 
     if (cPwdBox.value == "" || pwdPass == false) {
+        registerPageInputResult = false;
+    }
+
+    if (daysbeforePass == false) {
         registerPageInputResult = false;
     }
 
@@ -1604,6 +2016,7 @@ function SetFieldsEvent() {
     var pwdBox = document.getElementById("pwdBox");
     var idBox = document.getElementById("UserName");
     var cPwdBox = document.getElementById('confirmPwd');
+    var daysbeforebox = document.getElementById('daysbefore');
     cPwdBox.onfocus = function () {
         ShowPwsTips();
     }
@@ -1612,7 +2025,30 @@ function SetFieldsEvent() {
     }
     idBox.onblur = function () { UserNameExists(idBox.value) };
     pwdBox.onblur = function () { PwdValid() };
+    daysbeforebox.onblur = function () { DaysBeforeValidate(daysbeforebox) };
     cPwdBox.onblur = function () { PwdValid() };
+}
+
+function DaysBeforeValidate(obj) {
+    $.ajax(
+        {
+            type: 'get',
+            url: '/Account/ValidateDaysBefore?days=' + obj.value,
+            dataType: 'json',
+            async: true,
+            contentType: 'application/json',
+            success: function (data) {
+                var msg = document.getElementById('daysbeforeMsg');
+                msg.innerText = data;
+                if (data == "√") {
+                    daysbeforePass = true;
+                } else {
+                    daysbeforePass = false;
+                }
+                ValidateFields_RegisterView();
+            }
+        }
+    );
 }
 
 function IsAgreementChecked() {

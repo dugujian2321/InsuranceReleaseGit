@@ -1,4 +1,5 @@
 ﻿using Insurance.Models;
+using Microsoft.AspNetCore.Mvc;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -9,6 +10,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using VirtualCredit;
+using VirtualCredit.Models;
 using VirtualCredit.Services;
 
 namespace Insurance.Services
@@ -18,6 +21,7 @@ namespace Insurance.Services
         private string fileName = null; //文件名
         private IWorkbook workbook = null;
         public ISheet m_main;
+        UserInfoModel User;
         ICellStyle style0;
         public ExcelTool(string fileName, string sheetName)
         {
@@ -37,14 +41,16 @@ namespace Insurance.Services
             InitializeStyle();
         }
 
+
         public ExcelTool(Stream stream, string sheetName)
         {
             SetCulture();
             fileName = (stream as FileStream).Name;
             if (fileName.IndexOf(".xlsx") > 0) // 2007版本
             {
-                workbook = new XSSFWorkbook();
-                workbook.Write(stream);
+                stream.Close();
+                stream.Dispose();
+                workbook = new XSSFWorkbook(fileName);
             }
             else if (fileName.IndexOf(".xls") > 0) // 2003版本
                 workbook = new HSSFWorkbook(stream);
@@ -235,9 +241,84 @@ namespace Insurance.Services
             return GetCellText(1, 6);
         }
 
+        public double GetCostFromJuneToMay(string companyDir, int year, string plan)
+        {
+            DateTime now = DateTime.Now;
+            DateTime from = new DateTime();
+            DateTime to = new DateTime();
+
+            from = new DateTime(year, 6, 1);
+            to = new DateTime(year + 1, 5, 31, 23, 59, 59);
+
+
+            double cost = 0;
+            if (Directory.Exists(companyDir))
+            {
+                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                {
+                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    {
+                        continue;
+                    }
+                    DateTime dirDate = Convert.ToDateTime(new DirectoryInfo(monthDir).Name);
+                    dirDate = new DateTime(dirDate.Year, dirDate.Month, 1);
+                    if (dirDate >= from && dirDate <= to)
+                    {
+                        foreach (string file in Directory.GetFiles(monthDir))
+                        {
+                            string[] excelinfo = file.Split('@');
+                            cost += Convert.ToDouble(excelinfo[1]);
+                        }
+                    }
+                }
+            }
+            return Math.Round(cost, 2);
+        }
+        public double GetCostFromJuneToMay(string companyDir, int year, double unitPriceEveryMonth)
+        {
+            DateTime now = DateTime.Now;
+            DateTime from = new DateTime();
+            DateTime to = new DateTime();
+
+            from = new DateTime(year, 6, 1);
+            to = new DateTime(year + 1, 5, 31, 23, 59, 59);
+
+
+            double cost = 0;
+            if (Directory.Exists(companyDir))
+            {
+                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                {
+                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    {
+                        continue;
+                    }
+                    DateTime dirDate = Convert.ToDateTime(new DirectoryInfo(monthDir).Name);
+                    dirDate = new DateTime(dirDate.Year, dirDate.Month, 1);
+                    if (dirDate >= from && dirDate <= to)
+                    {
+                        int days = DateTime.DaysInMonth(dateTime.Year, dateTime.Month); //当月天数
+                        double unitPriceEveryday = unitPriceEveryMonth / days;
+                        foreach (string file in Directory.GetFiles(monthDir))
+                        {
+                            string[] excelinfo = file.Split('@');
+                            if (excelinfo.Length > 8)
+                            {
+                                cost += Convert.ToDouble(excelinfo[7]) * unitPriceEveryday;
+                            }
+                            else
+                            {
+                                cost += Convert.ToDouble(excelinfo[1]);
+                            }
+                        }
+                    }
+                }
+            }
+            return Math.Round(cost, 2);
+        }
 
         /// <summary>
-        /// 计算公司所有月份所有上传保单的费用
+        /// 计算公司所有月份所有上传保单的费用,《不》包括子公司的数据
         /// </summary>
         /// <param name="companyDir"></param>
         /// <returns></returns>
@@ -246,12 +327,21 @@ namespace Insurance.Services
             double cost = 0;
             if (Directory.Exists(companyDir))
             {
-                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                foreach (var plan in VC_ControllerBase.Plans)
                 {
-                    foreach (string file in Directory.GetFiles(monthDir))
+                    string planDir = Path.Combine(companyDir, plan);
+                    if (!Directory.Exists(planDir)) continue;
+                    foreach (string monthDir in Directory.GetDirectories(planDir))
                     {
-                        string[] excelinfo = file.Split('@');
-                        cost += Convert.ToDouble(excelinfo[1]);
+                        if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                        {
+                            continue;
+                        }
+                        foreach (string file in Directory.GetFiles(monthDir))
+                        {
+                            string[] excelinfo = file.Split('@');
+                            cost += Convert.ToDouble(excelinfo[1]);
+                        }
                     }
                 }
             }
@@ -259,6 +349,56 @@ namespace Insurance.Services
             return Math.Round(cost, 2);
         }
 
+        public double GetCustomerAlreadyPaid(string companyDir)
+        {
+            double cost = 0;
+            if (Directory.Exists(companyDir))
+            {
+                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                {
+                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    {
+                        continue;
+                    }
+                    foreach (string file in Directory.GetFiles(monthDir))
+                    {
+                        string[] excelinfo = file.Split('@');
+                        cost += Convert.ToDouble(excelinfo[6]);
+                    }
+                }
+            }
+
+            return Math.Round(cost, 2);
+        }
+
+        public double GetCustomerAlreadyPaidFromJuneToMay(string companyDir, int year)
+        {
+            double cost = 0; DateTime now = DateTime.Now;
+            DateTime from = new DateTime();
+            DateTime to = new DateTime();
+
+            from = new DateTime(year, 6, 1);
+            to = new DateTime(year + 1, 5, 31, 23, 59, 59);
+
+            if (Directory.Exists(companyDir))
+            {
+                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                {
+                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    {
+                        continue;
+                    }
+                    if (dateTime < from || dateTime > to) continue;
+                    foreach (string file in Directory.GetFiles(monthDir))
+                    {
+                        string[] excelinfo = file.Split('@');
+                        cost += Convert.ToDouble(excelinfo[6]);
+                    }
+                }
+            }
+
+            return Math.Round(cost, 2);
+        }
         public double GetPaidCost()
         {
             string path = new FileInfo(fileName).DirectoryName;
@@ -271,7 +411,7 @@ namespace Insurance.Services
             return 0;
         }
 
-        public bool GainData(string sourceFile, string companyName)
+        public bool GainData(string sourceFile)
         {
             bool result = true;
             try
@@ -369,7 +509,6 @@ namespace Insurance.Services
 
                 if (isFirstRowColumn)
                 {
-
                     for (int i = firstRow.FirstCellNum; i < cellCount; ++i)
                     {
                         ICell cell = firstRow.GetCell(i);
@@ -387,6 +526,19 @@ namespace Insurance.Services
                 }
                 else
                 {
+                    for (int i = firstRow.FirstCellNum; i < cellCount; ++i)
+                    {
+                        ICell cell = firstRow.GetCell(i);
+                        if (cell != null)
+                        {
+                            string cellValue = cell.StringCellValue;
+                            if (cellValue != null)
+                            {
+                                DataColumn column = new DataColumn(cellValue);
+                                data.Columns.Add(column);
+                            }
+                        }
+                    }
                     startRow = sheet.FirstRowNum;
                 }
 
@@ -732,85 +884,110 @@ namespace Insurance.Services
 
         public DataTable SelectPeopleByNameAndID(string name, int nameCol, string id, int idCol)
         {
-            DataTable result = new DataTable();
-            result.Columns.Add(new DataColumn("company"));
-            result.Columns.Add(new DataColumn("name"));
-            result.Columns.Add(new DataColumn("id"));
-            result.Columns.Add(new DataColumn("job"));
-            result.Columns.Add(new DataColumn("type"));
-            result.Columns.Add(new DataColumn("start_date"));
-            result.Columns.Add(new DataColumn("end_date"));
-
-            DataTable source;
-            ExcelToDataTable("Sheet1", true, out source);
-            if (source is null)
-            {
-                DataRow newRow = result.NewRow();
-                newRow["name"] = "未找到符合条件的人员";
-                newRow["id"] = string.Empty;
-                result.Rows.Add(newRow);
-                return result;
-            }
-            if (string.IsNullOrEmpty(id))
-            {
-                foreach (DataRow row in source.Rows)
-                {
-                    if (row["姓名"].ToString().IndexOf(name) >= 0)
-                    {
-                        DataRow newRow = result.NewRow();
-                        newRow["name"] = row["姓名"];
-                        newRow["id"] = row["身份证"];
-                        newRow["job"] = row["工种"];
-                        newRow["type"] = row["职业类别"];
-                        newRow["start_date"] = row["生效日期"];
-                        newRow["end_date"] = row["离职日期"];
-                        newRow["company"] = Path.GetFileNameWithoutExtension(fileName);
-                        result.Rows.Add(newRow);
-                    }
-                }
-            }
-            else
-            {
-                foreach (DataRow row in source.Rows)
-                {
-                    if (row["身份证"].ToString() == id)
-                    {
-                        DataRow newRow = result.NewRow();
-                        newRow["name"] = row["姓名"];
-                        newRow["id"] = id;
-                        newRow["job"] = row["工种"];
-                        newRow["type"] = row["职业类别"];
-                        newRow["start_date"] = row["生效日期"];
-                        newRow["end_date"] = row["离职日期"];
-                        newRow["company"] = Path.GetFileNameWithoutExtension(fileName);
-                        result.Rows.Add(newRow);
-                    }
-                }
-            }
-            if (result.Rows.Count <= 0)
-            {
-                DataRow newRow = result.NewRow();
-                newRow["name"] = "未找到符合条件的人员";
-                newRow["id"] = string.Empty;
-                result.Rows.Add(newRow);
-            }
-            return result;
-        }
-
-        public static bool CreateNewCompanyTable(string name)
-        {
-            bool result = true;
             try
             {
-                string dir = Path.Combine(Utility.Instance.WebRootFolder, "Excel", name);
-                Directory.CreateDirectory(dir);
-                File.Copy(Path.Combine(Utility.Instance.WebRootFolder, "Excel", "SummaryTemplate.xls"), Path.Combine(dir, name + ".xls"), true); //创建 公司名.xls
-                File.CreateText(Path.Combine(dir, name + "_0.txt"));
+                DataTable result = new DataTable();
+                result.Columns.Add(new DataColumn("company"));
+                result.Columns.Add(new DataColumn("name"));
+                result.Columns.Add(new DataColumn("id"));
+                result.Columns.Add(new DataColumn("job"));
+                result.Columns.Add(new DataColumn("type"));
+                result.Columns.Add(new DataColumn("start_date"));
+                result.Columns.Add(new DataColumn("end_date"));
+
+                DataTable source;
+                ExcelToDataTable("Sheet1", true, out source);
+                if (source is null)
+                {
+                    DataRow newRow = result.NewRow();
+                    newRow["name"] = "未找到符合条件的人员";
+                    newRow["id"] = string.Empty;
+                    result.Rows.Add(newRow);
+                    return result;
+                }
+                if (string.IsNullOrEmpty(id))
+                {
+                    foreach (DataRow row in source.Rows)
+                    {
+                        if (row["姓名"].ToString().IndexOf(name) >= 0)
+                        {
+                            DataRow newRow = result.NewRow();
+                            newRow["name"] = row["姓名"];
+                            newRow["id"] = row["身份证"];
+                            newRow["job"] = row["工种"];
+                            newRow["type"] = row["职业类别"];
+                            newRow["start_date"] = row["保障开始时间"];
+                            newRow["end_date"] = row["保障结束时间"];
+                            newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
+                            result.Rows.Add(newRow);
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (DataRow row in source.Rows)
+                    {
+                        if (row["身份证"].ToString() == id)
+                        {
+                            DataRow newRow = result.NewRow();
+                            newRow["name"] = row["姓名"];
+                            newRow["id"] = id;
+                            newRow["job"] = row["工种"];
+                            newRow["type"] = row["职业类别"];
+                            newRow["start_date"] = row["保障开始时间"];
+                            newRow["end_date"] = row["保障结束时间"];
+                            newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
+                            result.Rows.Add(newRow);
+                        }
+                    }
+                }
+                if (result.Rows.Count <= 0)
+                {
+                    DataRow newRow = result.NewRow();
+                    newRow["name"] = "未找到符合条件的人员";
+                    newRow["id"] = string.Empty;
+                    result.Rows.Add(newRow);
+                }
+                return result;
+            }
+            catch (Exception e)
+            {
+                throw;
+            }
+
+        }
+
+        public static bool CreateNewCompanyTable(NewUserModel user, out string companyDir)
+        {
+            bool result = true;
+            string name = user.CompanyName;
+            string dir = string.Empty;
+            UserInfoModel father = InsuranceDatabaseService.SelectUser(user.Father);
+            try
+            {
+                string fatherDir = Directory.GetDirectories(Utility.Instance.ExcelRoot, father.CompanyName, SearchOption.AllDirectories).FirstOrDefault();
+                dir = Path.Combine(fatherDir, name);
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+                var plans = user._Plan.Split("_");
+                foreach (string plan in plans)
+                {
+                    string planDir = Path.Combine(dir, plan);
+                    if (!Directory.Exists(planDir))
+                    {
+                        Directory.CreateDirectory(planDir);
+                        File.Copy(Path.Combine(Utility.Instance.WebRootFolder, "Excel", "SummaryTemplate.xls"), Path.Combine(planDir, name + ".xls"), true); //创建 公司名.xls
+                        File.CreateText(Path.Combine(planDir, name + "_0.txt"));
+                    }
+
+                }
+
             }
             catch
             {
                 result = false;
             }
+            companyDir = dir;
             return result;
         }
 
