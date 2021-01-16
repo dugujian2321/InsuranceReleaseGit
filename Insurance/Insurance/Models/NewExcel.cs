@@ -34,9 +34,7 @@ namespace Insurance.Models
         /// <summary>
         /// //结算状态 true-已结算 false-未结算
         /// </summary>
-        public bool Status { get { return Cost - Paid == 0; } }
-
-        public decimal ProductionCost { get; set; }
+        public bool Status { get { return Cost - Paid == 0; } } 
     }
 
 

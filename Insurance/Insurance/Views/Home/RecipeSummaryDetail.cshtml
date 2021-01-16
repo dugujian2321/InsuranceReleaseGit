@@ -4,9 +4,9 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 @model Insurance.Models.DetailModel
-<div class="alert alert-primary" style="font-size:20px" role="alert">
-    保费汇总 @ViewBag.Plan @ViewBag.Company @ViewBag.Date @ViewBag.Page @ViewBag.Msg
-</div>
+    <div class="alert alert-primary" style="font-size:20px" role="alert">
+        保费汇总 @ViewBag.Plan @ViewBag.Company @ViewBag.Date @ViewBag.Page @ViewBag.Msg
+    </div>
 @{
     UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
     if (Model.MonthlyExcel != null && Model.MonthlyExcel.Count > 0)
@@ -19,16 +19,12 @@
                     <th scope="col">总保费</th>
                     <th scope="col">已结保费</th>
                     <th scope="col">未结保费</th>
-                    @if (currentUser.HasChildren)
-                    {
-                        <th scope="col">成本</th>
-                    }
                     <th scope="col">操作</th>
                 </tr>
             </thead>
             <tbody>
                 @{
-
+                    
                     foreach (var item in Model.MonthlyExcel)
                     {
                         if (item != null)
@@ -39,10 +35,6 @@
                                 <td class="td_middle">@item.Cost</td>
                                 <td class="td_middle">@item.Paid</td>
                                 <td class="td_middle">@item.Unpaid</td>
-                                @if (currentUser.HasChildren)
-                                {
-                                    <td class="td_middle">@item.ProductionCost</td>
-                                }
                                 <td><a href="/Home/RecipeSummary?date=@item.StartDate&name=@item.Company" class="btn btn-primary">详细</a></td>
                             </tr>
                         }
@@ -54,10 +46,6 @@
                         <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Cost)</td>
                         <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Paid)</td>
                         <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Unpaid)</td>
-                        @if (currentUser.HasChildren)
-                        {
-                            <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.ProductionCost)</td>
-                        }
                         @if (currentUser.AccessLevel == 0)
                         {
                             <td><a href="/Home/BanlanceAccount?companyName=@Model.Company" class="btn btn-primary">结算</a></td>
@@ -98,10 +86,6 @@
                     <th scope="col">操作类型</th>
                     <th scope="col">操作人数</th>
                     <th scope="col">保费</th>
-                    @if (currentUser.HasChildren)
-                    {
-                        <th scope="col">成本</th>
-                    }
                     <th scope="col">生效时间</th>
                     <th scope="col">投保账号</th>
                 </tr>
@@ -148,10 +132,6 @@
                             <td>@item.Mode</td>
                             <td>@headcount</td>
                             <td id="@costid">@Math.Round(item.Cost, 2)</td>
-                            @if (currentUser.HasChildren)
-                            {
-                                <td>@item.ProductionCost</td>
-                            }
                             @{
                                 if (item.EndDate != "")
                                 {
@@ -162,7 +142,6 @@
                                     <td>@item.StartDate</td>
                                 }
                             }
-
                             <td>@item.Submitter</td>
                         </tr>
                     }

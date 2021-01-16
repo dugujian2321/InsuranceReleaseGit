@@ -19,10 +19,6 @@
                         <th>合计保费</th>
                         <th>合计已结保费</th>
                         <th>合计未结保费</th>
-                        @if (currentUser.HasChildren)
-                        {
-                            <th>总成本</th>
-                        }
                         <th>操作</th>
                     </tr>
                 </thead>
@@ -37,10 +33,6 @@
                                 <td class="td_middle">@item.TotalCost</td>
                                 <td class="td_middle">@item.CustomerAlreadyPaid</td>
                                 <td class="td_middle">@Math.Round(unpaid, 2)</td>
-                                @if (currentUser.HasChildren)
-                                {
-                                    <td class="td_middle">@item.ProductionCost</td>
-                                }
                                 <td class="td_middle"><a href="/Home/RecipeSummaryByMonth?name=@item.Name" class="btn btn-primary">详细</a></td>
                             </tr>
                         }
@@ -50,10 +42,6 @@
                         <td><strong>@Model.CompanyList.Sum(d => d.TotalCost)</strong></td>
                         <td><strong>@Model.CompanyList.Sum(d => d.CustomerAlreadyPaid)</strong></td>
                         <td><strong>@(Model.CompanyList.Sum(d => (d.TotalCost - d.CustomerAlreadyPaid)))</strong></td>
-                        @if (currentUser.HasChildren)
-                        {
-                            <td class="td_middle">@Model.CompanyList.Sum(pc => pc.ProductionCost)</td>
-                        }
                         <td><strong>/</strong></td>
                     </tr>
                 </tbody>
