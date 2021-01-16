@@ -20,18 +20,18 @@ namespace Insurance.Models
         [DataType(DataType.Currency)]
         public double TotalPaid { get; set; }
         [DataType(DataType.Currency)]
-        public double Unpaid
+        public decimal Unpaid
         {
             get
             {
                 double result = TotalCost - TotalPaid;
                 if (result * 1000 > Math.Floor(result * 100) * 10)
                 {
-                    return (result * 1000 + 1) / 1000;
+                    return (decimal)((result * 1000 + 1) / 1000);
                 }
                 else
                 {
-                    return Math.Round(result, 2);
+                    return (decimal)Math.Round(result, 2);
                 }
             }
         }
