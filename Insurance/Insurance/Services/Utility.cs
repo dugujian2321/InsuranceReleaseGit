@@ -57,6 +57,7 @@ namespace VirtualCredit.Services
             string result = string.Empty;
             for (int i = start; i <= end; i++)
             {
+                if (string.IsNullOrEmpty(strs[i])) continue;
                 result += strs[i] + connectWith;
             }
             return result;
@@ -73,8 +74,9 @@ namespace VirtualCredit.Services
             while (true)
             {
                 DateTime now = DateTime.Now.Date;
-                if (now > lastUpdateDate)
+                if (now.Date > lastUpdateDate.Date)
                 {
+                    Thread.Sleep(2000);
                     LogServices.LogService.Log($"开始每日数据备份，当前时间{DateTime.Now},上次备份时间{lastUpdateDate}");
                     LockerList.ForEach(l => l.RWLocker.EnterReadLock());
                     if (UpdateDailyData()) lastUpdateDate = lastUpdateDate.AddDays(1);

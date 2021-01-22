@@ -144,9 +144,10 @@ namespace Insurance.Services
                 if (DateTime.Now > nextEndDate)
                 {
                     shouldRenew = true;
+                    Thread.Sleep(2000);
                 }
                 if (shouldRenew)
-                {
+                {               
                     foreach (var locker in Utility.LockerList)
                     {
                         locker.RWLocker.EnterWriteLock();
