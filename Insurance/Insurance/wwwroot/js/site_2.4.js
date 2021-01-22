@@ -826,6 +826,7 @@ function Calculate() {
             alert('fail');
         },
         error: function (data) {
+            //alert(data.responseText)
             alert('error');
         }
     });

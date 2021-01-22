@@ -1680,12 +1680,22 @@ namespace VirtualCredit.Controllers
                     string date = file.Split('#')[0];
                     company = excelInfo[7];
                     string userFolder = GetSearchExcelsInDir(company);
-                    string fileName = file.Split('#')[1].Substring(0, file.Split('#')[1].Length - company.Length) + ".xls";
+                    string fileName = "";
+                    foreach (var item in excelInfo)
+                    {
+                        if (item.Equals(company, StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            continue;
+                        }
+                        fileName += item + "@";
+                    }
+                    fileName += ".xls";
                     string monthDir = Directory.GetDirectories(userFolder, "*", SearchOption.AllDirectories)
                         .Where(_ => Directory.GetFiles(_, fileName, SearchOption.TopDirectoryOnly).Length > 0)
                         .FirstOrDefault();
                     excelInfo[6] = excelInfo[1];
-                    string newPath = Utility.ArrayToString(excelInfo, 0, 6, "@");
+                    string newPath = Utility.ArrayToString(excelInfo, 0, excelInfo.Length - 1, "@");
+                    newPath = newPath.Replace(company + "@", "");
                     newPath += ".xls";
                     newPath = Path.Combine(monthDir, newPath);
                     string oldFile = Path.Combine(monthDir, fileName);
@@ -1701,9 +1711,10 @@ namespace VirtualCredit.Controllers
                     var fileInfo = new FileInfo(file);
                     string fileName = fileInfo.Name;
                     string dirPath = fileInfo.Directory.FullName;
-                    string[] excelInfo = fileName.Split('@');
+                    string[] excelInfo = Path.GetFileNameWithoutExtension(fileName).Split('@');
                     excelInfo[6] = "0";
-                    string oldPath = Path.Combine(dirPath, Utility.ArrayToString(excelInfo, 0, 6, "@") + ".xls");
+                    string oldFileName = Utility.ArrayToString(excelInfo, 0, excelInfo.Length - 1, "@").Replace(company + "@", "");
+                    string oldPath = Path.Combine(dirPath, oldFileName + ".xls");
                     System.IO.File.Move(file, oldPath);
                 }
                 return false;
@@ -1748,10 +1759,13 @@ namespace VirtualCredit.Controllers
                     }
                 }
                 string companyName = name;
+                decimal price = Convert.ToDecimal(InsuranceDatabaseService.SelectPropFromTable("UserInfo", "CompanyName", companyName).Rows[0]["UnitPrice"]);
                 string targetCompDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories).FirstOrDefault();
                 for (DateTime date = From; date <= To; date = date.AddMonths(1))
                 {
                     string monthDir = date.ToString("yyyy-MM");
+                    int daysInMonth = DateTime.DaysInMonth(date.Year, date.Month);
+                    decimal priceEachDay = price / daysInMonth;
                     SearchOption so = SearchOption.AllDirectories;
                     string[] dirs;
                     if (isSelf)
@@ -1771,7 +1785,7 @@ namespace VirtualCredit.Controllers
                     {
                         DirectoryInfo di = new DirectoryInfo(month);
                         if (di.Parent.Name != plan || !di.Exists) continue;
-                        var tempexcel = GetMonthlyDetail(month, name);
+                        var tempexcel = GetMonthlyDetail(month, name, priceEachDay);
                         if (tempexcel == null) continue;
                         excel.StartDate = tempexcel.StartDate;
                         excel.EndDate = tempexcel.EndDate;
@@ -1809,7 +1823,7 @@ namespace VirtualCredit.Controllers
 
         }
 
-        private NewExcel GetMonthlyDetail(string dir, string companyName)
+        private NewExcel GetMonthlyDetail(string dir, string companyName, decimal dailyPrice)
         {
             if (Directory.GetFiles(dir).Length <= 0)
             {
@@ -1820,6 +1834,7 @@ namespace VirtualCredit.Controllers
             decimal cost = 0;
             decimal unpaid = 0;
             decimal paid = 0;
+            int effectiveDays = 0;
             foreach (string fileName in Directory.GetFiles(dir))
             {
                 FileInfo fi = new FileInfo(fileName);
@@ -1839,6 +1854,10 @@ namespace VirtualCredit.Controllers
                 paid += decimal.Parse(fileinfo[6]);
                 unpaid += decimal.Parse(fileinfo[1]) - decimal.Parse(fileinfo[6]);
                 cost += decimal.Parse(fileinfo[1]);
+                if (fileinfo.Length > 8)
+                {
+                    effectiveDays += int.Parse(fileinfo[7]);
+                }
             }
             excel.UploadDate = new DirectoryInfo(dir).Name;
             excel.HeadCount = headcount;

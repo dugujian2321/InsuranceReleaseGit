@@ -204,7 +204,7 @@ namespace Insurance.Services
                     }
                 }
             });
-            return Math.Round(result, 2);
+            return MathEx.ToCurrency(result);
         }
 
 
@@ -240,7 +240,7 @@ namespace Insurance.Services
                     }
                 }
             });
-            return Math.Round(result, 2);
+            return MathEx.ToCurrency(result);
         }
     }
 }

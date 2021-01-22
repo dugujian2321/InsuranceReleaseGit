@@ -4,9 +4,9 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 @model Insurance.Models.DetailModel
-    <div class="alert alert-primary" style="font-size:20px" role="alert">
-        保费汇总 @ViewBag.Plan @ViewBag.Company @ViewBag.Date @ViewBag.Page @ViewBag.Msg
-    </div>
+<div class="alert alert-primary" style="font-size:20px" role="alert">
+    保费汇总 @ViewBag.Plan @ViewBag.Company @ViewBag.Date @ViewBag.Page @ViewBag.Msg
+</div>
 @{
     UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
     if (Model.MonthlyExcel != null && Model.MonthlyExcel.Count > 0)
@@ -24,7 +24,7 @@
             </thead>
             <tbody>
                 @{
-                    
+
                     foreach (var item in Model.MonthlyExcel)
                     {
                         if (item != null)
@@ -110,7 +110,19 @@
                             @{
                                 if (currentUser.AccessLevel == 0)
                                 {
-                                    string _id = item.FileName.Replace(".xls", "") + item.Company;
+                                    string[] info = item.FileName.Replace(".xls", "").Split("@");
+                                    string _id = "";
+                                    for (int i = 0; i <= 6; i++)
+                                    {
+                                        _id += info[i] + "@";
+                                    }
+                                    _id += item.Company;
+
+                                    for(int i = 7; i < info.Length - 1; i++)
+                                    {
+                                        _id += "@" + info[i];
+                                    }
+
                                     if (state == "未结算")
                                     {
                                         <td style="text-align:center"><input onchange="GetSelectedCost(this,'@item.Cost')" name="@index" id="@_id" type="checkbox" style="zoom:150%;"></td>

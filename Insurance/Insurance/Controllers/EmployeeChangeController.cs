@@ -492,7 +492,7 @@ namespace Insurance.Controllers
             }
         }
 
-
+        [HttpPost]
         public double CalculatePrice([FromForm] DateTime startdate, string company, string plan)
         {
             int effectiveDays = 0;
@@ -564,10 +564,11 @@ namespace Insurance.Controllers
                         {
                             return -9999995;
                         }
-                        result += CalculateSubPrice(start.Date, startdate, targetUser.UnitPrice, out tempEffectiveDays);
+                        tempEffectiveDays = CalculateEffectiveDays(start.Date, startdate, targetUser.UnitPrice);
                         effectiveDays += tempEffectiveDays;
+                        result += CalculateSubPrice(start.Date, startdate, targetUser.UnitPrice, tempEffectiveDays);
                     }
-                    double temp = Math.Round(result, 2);
+                    double temp = MathEx.ToCurrency(result);
                     HttpContext.Session.Set("price", temp);
                     HttpContext.Session.Set("readyToSubmit", "Y");
                     HttpContext.Session.Set("plan", plan);

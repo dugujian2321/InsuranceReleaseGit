@@ -88,6 +88,38 @@ namespace VirtualCredit
             return base.View(viewName, model);
         }
 
+
+        ///// <summary>
+        /////计算某个文件的保费
+        ///// </summary>
+        ///// <param name="fileName"></param>
+        ///// <param name="monthlyPrice"></param>
+        ///// <returns></returns>
+        //public decimal CalculatePriceFromFileName(string fileName, decimal monthlyPrice)
+        //{
+        //    int effecttiveDays = 0;
+        //    ExcelTool et = new ExcelTool(fileName, "sheet1");
+        //    DataTable dt = et.ExcelToDataTable("sheet1", true);
+            
+        //    string[] info = fileName.Split('@');
+        //    try
+        //    {
+        //        effecttiveDays = int.Parse(info[7]);
+        //    }
+        //    catch
+        //    {
+
+        //    }
+        //    if (effecttiveDays == 0)
+        //    {
+        //        return decimal.Parse(info[1]);
+        //    }
+        //    else
+        //    {
+
+        //    }
+        //}
+
         /// <summary>
         /// 计算每个人的应退保费
         /// </summary>
@@ -96,16 +128,20 @@ namespace VirtualCredit
         /// <param name="price">每月保费定价</param>
         /// <param name="effectiveDays"></param>
         /// <returns></returns>
-        protected double CalculateSubPrice(DateTime start, DateTime end, double price, out int effectiveDays)
+        protected double CalculateSubPrice(DateTime start, DateTime end, double price, int effectiveDays)
         {
             //对于退保人员，计算退费
             double unitPrice = price / DateTime.DaysInMonth(end.Year, end.Month); //当月每天保费，元/天
-            double received = MathEx.ToCurrency((DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) * unitPrice);//月初收费时已收取的保费
-            effectiveDays = end.Day - start.Day + 1; //当月已生效天数
-            double earned = MathEx.ToCurrency(effectiveDays * unitPrice); //截止至退费当天已赚取的保费
-            double payback = earned - received;
-            effectiveDays = (DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) - effectiveDays;//
+            double payback = unitPrice * effectiveDays;
             return payback;
+        }
+
+        protected int CalculateEffectiveDays(DateTime start, DateTime end, double price)
+        {
+            //对于退保人员，计算退费
+            int effectiveDays = end.Day - start.Day + 1; //当月已生效天数
+            effectiveDays = (DateTime.DaysInMonth(end.Year, end.Month) - start.Day + 1) - effectiveDays;//
+            return effectiveDays;
         }
 
         public List<Employee> ValidateExcel(FileStream formFile, string sheetName, string mode, string companyName, string plan)
@@ -501,7 +537,8 @@ namespace VirtualCredit
                     foreach (Employee item in es)
                     {
                         DateTime start = DateTime.Parse(item.StartDate);
-                        result += CalculateSubPrice(start.Date, end, curUser.UnitPrice, out a);
+                        a = CalculateEffectiveDays(start, end, (double)unitPrice);
+                        result += CalculateSubPrice(start.Date, end, curUser.UnitPrice, a);
                     }
                     return result;
             }
@@ -687,7 +724,6 @@ namespace VirtualCredit
                     if (temp != null)
                         com.UnitPrice += Convert.ToDouble(temp.Rows[0]["UnitPrice"]);
                     result.Add(com);
-
                 }
             }
             return result;
