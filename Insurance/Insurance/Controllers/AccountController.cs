@@ -338,6 +338,14 @@ namespace Insurance.Controllers
                 ViewBag.CompanyNameIncorrect = "子账号公司名称不能与父账号相同";
                 pass = false;
             }
+
+            if (user.UnitPrice < currUser.UnitPrice)
+            {
+                HttpContext.Session.Set<string>("noAccessCreateAccout", "子账号价格不能小于当前账号价格");
+                ViewBag.PriceTooSmall = "子账号价格不能小于当前账号价格";
+                pass = false;
+            }
+
             if (!pass)
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "输入信息不合规范");
