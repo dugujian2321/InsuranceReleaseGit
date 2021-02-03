@@ -62,6 +62,7 @@
             <input class="inputBox" id="unitPrice" type="text" asp-for="UnitPrice" style="width:35%" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
             <div class="input-group-append">
                 <span class="input-group-text" for="daysbefore">元/月</span>
+                <span id="priceMsg" class="warningMessage">@ViewBag.PriceTooSmall</span>
             </div>
         </div>
         if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
