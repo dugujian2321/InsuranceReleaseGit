@@ -51,13 +51,13 @@ namespace VirtualCredit.Controllers
             }
             int MDIteration;
             //若Session中读取不到前端预处理Iteration，则重置Iteration信息，并返回。
-            if (!int.TryParse(HttpContext.Session.Get<string>("Frontend"), out MDIteration))
+            if (!int.TryParse(CurrentSession.Get<string>("Frontend"), out MDIteration))
             {
                 ActionAfterReload("");
                 EncryptCache(HttpContext);
                 return View("Login", new UserInfoModel() { UserName = user.UserName });
             }
-            HttpContext.Session.Set<string>("Frontend", null);
+            CurrentSession.Set<string>("Frontend", null);
             MD5Helper md = new MD5Helper();
 
             string ip = _accessor.HttpContext.Connection.RemoteIpAddress.ToString();
@@ -65,7 +65,7 @@ namespace VirtualCredit.Controllers
             #region 验证验证码
             string userInputValidation = string.Empty;
             userInputValidation = HttpContext.Request.Form["validationResult"];
-            int backendValidation = HttpContext.Session.Get<int>("ValidationResult");
+            int backendValidation = CurrentSession.Get<int>("ValidationResult");
             UserInfoModel uim = new UserInfoModel();
             uim = DatabaseService.UserMatchUserNamePassword(user);
             if (Convert.ToInt16(userInputValidation) != backendValidation)
@@ -77,7 +77,7 @@ namespace VirtualCredit.Controllers
             else if (uim != null)
             {
                 user.CompanyName = uim.CompanyName;
-                user.IsOnline = HttpContext.Session.Id;
+                user.IsOnline = CurrentSession.Id;
                 user.IPAddress = ip;
                 if (!DatabaseService.UpdateUserInfo(user, new List<string>() { "IPAddress", "IsOnline" }))
                 {
@@ -132,8 +132,8 @@ namespace VirtualCredit.Controllers
                 }
                 user.MyLocker = Utility.GetCompanyLocker(user.CompanyName);
                 currUser_temp = user;
-                HttpContext.Session.Set("CurrentUser", user);
-                HttpContext.Session.Set<string>("Frontend", null);
+                CurrentSession.Set("CurrentUser", user);
+                CurrentSession.Set<string>("Frontend", null);
                 UpdateDailyData();
                 return RedirectToAction("Index", "Home", null);
             }
@@ -162,8 +162,8 @@ namespace VirtualCredit.Controllers
                     dailyHeadCount += ad.HeadCount;
                 }
             }
-            HttpContext.Session.Set("DailyHeadCount", dailyHeadCount);
-            HttpContext.Session.Set("DailyPrice", dailyPrice);
+            CurrentSession.Set("DailyHeadCount", dailyHeadCount);
+            CurrentSession.Set("DailyPrice", dailyPrice);
         }
 
         public IActionResult ForgetPassword()

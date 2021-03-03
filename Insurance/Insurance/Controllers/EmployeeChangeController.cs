@@ -27,7 +27,7 @@ namespace Insurance.Controllers
         string targetCompany;
         private static readonly object summaryLocker = new object();
 
-        public EmployeeChangeController(IHostingEnvironment hostingEnvironment)
+        public EmployeeChangeController(IHostingEnvironment hostingEnvironment, IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor.HttpContext)
         {
             _hostingEnvironment = hostingEnvironment;
             ExcelDirectory = _hostingEnvironment.WebRootPath;
@@ -41,7 +41,7 @@ namespace Insurance.Controllers
 
         private void Initialize(string company, string plan)
         {
-            if (string.IsNullOrEmpty(company)) company = HttpContext.Session.Get<string>("company");
+            if (string.IsNullOrEmpty(company)) company = CurrentSession.Get<string>("company");
             companyFolder = GetSearchExcelsInDir(company);
             targetCompany = company;
             summaryFileName = company + ".xls";
@@ -57,21 +57,21 @@ namespace Insurance.Controllers
             try
             {
                 //判断是否已计算保费
-                if (string.IsNullOrEmpty(HttpContext.Session.Get<string>("readyToSubmit")) || HttpContext.Session.Get<string>("readyToSubmit") != "Y")
+                if (string.IsNullOrEmpty(CurrentSession.Get<string>("readyToSubmit")) || CurrentSession.Get<string>("readyToSubmit") != "Y")
                 {
                     return Json("NotCalculated");
                 }
                 string summary_backup = string.Empty;
-                string targetcompany = HttpContext.Session.Get<string>("company");
+                string targetcompany = CurrentSession.Get<string>("company");
                 //验证前后端价格计算是否一致
-                double price = HttpContext.Session.Get<double>("price");
-                double calculatedprice = CalculatePrice(startdate, targetcompany, HttpContext.Session.Get<string>("plan"));
+                double price = CurrentSession.Get<double>("price");
+                double calculatedprice = CalculatePrice(startdate, targetcompany, CurrentSession.Get<string>("plan"));
                 if (price != calculatedprice)
                 {
                     return Json("NotCalculated");
                 }
 
-                var employees = HttpContext.Session.Get<List<Employee>>("validationResult");
+                var employees = CurrentSession.Get<List<Employee>>("validationResult");
                 if (employees == null || employees.Count <= 0 || employees.Any<Employee>(_ => _.Valid == false))
                 {
                     return Json(new List<string> { "信息错误", "", "" });
@@ -81,7 +81,7 @@ namespace Insurance.Controllers
                 {
                     Initialize(targetcompany);
                 }
-                string mode = HttpContext.Session.Get<string>("mode");
+                string mode = CurrentSession.Get<string>("mode");
                 string currUserDir = GetSearchExcelsInDir(currUser.CompanyName);
                 var di = new DirectoryInfo(currUserDir);
                 string excelsDirectory = string.Empty;
@@ -151,7 +151,7 @@ namespace Insurance.Controllers
                         //创建新excel文档
                         using (FileStream fs = System.IO.File.Create(newfilepath))
                         {
-                            var excel = HttpContext.Session.Get("newExcel");
+                            var excel = CurrentSession.Get("newExcel");
                             MemoryStream ms = new MemoryStream(excel);
                             ms.CopyTo(fs);
                             fs.Flush();
@@ -224,7 +224,7 @@ namespace Insurance.Controllers
                         //1 - 新表中添加离职信息，并保存文件
                         using (FileStream fs = System.IO.File.Create(newfilepath))
                         {
-                            var excel = HttpContext.Session.Get("newExcel");
+                            var excel = CurrentSession.Get("newExcel");
                             MemoryStream ms = new MemoryStream(excel);
                             ms.CopyTo(fs);
                             fs.Flush();
@@ -314,9 +314,9 @@ namespace Insurance.Controllers
 
         private void ClearSession()
         {
-            HttpContext.Session.Set<List<Employee>>("validationResult", null);
-            HttpContext.Session.Set<string>("readyToSubmit", "N");
-            HttpContext.Session.Set<string>("company", string.Empty);
+            CurrentSession.Set<List<Employee>>("validationResult", null);
+            CurrentSession.Set<string>("readyToSubmit", "N");
+            CurrentSession.Set<string>("company", string.Empty);
         }
 
         private void RevertSummaryFile(string path, string backup)
@@ -350,15 +350,15 @@ namespace Insurance.Controllers
         [UserLoginFilters]
         public JsonResult UpdateEmployees([FromForm] IFormFile newExcel, string mode, string company, string plan)
         {
-            HttpContext.Session.Set("validationResult", new List<Employee>());
-            HttpContext.Session.Set("company", string.Empty);
-            HttpContext.Session.Set("price", 0);
+            CurrentSession.Set("validationResult", new List<Employee>());
+            CurrentSession.Set("company", string.Empty);
+            CurrentSession.Set("price", 0);
             //TODO: 添加验证格式代码
             //将FormFile中的Sheet1转换成DataTable
             string template = Path.Combine(Utility.Instance.TemplateFolder, "employee_download.xls");
             string uploadedExcel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + Path.GetExtension(newExcel.FileName));
             FileStream ms = System.IO.File.Create(uploadedExcel);
-            HttpContext.Session.Set("readyToSubmit", "N");
+            CurrentSession.Set("readyToSubmit", "N");
             newExcel.CopyTo(ms);
             ExcelTool et = new ExcelTool(ms, "Sheet1");
             var dt = et.ExcelToDataTable("Sheet1", true);
@@ -378,15 +378,15 @@ namespace Insurance.Controllers
 
             FileStream inputStream = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite);
             inputStream.CopyTo(stream);
-            HttpContext.Session.Set("newExcel", stream.ToArray());
-            HttpContext.Session.Set("validationResult", new List<Employee>());
+            CurrentSession.Set("newExcel", stream.ToArray());
+            CurrentSession.Set("validationResult", new List<Employee>());
             if (newExcel is null)
             {
                 return null;
             }
             List<Employee> validationResult = ValidateExcel(inputStream, "Sheet1", mode, company, plan);
-            HttpContext.Session.Set("validationResult", validationResult);
-            HttpContext.Session.Set("company", company);
+            CurrentSession.Set("validationResult", validationResult);
+            CurrentSession.Set("company", company);
             inputStream.Close();
             inputStream.Dispose();
             System.IO.File.Delete(temp_excel);
@@ -556,9 +556,9 @@ namespace Insurance.Controllers
 
                 var temp = et.CheckDuplcateWithSummary(sourceDT, 3, idCol, mode); //验证总表中是否有重复
                 MergeList(temp, result);
-                HttpContext.Session.Set("mode", mode);
-                HttpContext.Session.Set("plan", plan);
-                HttpContext.Session.Set("newTable", et.ExcelToDataTable("Sheet1", true));
+                CurrentSession.Set("mode", mode);
+                CurrentSession.Set("plan", plan);
+                CurrentSession.Set("newTable", et.ExcelToDataTable("Sheet1", true));
                 System.IO.File.Delete(Path.Combine(companyDir, fileName));
                 return result;
             }
@@ -634,9 +634,9 @@ namespace Insurance.Controllers
                 return -9999999;
             }
 
-            HttpContext.Session.Set("price", 0);
-            var validationResult = HttpContext.Session.Get<List<Employee>>("validationResult");
-            var mode = HttpContext.Session.Get<string>("mode");
+            CurrentSession.Set("price", 0);
+            var validationResult = CurrentSession.Get<List<Employee>>("validationResult");
+            var mode = CurrentSession.Get<string>("mode");
 
             if (validationResult is null || validationResult.Count <= 0 || validationResult.Any(a => a.Valid == false))
             {
@@ -660,14 +660,14 @@ namespace Insurance.Controllers
                 if (mode == "add")
                 {
                     double temp = CalculateAddPrice(targetUser, startdate);
-                    HttpContext.Session.Set("price", temp);
-                    HttpContext.Session.Set("readyToSubmit", "Y");
+                    CurrentSession.Set("price", temp);
+                    CurrentSession.Set("readyToSubmit", "Y");
                     return temp;
                 }
                 else if (mode == "sub")
                 {
                     double result = 0;
-                    var employees = HttpContext.Session.Get<List<Employee>>("validationResult");
+                    var employees = CurrentSession.Get<List<Employee>>("validationResult");
                     foreach (Employee item in employees)
                     {
                         DateTime start = DateTime.Parse(item.StartDate);
@@ -678,14 +678,14 @@ namespace Insurance.Controllers
                         result += CalculateSubPrice(start.Date, startdate, targetUser.UnitPrice);
                     }
                     double temp = Math.Round(result, 2);
-                    HttpContext.Session.Set("price", temp);
-                    HttpContext.Session.Set("readyToSubmit", "Y");
-                    HttpContext.Session.Set("plan", plan);
+                    CurrentSession.Set("price", temp);
+                    CurrentSession.Set("readyToSubmit", "Y");
+                    CurrentSession.Set("plan", plan);
                     return temp;
                 }
                 else
                 {
-                    HttpContext.Session.Set("price", 0);
+                    CurrentSession.Set("price", 0);
                     return 0;
                 }
             }

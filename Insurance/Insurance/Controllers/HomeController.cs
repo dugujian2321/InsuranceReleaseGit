@@ -29,7 +29,7 @@ namespace VirtualCredit.Controllers
         private static readonly int idCol = 3;
         private static readonly int nameCol = 2;
 
-        public HomeController(IHostingEnvironment hostingEnvironment)
+        public HomeController(IHostingEnvironment hostingEnvironment, IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor.HttpContext)
         {
             _hostingEnvironment = hostingEnvironment;
         }
@@ -865,7 +865,7 @@ namespace VirtualCredit.Controllers
         [UserLoginFilters]
         public IActionResult SearchPeople(SearchPeopleModel model)
         {
-            HttpContext.Session.Set<List<Employee>>("searchResult", null);
+            CurrentSession.Set<List<Employee>>("searchResult", null);
             try
             {
                 return View(nameof(SearchPeople), model);
@@ -1022,7 +1022,7 @@ namespace VirtualCredit.Controllers
                 e.ID = row["id"].ToString();
                 employees.Add(e);
             }
-            HttpContext.Session.Set("searchResult", employees);
+            CurrentSession.Set("searchResult", employees);
         }
 
         /// <summary>
@@ -1049,7 +1049,7 @@ namespace VirtualCredit.Controllers
                     sm.PlanList.Add(p);
                 }
 
-                HttpContext.Session.Set("plan", string.Empty);
+                CurrentSession.Set("plan", string.Empty);
                 return View("RecieptPlans", sm);
             }
             catch (Exception e)
@@ -1075,7 +1075,7 @@ namespace VirtualCredit.Controllers
                 var currUser = GetCurrentUser();
                 model.CompanyList = GetChildrenCompanies(currUser, plan).ToList();
                 model.CompanyList = model.CompanyList.OrderBy(x => x.Name).ToList();
-                HttpContext.Session.Set("plan", plan);
+                CurrentSession.Set("plan", plan);
                 return View("RecipeSummary", model);
             }
             catch (Exception e)
@@ -1089,7 +1089,7 @@ namespace VirtualCredit.Controllers
         [AdminFilters]
         public IActionResult BanlanceAccount([FromQuery] string companyName)
         {
-            string plan = HttpContext.Session.Get<string>("plan");
+            string plan = CurrentSession.Get<string>("plan");
             ViewBag.Plan = plan;
             ViewBag.Company = companyName;
 
@@ -1151,7 +1151,7 @@ namespace VirtualCredit.Controllers
             }
             else
             {
-                plan = HttpContext.Session.Get<string>("plan");
+                plan = CurrentSession.Get<string>("plan");
             }
             ViewBag.Plan = plan;
             ViewBag.Company = name;
@@ -1686,7 +1686,7 @@ namespace VirtualCredit.Controllers
             string plan = string.Empty;
             if (string.IsNullOrEmpty(accountPlan))
             {
-                plan = HttpContext.Session.Get<string>("plan");
+                plan = CurrentSession.Get<string>("plan");
             }
             else
             {

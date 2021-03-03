@@ -23,7 +23,7 @@ namespace Insurance.Controllers
             UserInfoModel currUser = GetCurrentUser();
             if (currUser is null || currUser.AllowCreateAccount != "1")
             {
-                HttpContext.Session.Set<string>("noAccessCreateAccout", "当前用户权限不足");
+                CurrentSession.Set<string>("noAccessCreateAccout", "当前用户权限不足");
                 return View("../User/AccountManagement");
             }
             ViewBag.AllowCreateAccount = new SelectList(new List<string>() { "允许", "不允许" });
@@ -67,7 +67,7 @@ namespace Insurance.Controllers
                 model.Telephone = currUser.Telephone;
                 model.userName = currUser.UserName;
                 model.RecipeType = currUser.RecipeType;
-                HttpContext.Session.Set("ChildAccounts", dt);
+                CurrentSession.Set("ChildAccounts", dt);
                 return View("../User/ViewAccounts", model);
             }
             catch (Exception e)
@@ -81,22 +81,22 @@ namespace Insurance.Controllers
         [UserLoginFilters]
         public IActionResult ResetPassword(ResetPwdModel model)
         {
-            HttpContext.Session.Set<string>("msg", string.Empty);
+            CurrentSession.Set<string>("msg", string.Empty);
             var user = DatabaseService.SelectUser(model.userName);
             UserInfoModel currUser = GetCurrentUser();
             if (user is null)
             {
-                HttpContext.Session.Set<string>("msg", "用户不存在,密码修改失败");
+                CurrentSession.Set<string>("msg", "用户不存在,密码修改失败");
                 return RedirectToAction("ViewAccounts");
             }
             if (user.AccessLevel <= currUser.AccessLevel && !user.UserName.Equals(currUser.UserName, StringComparison.CurrentCultureIgnoreCase))
             {
-                HttpContext.Session.Set<string>("msg", "权限不足,密码修改失败");
+                CurrentSession.Set<string>("msg", "权限不足,密码修改失败");
                 return RedirectToAction("ViewAccounts");
             }
             if (model.newPassword != model.confirmNewPassword)
             {
-                HttpContext.Session.Set<string>("msg", "两次输入的密码不一致,密码修改失败");
+                CurrentSession.Set<string>("msg", "两次输入的密码不一致,密码修改失败");
                 return RedirectToAction("ViewAccounts");
             }
             //MD5Helper md5 = new MD5Helper();
@@ -108,7 +108,7 @@ namespace Insurance.Controllers
             bool res = DatabaseService.UpdateUserInfo(user, new List<string>() { "userPassword" });
             if (res)
             {
-                HttpContext.Session.Set<string>("msg", "密码修改成功");
+                CurrentSession.Set<string>("msg", "密码修改成功");
             }
             return RedirectToAction("ViewAccounts");
         }
@@ -146,7 +146,7 @@ namespace Insurance.Controllers
         {
             //浏览已登录信息 或 浏览子账号信息
             UserInfoModel currUser = GetCurrentUser();
-            HttpContext.Session.Set("editUser", userName);
+            CurrentSession.Set("editUser", userName);
             if (currUser == null)
             {
                 return Json("fail");
@@ -197,7 +197,7 @@ namespace Insurance.Controllers
         public bool UpdateAccountInfo(ResetPwdModel model)
         {
             UserInfoModel currUser = GetCurrentUser();
-            string user = HttpContext.Session.Get<string>("editUser");
+            string user = CurrentSession.Get<string>("editUser");
             if (currUser.AccessLevel != 0 && (currUser.UserName.Equals(user, StringComparison.CurrentCultureIgnoreCase))) //非超级管理员账号读取其他公司账号
             {
                 return false;
@@ -236,7 +236,7 @@ namespace Insurance.Controllers
         public bool UpdatePersonalInfo(ViewModelBase model)
         {
             UserInfoModel currUser = GetCurrentUser();
-            string user = HttpContext.Session.Get<string>("editUser");
+            string user = CurrentSession.Get<string>("editUser");
             if (currUser.AccessLevel != 0 && (currUser.UserName.Equals(user, StringComparison.CurrentCultureIgnoreCase))) //账号不能修改自身信息
             {
                 return false;
@@ -277,13 +277,13 @@ namespace Insurance.Controllers
             UserInfoModel currUser = GetCurrentUser();
             if (currUser is null || /*currUser.AccessLevel > 1 ||*/ currUser.AllowCreateAccount != "1")
             {
-                HttpContext.Session.Set<string>("noAccessCreateAccout", "当前用户权限不足");
+                CurrentSession.Set<string>("noAccessCreateAccout", "当前用户权限不足");
                 return View("../User/AccountManagement");
             }
 
             if (!ModelState.IsValid)
             {
-                HttpContext.Session.Set<string>("noAccessCreateAccout", "输入信息不合规范");
+                CurrentSession.Set<string>("noAccessCreateAccout", "输入信息不合规范");
                 ActionAfterReload("输入信息不合规范");
                 return View("../User/Register");
             }
@@ -293,10 +293,10 @@ namespace Insurance.Controllers
             //当用户点击提交按钮后，后端验证验证码
             string userInputValidation = string.Empty;
             userInputValidation = HttpContext.Request.Form["validationResult"]; //读取name = validationResult的input的值
-            int backendValidation = HttpContext.Session.Get<int>("ValidationResult");
+            int backendValidation = CurrentSession.Get<int>("ValidationResult");
             if (Convert.ToInt16(userInputValidation) != backendValidation)
             {
-                HttpContext.Session.Set("noAccessCreateAccout", "验证码计算错误，请重新输入！");
+                CurrentSession.Set("noAccessCreateAccout", "验证码计算错误，请重新输入！");
                 ActionAfterReload("验证码计算错误，请重新输入！");
                 return View();
             }
@@ -304,13 +304,13 @@ namespace Insurance.Controllers
 
             if (DatabaseService.UserMatchUserNameOnly(user))
             {
-                HttpContext.Session.Set<string>("noAccessCreateAccout", "用户名已存在");
+                CurrentSession.Set<string>("noAccessCreateAccout", "用户名已存在");
                 ViewBag.UserNameUsed = "用户名已存在";
                 pass = false;
             }
             if (user.userPassword != user.confirmPassword)
             {
-                HttpContext.Session.Set<string>("noAccessCreateAccout", "两次输入的密码不一致，请重新输入");
+                CurrentSession.Set<string>("noAccessCreateAccout", "两次输入的密码不一致，请重新输入");
                 ViewBag.PwdNotMatch = "两次输入的密码不一致，请重新输入";
                 pass = false;
             }
@@ -318,7 +318,7 @@ namespace Insurance.Controllers
             {
                 if (user.DaysBefore > currUser.DaysBefore)
                 {
-                    HttpContext.Session.Set<string>("noAccessCreateAccout", $"追溯期不能大于{currUser.DaysBefore}天");
+                    CurrentSession.Set<string>("noAccessCreateAccout", $"追溯期不能大于{currUser.DaysBefore}天");
                     ViewBag.DaysBeforeIncorrect = "追溯期不正确";
                     pass = false;
                 }
@@ -327,28 +327,28 @@ namespace Insurance.Controllers
             {
                 if (user._Plan != currUser._Plan)
                 {
-                    HttpContext.Session.Set<string>("noAccessCreateAccout", "子账户方案必须与其父账户相同");
+                    CurrentSession.Set<string>("noAccessCreateAccout", "子账户方案必须与其父账户相同");
                     ViewBag.PlanIncorrect = "子账户方案必须与其父账户相同";
                     pass = false;
                 }
             }
             if (currUser.CompanyName == user.CompanyName)
             {
-                HttpContext.Session.Set<string>("noAccessCreateAccout", "子账号公司名称不能与父账号相同");
+                CurrentSession.Set<string>("noAccessCreateAccout", "子账号公司名称不能与父账号相同");
                 ViewBag.CompanyNameIncorrect = "子账号公司名称不能与父账号相同";
                 pass = false;
             }
 
             if (user.UnitPrice < currUser.UnitPrice)
             {
-                HttpContext.Session.Set<string>("noAccessCreateAccout", "子账号价格不能小于当前账号价格");
+                CurrentSession.Set<string>("noAccessCreateAccout", "子账号价格不能小于当前账号价格");
                 ViewBag.PriceTooSmall = "子账号价格不能小于当前账号价格";
                 pass = false;
             }
 
             if (!pass)
             {
-                HttpContext.Session.Set<string>("noAccessCreateAccout", "输入信息不合规范");
+                CurrentSession.Set<string>("noAccessCreateAccout", "输入信息不合规范");
                 ActionAfterReload("输入信息不合规范");
                 return View("../User/Register", user);
             }

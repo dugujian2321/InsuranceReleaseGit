@@ -18,21 +18,23 @@ namespace VirtualCredit
     public class VC_ControllerBase : Controller
     {
         public static ConcurrentDictionary<string, string> CachedCompanyDir = new ConcurrentDictionary<string, string>();
+        public static ConcurrentDictionary<string, ISession> Sessions = new ConcurrentDictionary<string, ISession>();
         protected IHostingEnvironment _hostingEnvironment;
         public static List<string> Plans = new List<string> { "30万", "60万", "80万" };
         public static long CustomersCount = 0;
         public static string ExcelRoot = Utility.Instance.ExcelRoot;
         protected ImageTool _imageTool;
         public UserInfoModel currUser_temp;
+        public ISession CurrentSession;
         public string RoleId
         {
             get
             {
-                return HttpContext.Session.Get<string>("RoleId");
+                return CurrentSession.Get<string>("RoleId");
             }
             set
             {
-                HttpContext.Session.Set<string>("RoleId", value);
+                CurrentSession.Set<string>("RoleId", value);
             }
         }
 
@@ -48,8 +50,10 @@ namespace VirtualCredit
         {
 
             if (context != null)
+            {
+                CurrentSession = context.Session;
                 _imageTool = new ImageTool(context);
-
+            }
 
             int y = DateTime.Now.Year;
             if (DateTime.Now.Month < 6)
@@ -92,11 +96,11 @@ namespace VirtualCredit
             return payback;
         }
 
-        protected double CalculateAddPrice(UserInfoModel account,DateTime dt)
+        protected double CalculateAddPrice(UserInfoModel account, DateTime dt)
         {
             //对于添加新的保费信息，按生效日期至本月底的天数收费
             double result = 0;
-            var newEmployees = HttpContext.Session.Get<List<Employee>>("validationResult");
+            var newEmployees = CurrentSession.Get<List<Employee>>("validationResult");
             if (newEmployees is null || newEmployees.Count <= 0)
             {
                 return 0;
@@ -493,7 +497,7 @@ namespace VirtualCredit
         }
         protected void AdaptModel(ViewModelBase model)
         {
-            UserInfoModel uim = HttpContext.Session.Get<UserInfoModel>("CurrentUser");
+            UserInfoModel uim = CurrentSession.Get<UserInfoModel>("CurrentUser");
             if (uim is null)
             {
                 return;
@@ -527,7 +531,7 @@ namespace VirtualCredit
         {
             if (currUser_temp != null) return currUser_temp;
             IUser user = new UserInfoModel();
-            var currUser = HttpContext.Session.Get<UserInfoModel>("CurrentUser");
+            var currUser = CurrentSession.Get<UserInfoModel>("CurrentUser");
             user.UserName = currUser.UserName;
             user.userPassword = currUser.userPassword;
             UserInfoModel uim = DatabaseService.UserMatchUserNamePassword(user);
@@ -633,7 +637,7 @@ namespace VirtualCredit
                 {
                     goto Err;
                 }
-                int i2 = Convert.ToInt16(HttpContext.Session.Get<int>("ValidationResult"));
+                int i2 = Convert.ToInt16(CurrentSession.Get<int>("ValidationResult"));
 
                 if (i1 == i2)
                     return true;
