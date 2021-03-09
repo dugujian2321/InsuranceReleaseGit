@@ -6,6 +6,23 @@ using VirtualCredit.Services;
 
 namespace VirtualCredit
 {
+    public class MiniAppLoginFilters : Attribute, IActionFilter
+    {
+        public void OnActionExecuted(ActionExecutedContext context)
+        {
+            //throw new NotImplementedException();
+        }
+
+        public void OnActionExecuting(ActionExecutingContext context)
+        {
+            var res = SessionService.IsUserLogin(context.HttpContext);
+            if (!res)
+            {
+                SessionService.SetUserOffline(context.HttpContext);
+                context.Result = new RedirectToActionResult(actionName: "Login", controllerName: "Login", routeValues: null);
+            }
+        }
+    }
     public class UserLoginFilters : Attribute, IActionFilter
     {
         public void OnActionExecuted(ActionExecutedContext context)

@@ -1381,7 +1381,7 @@ namespace VirtualCredit.Controllers
         /// </summary>
         /// <param name="year"></param>
         /// <returns></returns>
-        private Dictionary<string, ValueType> SummaryByYear(int year)
+        protected Dictionary<string, ValueType> SummaryByYear(int year)
         {
             int headCount = 0;
             double totalIn = 0;

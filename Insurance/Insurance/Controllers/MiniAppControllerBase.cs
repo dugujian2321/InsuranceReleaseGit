@@ -10,7 +10,7 @@ using VirtualCredit.Models;
 
 namespace Insurance.Controllers
 {
-    public class MiniAppControllerBase : ControllerBase
+    public class MiniAppControllerBase : Controller
     {
 
     }

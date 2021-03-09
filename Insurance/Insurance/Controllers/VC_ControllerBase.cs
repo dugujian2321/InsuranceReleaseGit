@@ -18,7 +18,7 @@ namespace VirtualCredit
     public class VC_ControllerBase : Controller
     {
         public static ConcurrentDictionary<string, string> CachedCompanyDir = new ConcurrentDictionary<string, string>();
-        public static ConcurrentDictionary<string, ISession> Sessions = new ConcurrentDictionary<string, ISession>();
+        public static ConcurrentDictionary<string, ISession> MiniAppSessions = new ConcurrentDictionary<string, ISession>();
         protected IHostingEnvironment _hostingEnvironment;
         public static List<string> Plans = new List<string> { "30万", "60万", "80万" };
         public static long CustomersCount = 0;
@@ -66,6 +66,29 @@ namespace VirtualCredit
                 From = new DateTime(y, 6, 1);
                 To = new DateTime(y + 1, 5, 31);
             }
+        }
+
+        public JsonResult CheckMiniAuth(string openId)
+        {
+            string result = "";
+            if (!MiniAppSessions.Keys.Contains(openId))
+                result = "权限不足，无法访问，重新进入小程序重试";
+            return Json(result);
+        }
+
+        public void MiniSession(string openId)
+        {
+#if DEBUG
+            var k = MiniAppSessions.Keys.First();
+            CurrentSession = MiniAppSessions[k];
+            ViewBag.CurrentUser = GetCurrentUser();
+            ViewBag.OpenId = openId;
+            return;
+#endif
+            CheckMiniAuth(openId);
+            CurrentSession = MiniAppSessions[openId];
+            ViewBag.CurrentUser = GetCurrentUser();
+            ViewBag.OpenId = openId;
         }
 
         public override ViewResult View(string viewName)
@@ -350,7 +373,7 @@ namespace VirtualCredit
                     if (!Directory.Exists(companyDir)) continue;
                     Company company = new Company();
                     company.Name = companyName;
-
+                    company.AbbrName = companyAccount[0].CompanyNameAbb;
                     foreach (var account in companyAccount)
                     {
                         ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, account._Plan);
