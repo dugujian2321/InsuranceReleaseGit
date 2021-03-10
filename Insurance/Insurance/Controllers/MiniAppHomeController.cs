@@ -26,9 +26,15 @@ namespace Insurance.Controllers
 
         public IActionResult MiniHistoricalList(string openId)
         {
+
             try
             {
                 MiniSession(openId);
+                var user = GetCurrentUser();
+                if (user.AccessLevel != 0)
+                {
+                    return MiniCompanyHisitoryByMonth(user.CompanyName, openId);
+                }
                 HistoricalModel model = new HistoricalModel();
                 model.CompanyList = GetChildAccountsCompany();
                 if (model.CompanyList != null)
@@ -264,7 +270,7 @@ namespace Insurance.Controllers
                 {
                     r_locker.ExitReadLock();
                 }
-                
+
             }
         }
 

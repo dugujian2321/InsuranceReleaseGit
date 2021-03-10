@@ -105,7 +105,12 @@ namespace Insurance.Controllers
                 CurrentSession.Set("CurrentUser", user);
                 CurrentSession.Set<string>("Frontend", null);
                 UpdateDailyData();
-                MiniAppSessions.TryAdd(result.OpenId, CurrentSession);
+                if (MiniAppSessions.Keys.Contains(result.OpenId))
+                {
+                    MiniAppSessions[result.OpenId] = CurrentSession;
+                }
+                else
+                    MiniAppSessions.TryAdd(result.OpenId, CurrentSession);
                 return Ok(result);
             }
         }
