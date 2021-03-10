@@ -298,6 +298,171 @@ namespace Insurance.Controllers
             model.SummaryByYearTable = dt;
             ViewBag.PageInfo = "历年保单数据";
             return View("HistoricalListMiniApp", model);
+        }
+
+        public JsonResult MiniPreviewTable(string company, string fileName, string date, string openId)
+        {
+            try
+            {
+                MiniSession(openId);
+                UserInfoModel currUser = GetCurrentUser();
+                string[] fileinfo = new FileInfo(fileName).Name.Split("@");
+                UserInfoModel uploadUser = DatabaseService.SelectUser(fileinfo[2]);
+                if (!uploadUser.UserName.Equals("期初自动流转"))
+                {
+                    if (!IsChildCompany(currUser, company) && company != currUser.CompanyName)
+                        return null;
+                }
+
+                FileInfo fi = new FileInfo(fileName);
+                string downloadName = company + "_" + fi.Name.Split("@")[0] + ".xls";
+                string companyDir = string.Empty;
+                companyDir = ExcelRoot;
+                string filePath = Directory.GetFiles(companyDir, fileName, SearchOption.AllDirectories)[0];//路径
+
+
+                // string filePath = Path.Combine(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, DateTime.Parse(date).ToString("yyyy-MM"), fileName));//路径
+                ExcelTool excelTool = new ExcelTool(filePath, "Sheet1");
+                return Json(excelTool.ExcelToDataTable("Sheet1", false));
+            }
+            catch (Exception e)
+            {
+                LogService.Log(e.Message);
+                LogService.Log(e.StackTrace);
+                return null;
+            }
+        }
+
+
+        public IActionResult MiniCompanyHistory([FromQuery] string date, [FromQuery] string name, string openId)
+        {
+            MiniSession(openId);
+            ReaderWriterLockSlim r_locker = null;
+            DetailModel dm;
+            UserInfoModel currUser = GetCurrentUser();
+            bool isSelf = false;
+            if (currUser.CompanyName == name) isSelf = true;
+            try
+            {
+                r_locker = currUser.MyLocker.RWLocker;
+                r_locker.EnterReadLock();
+                dm = new DetailModel();
+                //获取该公司历史表单详细
+                string currUserCompany = string.Empty;
+                string currUserRootDir = GetCurrentUserRootDir(currUser);
+                currUserCompany = new DirectoryInfo(currUserRootDir).Name;
+
+                List<NewExcel> allexcels = new List<NewExcel>();
+                if (!GetChildrenCompanies(currUserCompany).Contains(name) && currUser.CompanyName != name) return View("Error");
+                //string date = "2020/3/1";
+                DateTime dt1 = DateTime.Parse(date);
+                string month = dt1.ToString("yyyy-MM");
+                string companyName = name;
+                List<string> excels = new List<string>();
+                var dataInfo = date.Split('/');
+                DateTime target = new DateTime(Convert.ToInt32(dataInfo[0]), Convert.ToInt32(dataInfo[1]), Convert.ToInt32(dataInfo[2]));
+                string companyDir = string.Empty;
+                if (target.Year < From.Year)
+                {
+                    string historyDir = Path.Combine(ExcelRoot, "历年归档", target.Year.ToString());
+                    companyDir = Directory.GetDirectories(historyDir, "*", SearchOption.AllDirectories).Where(_ => new DirectoryInfo(_).Name == name).FirstOrDefault();
+                }
+                else
+                    companyDir = GetSearchExcelsInDir(companyName);
+                SearchOption so = SearchOption.AllDirectories;
+                if (isSelf) so = SearchOption.TopDirectoryOnly;
+                List<string> monthDirs = new List<string>();
+                if (!string.IsNullOrEmpty(currUser._Plan))
+                {
+                    foreach (var plan in currUser._Plan.Split(' '))
+                    {
+                        DirectoryInfo di = new DirectoryInfo(Path.Combine(companyDir, plan));
+                        if (di.Exists)
+                            monthDirs.AddRange(Directory.GetDirectories(Path.Combine(companyDir, plan), month, so));
+                    }
+                }
+                else
+                {
+                    monthDirs = Directory.GetDirectories(companyDir, month, so).ToList();
+                }
+
+                if (monthDirs.Count > 0)
+                {
+                    foreach (string monthDir in monthDirs)
+                    {
+                        var uploadedFiles = Directory.GetFiles(monthDir);
+                        excels.AddRange(uploadedFiles);
+                    }
+                }
+                else
+                {
+                    dm.Company = name;
+                    dm.Excels = new List<NewExcel>();
+                    return View("MiniDetail", dm);
+                }
+
+                foreach (string fileName in excels)
+                {
+                    FileInfo fi = new FileInfo(fileName);
+                    if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
+                        continue;
+
+                    NewExcel excel = new NewExcel();
+                    excel.FileName = fi.Name;
+                    excel.Company = Directory.GetParent(Directory.GetParent(fileName).Parent.FullName).Name;
+                    excel.Plan = Directory.GetParent(fileName).Parent.Name;
+                    ExcelTool et = new ExcelTool(fileName, "Sheet1");
+                    excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
+                    string[] fileinfo = fi.Name.Split('@');
+                    DateTime dt;
+                    DateTime.TryParse(fileinfo[0] + " " + fileinfo[5].Replace('-', ':'), out dt);
+                    excel.UploadDate = dt.ToString("yyyy-MM-dd HH:mm:ss");
+                    excel.HeadCount = et.GetEmployeeNumber();
+                    excel.Uploader = fileinfo[2];
+                    if (fileinfo[3].Equals("add", StringComparison.CurrentCultureIgnoreCase)) //若结束日期为空，则为增加人员文档
+                    {
+                        excel.Mode = "加保";
+                        excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
+                        excel.Cost = decimal.Parse(fileinfo[1]);
+                    }
+                    else //若结束时间不为空，则为减员文档
+                    {
+                        excel.Mode = "减保";
+                        excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
+                        excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
+                        excel.Cost = decimal.Parse(fileinfo[1]);
+                    }
+                    allexcels.Add(excel);
+                }
+                allexcels.Sort((l, r) =>
+                {
+                    if (DateTime.Parse(l.UploadDate) != DateTime.Parse(r.UploadDate))
+                    {
+                        return DateTime.Parse(r.UploadDate).CompareTo(DateTime.Parse(l.UploadDate));
+                    }
+                    else
+                    {
+                        return l.Cost.CompareTo(r.Cost);
+                    }
+                });
+                dm.Company = name;
+                dm.Excels = allexcels;
+                return View("MiniDetail", dm);
+            }
+            catch
+            {
+                dm = new DetailModel();
+                dm.Company = name;
+                dm.Excels = new List<NewExcel>();
+                return View("MiniDetail", dm);
+            }
+            finally
+            {
+                if (r_locker != null && r_locker.IsReadLockHeld)
+                {
+                    r_locker.ExitReadLock();
+                }
+            }
 
         }
     }

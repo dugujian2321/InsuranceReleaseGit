@@ -479,6 +479,67 @@ function DeleteCompanyData(company) {
     );
 }
 
+function RegisterMiniEvents(){
+    $('#dataPreview').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget) // Button that triggered the modal
+        var company = button.data('company') // Extract info from data-* attributes
+        var filename = button.data('fn') // Extract info from data-* attributes
+        var date = button.data('date') // Extract info from data-* attributes
+        var openId = button.data('openid') // Extract info from data-* attributes
+        // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+        // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+        var modal = $(this)
+        modal.find('.modal-title').text('数据预览')
+        var table = document.getElementById('previewTable');
+        var table_header = table.getElementsByTagName('thead')[0];
+        var table_body = table.getElementsByTagName('tbody')[0];
+        table_header.innerHTML = '';
+        table_body.innerHTML = '';
+        //document.getElementById('download').href = "/Home/DownloadExcel?company=" + company + "&fileName=" + filename + "&date=" + date;
+        $.ajax(
+            {
+                async: true,
+                processData: false,
+                type: 'get',
+                dataType: 'json',
+                url: '/MiniAppHome/MiniPreviewTable?company=' + company + "&fileName=" + filename + "&date=" + date + "&openId=" + openId,
+                success: function (data) {
+                    if (data) {
+
+                        var tr = document.createElement('tr');
+                        var theaderRow = table_header.appendChild(tr);
+                        for (var i = 0; i < Object.values(data[0]).length; i++) {
+                            var th = document.createElement('th');
+                            th.innerHTML = Object.values(data[0])[i];
+                            theaderRow.appendChild(th);
+                        }
+                        for (var j = 1; j < data.length; j++) {
+                            var tr = document.createElement('tr');
+                            for (var k = 0; k < Object.values(data[j]).length; k++) {
+                                var td = document.createElement('td');
+                                td.innerHTML = Object.values(data[j])[k];
+                                tr.appendChild(td);
+                            }
+
+                            table_body.appendChild(tr);
+                        }
+                    }
+                },
+                fail: function (data) {
+                    alert("保存失败");
+                },
+                error: function (data) {
+                    alert("错误");
+                }
+            }
+        )
+
+        modal.find('.modal-body input').val("test")
+        //modal.find('#download').href = "/Home/DownloadExcel?company=" + company + "&fileName=" + filename + "&date=" + date
+    });
+}
+
+
 function RegisterEvents() {
     $('#confirmDeleteExcel').on('show.bs.modal', function (event) {
         var button = $(event.relatedTarget); // Button that triggered the modal

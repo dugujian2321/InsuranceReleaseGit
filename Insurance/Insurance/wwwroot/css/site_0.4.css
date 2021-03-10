@@ -34,6 +34,12 @@ html {
     background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2333ff33' viewBox='0 0 8 8'%3E%3Cpath d='M2.75 0l-1.5 1.5 2.5 2.5-2.5 2.5 1.5 1.5 4-4-4-4z'/%3E%3C/svg%3E");
 }
 
+.minitable th, .minitable td {
+    padding:0.5rem 0.3rem;
+    vertical-align: top;
+    border-top: 1px solid #dee2e6
+}
+
 .li_tab {
     float: left;
     margin-left: 10px;

@@ -6,6 +6,7 @@ namespace Insurance.Models
     public class NewExcel
     {
         public string Company { get; set; }
+        public string AbbrName { get; set; }
 
         public string UploadDate { get; set; }
 
