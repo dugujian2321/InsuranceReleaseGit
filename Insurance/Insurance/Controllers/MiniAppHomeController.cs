@@ -31,7 +31,7 @@ namespace Insurance.Controllers
             {
                 MiniSession(openId);
                 var user = GetCurrentUser();
-                if (user.AccessLevel != 0)
+                if (user.AllowCreateAccount != "1")
                 {
                     return MiniCompanyHisitoryByMonth(user.CompanyName, openId);
                 }

@@ -395,6 +395,7 @@ namespace VirtualCredit
                     ExcelTool et = new ExcelTool(thisSummary, "Sheet1");
                     self.EmployeeNumber = et.GetEmployeeNumber();
                     self.StartDate = From;
+                    self.AbbrName = currUser.CompanyNameAbb;
                     self.PaidCost = et.GetPaidCost();
                     self.CustomerAlreadyPaid = et.GetCustomerAlreadyPaidFromJuneToMay(companiesDirectory, From.Year);
                     self.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", self.Name).Rows[0]["UnitPrice"]);
