@@ -1,0 +1,23 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/home/home",
+    "pages/add/add",
+    "pages/sub/sub",
+    "pages/history/history",
+    "pages/search/search",
+    "pages/files/files",
+    "pages/report/report",
+    "pages/logs/logs"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#fff",
+    "navigationBarTitleText": "急速保",
+    "navigationBarTextStyle": "black",
+    "backgroundColor":"#90EE90",
+    "pageOrientation": "auto"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

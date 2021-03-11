@@ -1,0 +1,15 @@
+<!--pages/login/login.wxml-->
+<view class="container">
+    <image mode="aspectFit" style="height:350rpx" src="" />
+    <view class="horizontalview">
+        <text class="col-1">用户名</text>
+        <input class="col-1 txt" type="text" bindinput="handleUseNameInput" value="{{m_UseName}}" />
+    </view>
+    <view class="horizontalview">
+        <text class="col-1">密码</text>
+        <input class="col-1 txt" type="password" bindinput="handlepwdInput" value="{{m_Password}}" />
+    </view>
+    <button style="margin-top:50rpx" disabled="{{btnForcastDisabled}}" bindtap="handleLogin" type="primary">登录</button>
+    <!-- <popup id='popup' title='结果' content='{{simulationResult}}' btn_ok='确定' bind:success="_success"></popup> -->
+</view>
+

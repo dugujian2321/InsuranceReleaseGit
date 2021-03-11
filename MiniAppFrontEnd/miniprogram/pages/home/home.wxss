@@ -1,0 +1,12 @@
+/* pages/home/home.wxss */
+.verticalview{
+    width:220rpx;height:300rpx;
+    margin: 20rpx;
+}
+.verticalview text{
+    margin-top:20rpx;
+}
+
+image{
+    width: 100rpx;
+}

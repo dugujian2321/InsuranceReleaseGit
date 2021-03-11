@@ -1,0 +1,38 @@
+<!-- pages/home/home.wxml -->
+<view class="container">
+    <view>
+        <view class="horizontalview">
+            <view class="col-1" style="background-color:white">
+                <text class="col-2" style="">TODO：其他信息</text>
+            </view>
+        </view>
+        <view class="horizontalview">
+            <navigator class="verticalview" url="/pages/add/add"  style="background-color:#07c160">
+                <image src="../../staticfiles/tianjia.png" mode="aspectFit" lazy-load="false" binderror="" bindload=""></image>
+                <text class="col-2" style="">加保</text>
+            </navigator>
+            <navigator class="verticalview" url="/pages/sub/sub"  style="background-color:#87CEFA">
+                <image src="../../staticfiles/xiangpi.png" mode="aspectFit" lazy-load="false" binderror="" bindload=""></image>
+                <text class="col-2">减保</text>
+            </navigator>
+            <navigator class="verticalview" url="/pages/history/history"  style="background-color:#FFF0F5">
+                <image src="../../staticfiles/liebiao.png" mode="aspectFit" lazy-load="false" binderror="" bindload=""></image>
+                <text class="col-2">保单列表</text>
+            </navigator>
+        </view>
+        <view class="horizontalview">
+            <navigator class="verticalview" url="/pages/search/search"  style="background-color:#CAFF70">
+                <image src="../../staticfiles/shuju.png" mode="aspectFit" lazy-load="false" binderror="" bindload=""></image>
+                <text class="col-2" style="">在线报案</text>
+            </navigator>
+            <navigator class="verticalview" url="/pages/files/files"  style="background-color:#FFC125">
+                <image src="../../staticfiles/wenjian.png" mode="aspectFit" lazy-load="false" binderror="" bindload=""></image>
+                <text class="col-2">保费汇总</text>
+            </navigator>
+            <!-- <navigator class="verticalview" url="/pages/report/report"  style="background-color:#9B30FF">
+                <image src="../../staticfiles/tongzhi.png" mode="aspectFit" lazy-load="false" binderror="" bindload=""></image>
+                <text class="col-2">报案</text>
+            </navigator> -->
+        </view>
+    </view>
+</view>

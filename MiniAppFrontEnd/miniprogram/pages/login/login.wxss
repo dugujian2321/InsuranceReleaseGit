@@ -1,0 +1,9 @@
+/* pages/login/login.wxss */
+/* pages/gaozhuan/gaozhuan.wxss */
+image{
+    padding: 0;
+    margin: 0;
+    height: 600rpx; 
+    padding-bottom: 20rpx;
+    padding-top: 20rpx;
+    }
