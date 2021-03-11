@@ -418,6 +418,40 @@ function ViewCase() {
         });
 }
 
+function MiniSubmitCase() {
+    var fd = new FormData();
+    var date = document.getElementById('casedate');
+    var person = document.getElementById('caseperson');
+    var detail = document.getElementById('casedetail');
+    fd.append("casedate", date.value);
+    fd.append("person", person.value);
+    fd.append("detail", detail.value);
+    $.ajax(
+        {
+            type: "post",
+            url: '/Home/SubmitCase',
+            async: true,
+            data: fd,
+            contentType: false,
+            processData: false,
+            dataType: 'JSON',
+            success: function (data) {
+                if (data == true) {
+                    alert("报案成功");
+                    window.location.reload();
+                } else {
+                    alert(data);
+                }
+            },
+            fail: function (data) {
+                alert("报案失败");
+            },
+            error: function (data) {
+                alert("错误");
+            }
+        });
+}
+
 function SubmitCase() {
     var fd = new FormData();
     var date = document.getElementById('casedate');

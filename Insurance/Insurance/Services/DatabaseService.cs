@@ -645,6 +645,12 @@ namespace VirtualCredit
             }
         }
 
+        public static string CompanyAbbrName(string longName)
+        {
+            string cmdText = $"select CompanyNameAbb from UserInfo where CompanyName='{longName}'";
+            var result = SQLServerHelper.ExecuteReader(cmdText);
+            return result.Rows[0][0].ToString();
+        }
         public static DataTable SelectPropFromTable(string tableName, string colName, string colValue)
         {
             if (colName is null)

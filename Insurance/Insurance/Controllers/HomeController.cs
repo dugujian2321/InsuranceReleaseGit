@@ -1011,7 +1011,7 @@ namespace VirtualCredit.Controllers
             }
         }
 
-        private void CacheSearchResult(DataTable table)
+        protected void CacheSearchResult(DataTable table)
         {
             List<Employee> employees = new List<Employee>();
             foreach (DataRow row in table.Rows)
@@ -2152,7 +2152,7 @@ namespace VirtualCredit.Controllers
         }
 
         [HttpGet]
-        [AdminFilters]
+        //[AdminFilters]
         public JsonResult UpdateCaseCost([FromQuery] string id, [FromQuery] string cost)
         {
             if (!double.TryParse(cost, out double price)) return Json("金额不正确");

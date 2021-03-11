@@ -19,6 +19,9 @@ namespace Insurance.Controllers
 {
     public class MiniAppHomeController : HomeController
     {
+        private static readonly int idCol = 3;
+        private static readonly int nameCol = 2;
+
         public MiniAppHomeController(IHostingEnvironment hostingEnvironment, IHttpContextAccessor httpContextAccessor) : base(hostingEnvironment, httpContextAccessor)
         {
 
@@ -306,6 +309,113 @@ namespace Insurance.Controllers
             return View("HistoricalListMiniApp", model);
         }
 
+        public IActionResult MiniSearchPeople(SearchPeopleModel model, string openId)
+        {
+            MiniSession(openId);
+            CurrentSession.Set<List<Employee>>("searchResult", null);
+            try
+            {
+                return View(nameof(MiniSearchPeople), model);
+            }
+            catch (Exception e)
+            {
+                LogService.Log(e.Message);
+                return View("Error");
+            }
+        }
+
+        public IActionResult MiniViewCase(string openId)
+        {
+            MiniSession(openId);
+            var result = DatabaseService.Select("CaseInfo");
+            if (result == null || result.Rows.Count == 0) return Json("未找到报案信息");
+            foreach (DataRow row in result.Rows)
+            {
+                row[4] = DateTime.Parse(row[4].ToString()).Date;
+            }
+            SearchPeopleModel model = new SearchPeopleModel();
+            model.CaseTable = result;
+            return View("MiniSearchPeople", model);
+        }
+
+        public IActionResult MiniSearch(string em_name, string em_id, string open_id)
+        {
+            MiniSession(open_id);
+            var currUser = GetCurrentUser();
+            SearchPeopleModel model = new SearchPeopleModel();
+            model.People = new Employee();
+            model.People.Name = em_name;
+            model.People.ID = em_id;
+            DataTable res = new DataTable();
+            string company = currUser.CompanyName;
+            string debug = "";
+            try
+            {
+                currUser.MyLocker.RWLocker.EnterReadLock();
+                string targetDir = GetSearchExcelsInDir(company);
+                foreach (var file in Directory.GetFiles(targetDir, "*", SearchOption.AllDirectories))
+                {
+                    debug = file;
+                    FileInfo fi = new FileInfo(file);
+                    if (!DateTime.TryParse(fi.Directory.Name, out DateTime date)) continue;
+                    DataTable temp = new DataTable();
+                    string[] excelInfo = fi.Name.Split("@");
+                    string mode = excelInfo[3].Equals("Add", StringComparison.CurrentCultureIgnoreCase) ? "加保" : "减保";
+                    string uploadtime = excelInfo[0] + " " + excelInfo[5].Replace('-', ':');
+                    string comp = fi.Directory.Parent.Parent.Name;
+                    string compAbbr = DatabaseService.CompanyAbbrName(comp);
+                    string uploader = excelInfo[2];
+                    using (ExcelTool et = new ExcelTool(file, "Sheet1"))
+                    {
+                        temp = et.SelectPeopleByNameAndID(em_name, nameCol, em_id, idCol);
+                    }
+                    if (temp != null && temp.Rows.Count > 0)
+                    {
+                        if (res.Columns.Count <= 0)
+                        {
+                            res = temp.Clone(); //拷贝表结构
+                            DataColumn dc = new DataColumn("History");
+                            res.Columns.Add(dc);
+                        }
+                        if (temp.Rows[0][1].ToString() == "未找到符合条件的人员")
+                        {
+                            continue;
+                        }
+                        foreach (DataRow row in temp.Rows)
+                        {
+                            string history = string.Join('%', uploadtime, mode, row["start_date"], row["end_date"], compAbbr, uploader);
+                            DataRow[] t = res.Select($"id = '{row["id"]}'");
+                            if (t != null && t.Length > 0)
+                            {
+                                t[0]["History"] = string.Join("+", t[0]["History"], history);
+                            }
+                            else
+                            {
+                                DataRow newRow = res.NewRow();
+                                newRow.ItemArray = row.ItemArray;
+                                newRow["History"] = history;
+                                res.Rows.Add(newRow);
+                            }
+
+                        }
+                    }
+
+                }
+
+                model.Result = res;
+                CacheSearchResult(res);
+                return View("MiniSearchPeople", model);
+            }
+            catch (Exception e)
+            {
+                LogService.Log(e.Message);
+                return View("Error");
+            }
+            finally
+            {
+                currUser.MyLocker.RWLocker.ExitReadLock();
+            }
+        }
         public JsonResult MiniPreviewTable(string company, string fileName, string date, string openId)
         {
             try
