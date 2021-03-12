@@ -337,7 +337,288 @@ namespace Insurance.Controllers
             model.CaseTable = result;
             return View("MiniSearchPeople", model);
         }
+        public IActionResult MiniRecipeSummaryByMonth([FromQuery] string name, string openid, [FromQuery] string accountPlan = "")
+        {
+            MiniSession(openid);
+            string plan = string.Empty;
+            if (string.IsNullOrEmpty(accountPlan))
+            {
+                plan = CurrentSession.Get<string>("plan");
+            }
+            else
+            {
+                plan = accountPlan;
+            }
+            if (string.IsNullOrEmpty(plan)) return View("Error");
+            ViewBag.Plan = plan;
+            ViewBag.Company = name;
+            ViewBag.AbbrCompName = DatabaseService.CompanyAbbrName(name);
+            ReaderWriterLockSlim r_locker = null;
+            bool isSelf = false;
+            var currUser = GetCurrentUser();
+            if (currUser.CompanyName == name) isSelf = true;
+            try
+            {
+                r_locker = currUser.MyLocker.RWLocker;
+                r_locker.EnterReadLock();
+                //获取该公司历史表单详细
+                List<NewExcel> allMonthlyExcels = new List<NewExcel>();
+                if (currUser.ChildAccounts.Count == 0)
+                {
+                    if (currUser.CompanyName != name)
+                    {
+                        ViewBag.Msg = "未查询到保单信息";
+                        DetailModel dm1 = new DetailModel();
+                        dm1.Company = name;
+                        dm1.MonthlyExcel = new List<NewExcel>();
+                        return View("MiniRecipeSummaryDetail", dm1);
+                    }
+                }
+                string companyName = name;
+                string targetCompDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories).FirstOrDefault();
+                for (DateTime date = From; date <= To; date = date.AddMonths(1))
+                {
+                    string monthDir = date.ToString("yyyy-MM");
+                    SearchOption so = SearchOption.AllDirectories;
+                    string[] dirs;
+                    if (isSelf)
+                    {
+                        so = SearchOption.TopDirectoryOnly;
+                        dirs = Directory.GetDirectories(Path.Combine(targetCompDir, plan), monthDir, so);
+                    }
+                    else
+                    {
+                        dirs = Directory.GetDirectories(targetCompDir, monthDir, so);
+                    }
 
+                    if (dirs.Length == 0) continue;
+                    NewExcel excel = new NewExcel();
+                    excel.Company = companyName;
+                    foreach (string month in dirs)
+                    {
+                        DirectoryInfo di = new DirectoryInfo(month);
+                        if (di.Parent.Name != plan || !di.Exists) continue;
+                        var tempexcel = GetMonthlyDetail(month, name);
+                        if (tempexcel == null) continue;
+                        excel.StartDate = tempexcel.StartDate;
+                        excel.EndDate = tempexcel.EndDate;
+                        excel.Cost += tempexcel.Cost;
+                        excel.HeadCount += tempexcel.HeadCount;
+                        excel.Paid += tempexcel.Paid;
+                        excel.Unpaid += tempexcel.Unpaid;
+                        excel.UploadDate = tempexcel.UploadDate;
+                    }
+                    if (excel != null && excel.StartDate != null)
+                    {
+                        allMonthlyExcels.Add(excel);
+                    }
+                }
+
+                DetailModel dm = new DetailModel();
+                dm.Company = name;
+                dm.MonthlyExcel = allMonthlyExcels;
+                return View("MiniRecipeSummaryDetail", dm);
+            }
+            catch
+            {
+                DetailModel dm = new DetailModel();
+                dm.Company = name;
+                dm.MonthlyExcel = new List<NewExcel>();
+                return View("MiniRecipeSummaryDetail", dm);
+            }
+            finally
+            {
+                if (r_locker != null && r_locker.IsReadLockHeld)
+                {
+                    r_locker.ExitReadLock();
+                }
+            }
+
+        }
+        public IActionResult MiniGetTargetPlanData(string plan, string openId)
+        {
+            try
+            {
+                MiniSession(openId);
+                ViewBag.Plan = plan;
+                RecipeSummaryModel model = new RecipeSummaryModel();
+                var currUser = GetCurrentUser();
+                model.CompanyList = GetChildrenCompanies(currUser, plan).ToList();
+                model.CompanyList = model.CompanyList.OrderBy(x => x.Name).ToList();
+                CurrentSession.Set("plan", plan);
+                return View("MiniRecipeSummary", model);
+            }
+            catch (Exception e)
+            {
+                LogService.Log(e.Message);
+                return View("Error");
+            }
+        }
+
+        public IActionResult MiniBanlanceAccount([FromQuery] string companyName, string openId)
+        {
+            MiniSession(openId);
+            string plan = CurrentSession.Get<string>("plan");
+            ViewBag.Plan = plan;
+            ViewBag.Company = companyName;
+
+            if (string.IsNullOrEmpty(plan)) return View("Error");
+            DateTime now = DateTime.Now;
+            int year = 0;
+            if (now.Month >= 6)
+            {
+                year = now.Year;
+            }
+            else
+            {
+                year = now.Year - 1;
+            }
+            DateTime from = new DateTime(year, 6, 1);
+            DateTime to = new DateTime(year + 1, 5, 31, 23, 59, 59);
+            var allDirs = Directory.GetDirectories(GetSearchExcelsInDir(companyName), "*", SearchOption.AllDirectories);
+            List<string> targetDirs = new List<string>();
+            allDirs.ToList().ForEach(x =>
+            {
+                DirectoryInfo di = new DirectoryInfo(x);
+                if (DateTime.TryParse(di.Name, out DateTime date))
+                {
+                    var slices = di.Name.Split("-");
+                    int folderYear = Convert.ToInt32(slices[0]);
+                    int folderMonth = Convert.ToInt32(slices[1]);
+                    if ((folderYear > from.Year && folderMonth <= to.Month) ||
+                        (folderYear == from.Year && folderMonth >= from.Month))
+                    {
+                        targetDirs.Add(x);
+                    }
+                }
+            });
+            DetailModel detailModel = new DetailModel();
+            foreach (var dir in targetDirs)
+            {
+                foreach (var file in Directory.GetFiles(dir))
+                {
+                    var excel = GetExcelInfo(file, companyName);
+                    if (excel != null && excel.Cost != excel.Paid)
+                    {
+                        detailModel.Excels.Add(excel);
+                    }
+                }
+            }
+            detailModel.Company = companyName;
+            ViewBag.Page = "未结算汇总";
+            return View("MiniRecipeSummaryDetail", detailModel);
+        }
+
+        public IActionResult MiniRecipeSummary([FromQuery] string date, [FromQuery] string name, string openid)
+        {
+            MiniSession(openid);
+            string plan = string.Empty;
+            var currUser = GetCurrentUser();
+            if (currUser.ChildAccounts.Count == 0)
+            {
+                plan = currUser._Plan;
+            }
+            else
+            {
+                plan = CurrentSession.Get<string>("plan");
+            }
+            ViewBag.Plan = plan;
+            ViewBag.Company = name;
+
+            if (string.IsNullOrEmpty(plan)) return View("Error");
+            //获取该公司历史表单详细
+            DetailModel dm = new DetailModel();
+            List<NewExcel> allexcels = new List<NewExcel>();
+            bool isSelf = false;
+            if (currUser.ChildAccounts.Count == 0)
+            {
+                if (currUser.CompanyName != name)
+                {
+                    return View("Error");
+                }
+            }
+            if (currUser.CompanyName == name) isSelf = true;
+            //string date = "2020/3/1";
+            if (!DateTime.TryParse(date, out DateTime dt1))
+            {
+                return View("Error");
+            }
+            string month = dt1.ToString("yyyy-MM");
+            ViewBag.Date = month;
+            string companyName = name;
+            string targetDirectory = GetSearchExcelsInDir(companyName);
+            List<string> excels = new List<string>();
+            string[] monthDirs;
+            SearchOption so = SearchOption.AllDirectories;
+            if (isSelf)
+            {
+                so = SearchOption.TopDirectoryOnly;
+                monthDirs = Directory.GetDirectories(Path.Combine(targetDirectory, plan), month, so);
+            }
+            else
+            {
+                monthDirs = Directory.GetDirectories(targetDirectory, month, so);
+            }
+
+            foreach (var monthDir in monthDirs)
+            {
+                DirectoryInfo di = new DirectoryInfo(monthDir);
+                if (di.Parent.Name != plan) continue;
+                excels.AddRange(Directory.GetFiles(monthDir));
+            }
+
+            if (excels == null || excels.Count <= 0)
+            {
+                dm.Company = name;
+                dm.Excels = allexcels;
+                return View("MiniRecipeSummaryDetail", dm);
+            }
+            foreach (string fileName in excels)
+            {
+                NewExcel excel = GetExcelInfo(fileName, companyName);
+                if (excel != null)
+                {
+                    allexcels.Add(excel);
+                }
+            }
+            dm.Company = name;
+            //allexcels.Sort((a, b) =>
+            //{
+            //    return a.Cost - a.Paid != b.Cost - b.Paid ? Math.Abs(b.Cost - b.Paid).CompareTo(Math.Abs(a.Cost - a.Paid)) :
+            //            DateTime.Parse(a.UploadDate).CompareTo(DateTime.Parse(b.UploadDate)); //先按结算状态排序，再按时间排序
+            //});
+            allexcels = allexcels.OrderBy(x => x.Status).ThenBy(x => x.UploadDate).ToList();
+            dm.Excels = allexcels;
+            return View("MiniRecipeSummaryDetail", dm);
+        }
+        public IActionResult MiniGetAllRecipeSummary(string openid)
+        {
+            try
+            {
+                MiniSession(openid);
+                var currUser = GetCurrentUser();
+                SummaryModel sm = new SummaryModel();
+                sm.PlanList = new List<Plan>();
+                foreach (var plan in Plans)
+                {
+                    Plan p = new Plan();
+                    p.Name = plan;
+                    var comp = GetChildrenCompanies(currUser, plan);
+                    p.TotalCost = comp.Sum(x => x.TotalCost);
+                    p.TotalPaid = comp.Sum(x => x.CustomerAlreadyPaid);
+                    p.HeadCount = comp.Sum(x => x.EmployeeNumber);
+                    sm.PlanList.Add(p);
+                }
+
+                CurrentSession.Set("plan", string.Empty);
+                return View("MiniRecieptPlans", sm);
+            }
+            catch (Exception e)
+            {
+                LogService.Log(e.Message);
+                return View("Error");
+            }
+        }
         public IActionResult MiniSearch(string em_name, string em_id, string open_id)
         {
             MiniSession(open_id);
@@ -439,7 +720,15 @@ namespace Insurance.Controllers
 
                 // string filePath = Path.Combine(Path.Combine(_hostingEnvironment.WebRootPath, "Excel", company, DateTime.Parse(date).ToString("yyyy-MM"), fileName));//路径
                 ExcelTool excelTool = new ExcelTool(filePath, "Sheet1");
-                return Json(excelTool.ExcelToDataTable("Sheet1", false));
+                DataTable result = excelTool.ExcelToDataTable("Sheet1", false);
+                DataRow firstRow = result.Rows[0];
+                foreach (DataColumn col in result.Columns)
+                {
+                    if (firstRow[col].ToString() == "保障开始时间") firstRow[col] = "开始";
+                    if (firstRow[col].ToString() == "保障结束时间") firstRow[col] = "结束";
+                    if (firstRow[col].ToString() == "职业类别") firstRow[col] = "类别";
+                }
+                return Json(result);
             }
             catch (Exception e)
             {

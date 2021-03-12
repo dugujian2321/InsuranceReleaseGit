@@ -468,6 +468,7 @@ namespace VirtualCredit
                     com.EmployeeNumber = edr.GetEmployeeNumber();
                     com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(Path.Combine(companyDir.FullName, plan), From.Year);
                     com.StartDate = From;
+                    com.AbbrName = DatabaseService.CompanyAbbrName(com.Name);
                     com.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
                     result.Add(com);
                 }
@@ -475,6 +476,7 @@ namespace VirtualCredit
                 {
                     Company com = new Company();
                     com.Name = companyDir.Name;
+                    com.AbbrName = DatabaseService.CompanyAbbrName(com.Name);
                     com.StartDate = From;
                     ExcelDataReader edr = new ExcelDataReader(companyDir.Name, From.Year, plan);
                     com.PaidCost += edr.GetPaidCost();

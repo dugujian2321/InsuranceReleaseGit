@@ -1225,7 +1225,7 @@ namespace VirtualCredit.Controllers
 
 
 
-        private NewExcel GetExcelInfo(string fileFullName, string companyName)
+        protected NewExcel GetExcelInfo(string fileFullName, string companyName)
         {
             FileInfo fi = new FileInfo(fileFullName);
             if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
@@ -1778,7 +1778,7 @@ namespace VirtualCredit.Controllers
 
         }
 
-        private NewExcel GetMonthlyDetail(string dir, string companyName)
+        protected NewExcel GetMonthlyDetail(string dir, string companyName)
         {
             if (Directory.GetFiles(dir).Length <= 0)
             {
