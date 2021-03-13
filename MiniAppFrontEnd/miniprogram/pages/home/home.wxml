@@ -3,7 +3,7 @@
     <view>
         <view class="horizontalview">
             <view class="col-1" style="background-color:white">
-                <text class="col-2" style="">TODO：其他信息</text>
+                <text class="col-2" style=""></text>
             </view>
         </view>
         <view class="horizontalview">
@@ -23,16 +23,16 @@
         <view class="horizontalview">
             <navigator class="verticalview" url="/pages/search/search"  style="background-color:#CAFF70">
                 <image src="../../staticfiles/shuju.png" mode="aspectFit" lazy-load="false" binderror="" bindload=""></image>
-                <text class="col-2" style="">在线报案</text>
+                <text class="col-1" style="">在线报案</text>
             </navigator>
-            <navigator class="verticalview" url="/pages/files/files"  style="background-color:#FFC125">
+            <navigator class="verticalview" url="/pages/premium/premium"  style="background-color:#FFC125">
                 <image src="../../staticfiles/wenjian.png" mode="aspectFit" lazy-load="false" binderror="" bindload=""></image>
-                <text class="col-2">保费汇总</text>
+                <text class="col-1">保费汇总</text>
             </navigator>
-            <!-- <navigator class="verticalview" url="/pages/report/report"  style="background-color:#9B30FF">
+            <navigator class="verticalview" url="/pages/report/report" style="background-color:#9B30FF;visibility:collapse">
                 <image src="../../staticfiles/tongzhi.png" mode="aspectFit" lazy-load="false" binderror="" bindload=""></image>
                 <text class="col-2">报案</text>
-            </navigator> -->
+            </navigator>
         </view>
     </view>
 </view>

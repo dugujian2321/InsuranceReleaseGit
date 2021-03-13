@@ -33,7 +33,15 @@ navigator.weui-btn{
   border-color: rgb(187, 187, 187);
   border-width: 0.5rpx;
 }
-
+/** wxss **/
+/*自定义按钮样式*/
+.ocr-wrapper {
+  margin: 40rpx auto;
+  width: 375rpx;
+}
+.intro {
+  margin: 40rpx;
+}
 .verticalview{
   height: 100%;
   width: 90%;

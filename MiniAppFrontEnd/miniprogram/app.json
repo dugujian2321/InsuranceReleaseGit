@@ -1,12 +1,12 @@
 {
   "pages": [
-    "pages/login/login",
     "pages/home/home",
     "pages/add/add",
+    "pages/login/login",
     "pages/sub/sub",
     "pages/history/history",
     "pages/search/search",
-    "pages/files/files",
+    "pages/premium/premium",
     "pages/report/report",
     "pages/logs/logs"
   ],
@@ -19,5 +19,11 @@
     "pageOrientation": "auto"
   },
   "style": "v2",
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "plugins": {
+    "ocr-plugin": {
+      "version": "3.0.6",
+      "provider": "wx4418e3e031e551be"
+    }
+  }
 }

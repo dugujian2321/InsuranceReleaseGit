@@ -1,2 +1,18 @@
-<!--pages/add/add.wxml-->
-<text>pages/add/add.wxml</text>
+<!-- pages/add/add.wxml -->
+<view class="page">
+    <view class="page__bd">
+        <mp-cells>
+            <mp-cell value="扫描"></mp-cell>
+            <mp-cell>
+                <ocr-navigator bind:onSuccess="success" certificateType="idCard" opposite="{{false}}">
+                    <button type="primary">扫描或选择照片</button>
+                </ocr-navigator>
+            </mp-cell>
+        </mp-cells>
+        <mp-cells ext-class="my-cells" title="名单(左滑条目可删除)">
+            <mp-slideview buttons="{{slideButtons}}" bindbuttontap="slideButtonTap">
+                <mp-cell value="姓名+身份证" footer="左滑删除"></mp-cell>
+            </mp-slideview>
+        </mp-cells>
+    </view>
+</view>

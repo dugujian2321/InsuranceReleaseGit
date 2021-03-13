@@ -1,6 +1,6 @@
 <!--pages/login/login.wxml-->
 <view class="container">
-    <image mode="aspectFit" style="height:350rpx" src="" />
+    <image mode="aspectFit" style="height:550rpx" src="../../staticfiles/logo.jpg" />
     <view class="horizontalview">
         <text class="col-1">用户名</text>
         <input class="col-1 txt" type="text" bindinput="handleUseNameInput" value="{{m_UseName}}" />
