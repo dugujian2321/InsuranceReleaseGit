@@ -18,13 +18,13 @@ namespace Insurance.Controllers
 {
     public class EmployeeChangeController : VC_ControllerBase
     {
-        private readonly int idCol = 1;
-        private readonly int jobCol = 2;
+        protected readonly int idCol = 1;
+        protected readonly int jobCol = 2;
         public static string ExcelDirectory;
-        string companyFolder;
+        protected string companyFolder;
         string summaryFileName;
-        string summaryFilePath;
-        string targetCompany;
+        protected string summaryFilePath;
+        protected string targetCompany;
         private static readonly object summaryLocker = new object();
 
         public EmployeeChangeController(IHostingEnvironment hostingEnvironment, IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor.HttpContext)
@@ -33,13 +33,13 @@ namespace Insurance.Controllers
             ExcelDirectory = _hostingEnvironment.WebRootPath;
         }
 
-        private void Initialize(string company)
+        protected void Initialize(string company)
         {
             Initialize(company, string.Empty);
         }
 
 
-        private void Initialize(string company, string plan)
+        protected void Initialize(string company, string plan)
         {
             if (string.IsNullOrEmpty(company)) company = CurrentSession.Get<string>("company");
             companyFolder = GetSearchExcelsInDir(company);
@@ -307,19 +307,19 @@ namespace Insurance.Controllers
             }
         }
 
-        private bool UpdateDailyDetail(DailyDetailModel model)
+        protected bool UpdateDailyDetail(DailyDetailModel model)
         {
             return DatabaseService.InsertDailyDetail(model);
         }
 
-        private void ClearSession()
+        protected void ClearSession()
         {
             CurrentSession.Set<List<Employee>>("validationResult", null);
             CurrentSession.Set<string>("readyToSubmit", "N");
             CurrentSession.Set<string>("company", string.Empty);
         }
 
-        private void RevertSummaryFile(string path, string backup)
+        protected void RevertSummaryFile(string path, string backup)
         {
             //删除原文件，重命名备份文件
             if (System.IO.File.Exists(path) && System.IO.File.Exists(backup))
@@ -583,7 +583,7 @@ namespace Insurance.Controllers
 
         }
 
-        private void MergeList(List<Employee> newEmployees, List<Employee> employees)
+        protected void MergeList(List<Employee> newEmployees, List<Employee> employees)
         {
             if (newEmployees != null)
             {
@@ -701,7 +701,7 @@ namespace Insurance.Controllers
 
         }
 
-        private string GetMonthFolder(DateTime date)
+        protected string GetMonthFolder(DateTime date)
         {
             return date.ToString("yyyy-MM");
         }

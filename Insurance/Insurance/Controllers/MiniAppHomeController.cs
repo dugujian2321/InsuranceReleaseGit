@@ -597,6 +597,10 @@ namespace Insurance.Controllers
             {
                 MiniSession(openid);
                 var currUser = GetCurrentUser();
+                if (currUser.AllowCreateAccount != "1")
+                {
+                    return RedirectToAction("MiniRecipeSummaryByMonth", new { openId = openid, accountPlan = currUser._Plan, name = currUser.CompanyName });
+                }
                 SummaryModel sm = new SummaryModel();
                 sm.PlanList = new List<Plan>();
                 foreach (var plan in Plans)

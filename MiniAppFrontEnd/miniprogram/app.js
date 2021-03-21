@@ -4,11 +4,11 @@ App({
         openId:"",
         userInfo: null,
         screenHeight: '',
-        baseUrl: 'https://192.168.1.11:5001/'
-        //baseUrl: 'http://www.pagzb.com:80/'
-        //记得改初始化链接
+        baseUrl: 'http://192.168.1.11:5000/'
+        //baseUrl: 'https://www.pagzb.com/'
       },
     onLaunch: function () {
+        console.log("当前服务器"+ this.globalData.baseUrl)
         var _this = this;
         var logs = wx.getStorageSync('logs') || [];
         logs.unshift(Date.now());

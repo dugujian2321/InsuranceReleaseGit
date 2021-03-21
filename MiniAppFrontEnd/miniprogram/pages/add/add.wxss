@@ -11,5 +11,5 @@
   box-sizing: border-box;
   border-bottom-style: solid;
   border-color: rgb(187, 187, 187);
-  border-width: 0.5rpx;
+  border-width: 0rpx;
 }

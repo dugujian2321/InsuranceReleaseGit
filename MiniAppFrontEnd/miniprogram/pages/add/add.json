@@ -5,6 +5,9 @@
     "mp-cells": "../../miniprogram_npm/weui-miniprogram/cells/cells",
     "mp-cell": "../../miniprogram_npm/weui-miniprogram/cell/cell",
     "mp-slideview": "../../miniprogram_npm/weui-miniprogram/slideview/slideview",
-    "ocr-navigator": "plugin://ocr-plugin/ocr-navigator"
+    "ocr-navigator": "plugin://ocr-plugin/ocr-navigator",
+    "mp-canlendar": "../../miniprogram_npm/wx_calendar-master/src/component/v2/index",
+    "mp-toptips": "../../miniprogram_npm/weui-miniprogram/toptips/toptips",
+    "popup":"../../miniprogram_npm/popup/popup"
   }
 }

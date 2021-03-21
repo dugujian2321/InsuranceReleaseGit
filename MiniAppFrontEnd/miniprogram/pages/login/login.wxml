@@ -9,7 +9,7 @@
         <text class="col-1">密码</text>
         <input class="col-1 txt" type="password" bindinput="handlepwdInput" value="{{m_Password}}" />
     </view>
-    <button style="margin-top:50rpx" disabled="{{btnForcastDisabled}}" bindtap="handleLogin" type="primary">登录</button>
+    <button style="margin-top:50rpx" disabled="{{btnLoginDisabled}}" bindtap="handleLogin" type="primary">{{loginText}}</button>
     <!-- <popup id='popup' title='结果' content='{{simulationResult}}' btn_ok='确定' bind:success="_success"></popup> -->
 </view>
 

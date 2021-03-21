@@ -1,0 +1,14 @@
+<!-- pages/components/popup.wxml -->
+<view class="wx-popup" hidden="{{flag}}">
+  <view class="popup-container">
+    <view class="wx-popup-title">{{title}}</view>
+    <scroll-view scroll-top="{{scrollTop}}" scroll-y="true" class='scroll-view_H'>
+      <view style="border-bottom:2rpx dashed #07c160" wx:for="{{content}}">
+        <text class="scroll-view-item_H">{{item}}</text>
+      </view>
+    </scroll-view>
+    <view class="btnBox">
+      <button class="wx-popup-btn" type="primary" bindtap='_success'>{{btn_ok}}</button>
+    </view>
+  </view>
+</view>

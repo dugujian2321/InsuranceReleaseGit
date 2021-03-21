@@ -1,8 +1,8 @@
 {
   "pages": [
+    "pages/login/login",
     "pages/home/home",
     "pages/add/add",
-    "pages/login/login",
     "pages/sub/sub",
     "pages/history/history",
     "pages/search/search",

@@ -3,7 +3,7 @@
     "windowsAuthentication": false, 
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:53548",
+      "applicationUrl": "http://192.168.1.11:53548",
       "sslPort": 44346
     }
   },
@@ -18,7 +18,7 @@
     "VirtualCredit": {
       "commandName": "Project",
       "launchBrowser": true,
-      "applicationUrl": "https://192.168.1.11:5001;http://localhost:5000",
+      "applicationUrl": "https://192.168.1.11:5001;http://192.168.1.11:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
