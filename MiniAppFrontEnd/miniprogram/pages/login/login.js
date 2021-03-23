@@ -5,8 +5,8 @@ Page({
    * 页面的初始数据
    */
   data: {
-    m_UseName: "oliver",
-    m_Password: "123",
+    m_UseName: "",
+    m_Password: "",
     //m_UseName: "jxyb666",
     //m_Password: "jxyb666",
     btnLoginDisabled: false,

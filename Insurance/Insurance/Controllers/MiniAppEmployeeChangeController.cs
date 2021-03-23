@@ -407,7 +407,7 @@ namespace Insurance.Controllers
                         }
                         summary.DatatableToExcel(tbl_summary);
                         List<string> result = new List<string>();
-                        result.Add("投保成功");
+                        result.Add("退保成功");
                         string kickoffDate = employee.StartDate + " 00:00:01";
                         string endDate = startdate.ToString("yyyy/MM/dd 23:59:59");
                         result.Add(kickoffDate);
@@ -426,6 +426,8 @@ namespace Insurance.Controllers
                         ClearSession();
                         Utility.DailySub += headCount;
                         Utility.DailyTotalCost += price;
+                        result.Add(headCount.ToString());
+                        result.Add(price.ToString());
                         return Json(result);
                     }
                     catch (Exception e)

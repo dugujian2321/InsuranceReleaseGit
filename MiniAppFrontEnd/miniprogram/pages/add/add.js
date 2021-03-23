@@ -17,7 +17,11 @@ Page({
     plan: [],
     selected_plan: "",
     ServerMsg: [],
-    price: '0'
+    price: '0',
+    CalculateText: "计算保费",
+    calculateBtnEnabled: true,
+    SubmitText: "提交",
+    scanBtnDisabled: false
   },
   onLoad: function () {
     var reqTask = wx.request({
@@ -106,6 +110,39 @@ Page({
     this.selectDate()
     console.log(this.data.str_StartDate)
   },
+  changeCalculateBtnState: function (e) {
+    if (this.data.CalculateText == "计算保费") {
+      this.setData({
+        CalculateText: "计算中...",
+        calculateBtnEnabled: false,
+        scanBtnDisabled: true
+      })
+    } else {
+      this.setData({
+        CalculateText: "计算保费",
+        calculateBtnEnabled: true,
+        scanBtnDisabled: false
+      })
+    }
+
+  },
+  changeSubmitBtnState: function (e) {
+    if (this.data.SubmitText == "提交") {
+      this.setData({
+        SubmitText: "正在提交...",
+        calculated: false,
+        calculateBtnEnabled: false,
+        scanBtnDisabled: true
+      })
+    } else {
+      this.setData({
+        SubmitText: "提交",
+        calculated: true,
+        calculateBtnEnabled: true,
+        scanBtnDisabled: false
+      })
+    }
+  },
   calculate: function (e) {
     var that = this
     // var debugList = [
@@ -116,9 +153,9 @@ Page({
     //     job: 'j1'
     //   }
     // ]
-    this.setData({
-      list_add: debugList
-    })
+    // this.setData({
+    //   list_add: debugList
+    // })
     if (this.data.list_add.length <= 0) {
       this.showErrorMsg("人员列表为空")
       return
@@ -131,7 +168,7 @@ Page({
       plan: this.data.selected_plan,
       openId: getApp().globalData.openId
     }
-    console.log(dataobj)
+    this.changeCalculateBtnState()
     var reqTask = wx.request({
       url: getApp().globalData.baseUrl + 'mini/miniappemployeechange/minicalculateprice',
       data: dataobj,
@@ -175,7 +212,9 @@ Page({
       fail: (f) => {
         console.log(f)
       },
-      complete: () => { }
+      complete: () => {
+        this.changeCalculateBtnState()
+      }
     });
   },
   success: function (e) {
@@ -213,6 +252,7 @@ Page({
       console.log("no data")
       return
     }
+    this.changeSubmitBtnState()
     var reqTask = wx.request({
       url: getApp().globalData.baseUrl + 'mini/miniappemployeechange/MiniUpdateSummary?date=' + this.data.date +
         '&plan=' + this.data.selected_plan +
@@ -248,7 +288,15 @@ Page({
       fail: (f) => {
         console.log(f)
       },
-      complete: () => { }
+      complete: () => {
+        var su = this.data.calculated
+        this.changeSubmitBtnState()
+        if (su == false) {
+          this.setData({
+            calculated: false
+          })
+        }
+      }
     });
 
   }

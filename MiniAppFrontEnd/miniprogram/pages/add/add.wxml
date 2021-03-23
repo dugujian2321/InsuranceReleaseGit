@@ -22,7 +22,7 @@
         <mp-cells title="添加人员">
             <mp-cell>
                 <ocr-navigator bind:onSuccess="success" certificateType="idCard" opposite="{{false}}">
-                    <button type="primary">扫描身份证</button>
+                    <button type="primary" disabled="{{scanBtnDisabled}}">扫描身份证</button>
                 </ocr-navigator>
             </mp-cell>
         </mp-cells>
@@ -32,8 +32,8 @@
             </mp-slideview>
             <mp-cell value="保费：{{price}}元"></mp-cell>
         </mp-cells>
-        <button style="margin-top:50rpx" type="primary" bindtap="calculate">计算保费</button>
-        <button style="margin-top:50rpx" disabled="{{!calculated}}" type="primary" bindtap="submit">提交</button>
+        <button style="margin-top:50rpx" type="primary" disabled="{{!calculateBtnEnabled}}" bindtap="calculate">{{CalculateText}}</button>
+        <button style="margin-top:50rpx" disabled="{{!calculated}}" type="primary" bindtap="submit">{{SubmitText}}</button>
     </view>
     <popup id='popup' title='结果' content="{{ServerMsg}}" btn_ok='确定' bind:success="_success"></popup>
 </view>
