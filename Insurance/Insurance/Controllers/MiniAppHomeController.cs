@@ -497,7 +497,7 @@ namespace Insurance.Controllers
             {
                 foreach (var file in Directory.GetFiles(dir))
                 {
-                    var excel = GetExcelInfo(file, companyName);
+                    var excel = GetExcelInfo(file, companyName, plan);
                     if (excel != null && excel.Cost != excel.Paid)
                     {
                         detailModel.Excels.Add(excel);
@@ -575,7 +575,7 @@ namespace Insurance.Controllers
             }
             foreach (string fileName in excels)
             {
-                NewExcel excel = GetExcelInfo(fileName, companyName);
+                NewExcel excel = GetExcelInfo(fileName, companyName, plan);
                 if (excel != null)
                 {
                     allexcels.Add(excel);

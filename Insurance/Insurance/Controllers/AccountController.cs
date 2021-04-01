@@ -202,8 +202,25 @@ namespace Insurance.Controllers
             {
                 return false;
             }
-
+            List<string> paras = new List<string>()
+            {
+                "AccessLevel","AllowCreateAccount","DaysBefore","_Plan","UnitPrice"
+            };
             UserInfoModel uim = DatabaseService.SelectUser(user);
+            UserInfoModel uimFather = null;
+            if (uim.Father != currUser.UserName)
+            {
+                uimFather = DatabaseService.SelectUser(uim.Father);
+                if (model.UnitPrice > uimFather.UnitPrice) //子账号定价不能高于父账号
+                {
+                    return false;
+                }
+            }
+
+            double oldPrice = uim.UnitPrice;
+            double newPrice = model.UnitPrice;
+            double diff = newPrice - oldPrice;
+
             uim._Plan = model._Plan;
             uim.UnitPrice = model.UnitPrice;
             uim.DaysBefore = model.DaysBefore;
@@ -217,12 +234,17 @@ namespace Insurance.Controllers
                 uim.AllowCreateAccount = "2";
                 uim.AccessLevel = 2;
             }
-            List<string> paras = new List<string>()
-            {
-                "AccessLevel","AllowCreateAccount","DaysBefore","_Plan","UnitPrice"
-            };
+
             if (DatabaseService.UpdateUserInfo(uim, paras))
             {
+                foreach (UserInfoModel springUser in uim.SpringAccounts)
+                {
+                    var parameters = new List<string>() { "UnitPrice" };
+                    UserInfoModel newModel = new UserInfoModel();
+                    newModel = springUser;
+                    newModel.UnitPrice = springUser.UnitPrice + diff;
+                    DatabaseService.UpdateUserInfo(newModel, parameters);
+                }
                 return true;
             }
             else
