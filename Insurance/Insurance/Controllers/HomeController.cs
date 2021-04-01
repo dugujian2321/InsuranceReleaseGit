@@ -1128,7 +1128,7 @@ namespace VirtualCredit.Controllers
             {
                 foreach (var file in Directory.GetFiles(dir))
                 {
-                    var excel = GetExcelInfo(file, companyName);
+                    var excel = GetExcelInfo(file, companyName, plan);
                     if (excel != null && excel.Cost != excel.Paid)
                     {
                         detailModel.Excels.Add(excel);
@@ -1206,7 +1206,7 @@ namespace VirtualCredit.Controllers
             }
             foreach (string fileName in excels)
             {
-                NewExcel excel = GetExcelInfo(fileName, companyName);
+                NewExcel excel = GetExcelInfo(fileName, companyName, plan);
                 if (excel != null)
                 {
                     allexcels.Add(excel);
@@ -1224,16 +1224,41 @@ namespace VirtualCredit.Controllers
         }
 
 
-
-        private NewExcel GetExcelInfo(string fileFullName, string companyName)
+        private Dictionary<string, UserInfoModel> m_CachedUser = new Dictionary<string, UserInfoModel>();
+        private NewExcel GetExcelInfo(string fileFullName, string companyName, string plan)
         {
+            var currUser = GetCurrentUser();
             FileInfo fi = new FileInfo(fileFullName);
             if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
                 return null;
 
+            string _month = fi.Directory.Name;
+            string _plan = fi.Directory.Parent.Name;
+            string _childCompanyName = fi.Directory.Parent.Parent.Name;
+            UserInfoModel companyAccount = null;
+            if (!m_CachedUser.ContainsKey(_childCompanyName))
+            {
+                companyAccount = DatabaseService.SelectUserByCompanyAndPlan(_childCompanyName, plan);
+                m_CachedUser.Add(_childCompanyName, companyAccount);
+            }
+            else
+            {
+                companyAccount = m_CachedUser[_childCompanyName];
+            }
+            bool bHasChildren = companyAccount.ChildAccounts.Count > 0;
+            double unitPrice = 0;
+            if (_childCompanyName != companyName)
+            {
+                unitPrice = currUser.ChildAccounts.Where(ac => ac.SpringAccounts.Any(cac => cac.CompanyName == _childCompanyName)).FirstOrDefault().UnitPrice;
+            }
+            else
+            {
+                unitPrice = companyAccount.UnitPrice;
+            }
             NewExcel excel = new NewExcel();
             excel.FileName = fi.Name;
             excel.Company = companyName;
+
 
             ExcelTool et = new ExcelTool(fileFullName, "Sheet1");
             excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
@@ -1247,13 +1272,13 @@ namespace VirtualCredit.Controllers
             {
                 excel.Mode = "加保";
                 excel.StartDate = et.GetCellText(1, 4, ExcelTool.DataType.String);
-                excel.Cost = decimal.Parse(fileinfo[1]);
+                excel.Cost = decimal.Parse(fileinfo[1]) * decimal.Parse(unitPrice.ToString()) / decimal.Parse(companyAccount.UnitPrice.ToString());
             }
             else
             {
                 excel.Mode = "减保";
                 excel.EndDate = et.GetCellText(1, 5, ExcelTool.DataType.String);
-                excel.Cost = decimal.Parse(fileinfo[1]);
+                excel.Cost = decimal.Parse(fileinfo[1]) * decimal.Parse(unitPrice.ToString()) / decimal.Parse(companyAccount.UnitPrice.ToString());
             }
             excel.Paid = decimal.Parse(fileinfo[6]);
             return excel;
