@@ -1033,7 +1033,7 @@ namespace Insurance.Services
                 currentRow = m_main.GetRow(i);
                 id = currentRow.Cells[idCol].ToString();
                 IDCardValidation idTool = new IDCardValidation();
-                if (!idTool.CheckIDCard(id))
+                if (!idTool.CheckAge(id) || !idTool.CheckIDCard(id) )
                 {
                     Employee e = new Employee()
                     {
@@ -1041,7 +1041,7 @@ namespace Insurance.Services
                         Name = currentRow.Cells[0].ToString(),
                         JobType = currentRow.Cells[2].ToString(),
                         Job = currentRow.Cells[3].ToString(),
-                        DataDesc = "身份证疑似错误：" + id,
+                        DataDesc = "身份证错误或年龄不在16-65周岁：" + id,
                         Valid = false
                     };
                     result.Add(e);

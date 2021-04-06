@@ -331,9 +331,18 @@ namespace Insurance.Controllers
 
         public JsonResult UserDaysBefore([FromQuery] string company)
         {
-            var user = DatabaseService.SelectUserByCompany(company);
+            int days = 0;
+            var currUser = GetCurrentUser();
+            if (currUser.AccessLevel == 0)
+            {
+                days = currUser.DaysBefore;
+            }
+            else
+            {
+                var user = DatabaseService.SelectUserByCompany(company);
+                days = user.DaysBefore;
+            }
 
-            int days = user.DaysBefore;
             DateTime dt = DateTime.Now.Date.AddDays(-1 * days);
             ClearSession();
             return Json(dt.ToString("yyyy-MM-dd"));
