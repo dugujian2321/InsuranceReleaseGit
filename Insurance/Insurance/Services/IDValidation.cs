@@ -30,6 +30,33 @@ namespace Insurance.Services
             }
         }
 
+        public bool CheckAge(string idNumber)
+        {
+            if (idNumber.Length == 18)
+            {
+                string birthDateStr = idNumber.Substring(6, 8);
+                birthDateStr = birthDateStr.Substring(0, 4) + "-" + birthDateStr.Substring(4, 2) + "-" + birthDateStr.Substring(6, 2);
+                if (!DateTime.TryParse(birthDateStr, out DateTime birthDate))
+                {
+                    return false;
+                }
+
+                if (DateTime.Now < birthDate.AddYears(16) || DateTime.Now > birthDate.AddYears(65))
+                {
+                    return false;
+                }
+
+                return true;
+            }
+            else if (idNumber.Length == 15)
+            {
+                return false;
+            }
+            else
+            {
+                return false;
+            }
+        }
 
         /// <summary>  
         /// 18位身份证号码验证  
