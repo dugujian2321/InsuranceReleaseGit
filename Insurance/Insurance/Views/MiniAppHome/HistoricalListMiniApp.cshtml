@@ -40,7 +40,7 @@
         {
             if (currentUser.AllowCreateAccount == "1")
             {
-                <table class="table table-striped table-bordered">
+                <table class="table minitable table-striped table-bordered">
                     <thead class="thead-dark">
                         <tr style="text-align:center">
                             <th scope="col">公司</th>
@@ -64,8 +64,11 @@
                         {
                             @foreach (Company item in Model.CompanyList)
                             {
+                                int len = item.AbbrName.Length;
+                                len = len >= 5 ? 5 : len;
                                 <tr style="text-align:center">
-                                    <td class="td_middle">@item.AbbrName</td>
+                                    
+                                    <td class="td_middle">@item.AbbrName.Substring(0, len)</td>
                                     <td class="td_middle">@item.EmployeeNumber</td>
                                     <td class="td_middle">@item.TotalCost</td>
                                     @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)

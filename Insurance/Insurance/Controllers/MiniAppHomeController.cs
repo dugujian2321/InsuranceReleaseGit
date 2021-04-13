@@ -726,12 +726,13 @@ namespace Insurance.Controllers
                 ExcelTool excelTool = new ExcelTool(filePath, "Sheet1");
                 DataTable result = excelTool.ExcelToDataTable("Sheet1", false);
                 DataRow firstRow = result.Rows[0];
-                foreach (DataColumn col in result.Columns)
+                for (int i = 0; i < result.Columns.Count; i++)
                 {
-                    if (firstRow[col].ToString() == "保障开始时间") firstRow[col] = "开始";
-                    if (firstRow[col].ToString() == "保障结束时间") firstRow[col] = "结束";
-                    if (firstRow[col].ToString() == "职业类别") firstRow[col] = "类别";
+                    if (firstRow[i].ToString() == "保障开始时间") { result.Columns.RemoveAt(i); i--; };
+                    if (firstRow[i].ToString() == "保障结束时间") { result.Columns.RemoveAt(i); i--; };
+                    if (firstRow[i].ToString() == "职业类别") { result.Columns.RemoveAt(i); i--; };
                 }
+
                 return Json(result);
             }
             catch (Exception e)
