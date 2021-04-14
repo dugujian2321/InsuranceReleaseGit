@@ -8,6 +8,7 @@
     "ocr-navigator": "plugin://ocr-plugin/ocr-navigator",
     "mp-canlendar": "../../miniprogram_npm/wx_calendar-master/src/component/v2/index",
     "mp-toptips": "../../miniprogram_npm/weui-miniprogram/toptips/toptips",
-    "popup":"../../miniprogram_npm/popup/popup"
+    "popup":"../../miniprogram_npm/popup/popup",
+    "addpopup":"../../miniprogram_npm/addPopup/addPopup"
   }
 }

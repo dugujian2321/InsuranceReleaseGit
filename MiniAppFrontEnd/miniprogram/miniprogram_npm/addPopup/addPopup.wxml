@@ -1,0 +1,32 @@
+<!-- pages/components/popup.wxml -->
+<view class="wx-popup" hidden="{{flag}}">
+  <view class="popup-container">
+    <view class="wx-popup-title">{{title}}</view>
+    <view class="horizontalview">
+      <text class="col-1">姓名：</text>
+      <input class="col-2" type="text" bindblur="handleNameInput" value="{{emName}}" />
+    </view>
+    <view class="horizontalview">
+      <text class="col-1">身份证：</text>
+      <input class="col-2" type="text" bindblur="handleIdNumInput" value="{{idNum}}" />
+    </view>
+    <view class="horizontalview">
+      <text class="col-1">工种：</text>
+      <input class="col-2" type="text" bindblur="handleJobInput" value="{{job}}" />
+    </view>
+    <view class="horizontalview" style="border:none">
+      <text class="col-1">职业类别：</text>
+      <input class="col-2" disabled="{{true}}" type="text" value="{{jobType}}" />
+    </view>
+    <view class="btnBox">
+      <ocr-navigator bind:onSuccess="success" certificateType="idCard" opposite="{{false}}">
+        <button class="wx-popup-btn" type="primary" disabled="{{scanBtnDisabled}}">扫描身份证</button>
+      </ocr-navigator>
+
+    </view>
+    <view class="horizontalview" style="border:none">
+      <button class="wx-popup-btn" type="primary" bindtap='_cancel'>{{btn_no}}</button>
+      <button class="wx-popup-btn" type="primary" bindtap='_success'>{{btn_ok}}</button>
+    </view>
+  </view>
+</view>

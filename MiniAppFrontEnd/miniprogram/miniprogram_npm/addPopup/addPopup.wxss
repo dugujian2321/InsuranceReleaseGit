@@ -1,0 +1,101 @@
+/* pages/components/popup.wxss */
+/* component/popup.wxss */
+.wx-popup {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 999;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+
+}
+.scroll-view_H{
+  white-space: nowrap;
+  height:700rpx;
+}
+.scroll-view-item_H{
+  width: 100%;
+  height: 60rpx;
+  padding-left: 20rpx;
+  white-space: pre-wrap;
+}
+
+view.btnBox{
+  border-top-style: solid;
+  border-top-color:#07c160;
+  border-top-width: 2rpx;
+}
+
+.horizontalview{
+  height: 100%;
+  width: 90%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 5rpx 5rpx;
+  margin: 5rpx auto;
+  justify-content: space-between;
+  box-sizing: border-box;
+  border-bottom-style: solid;
+  border-color: rgb(187, 187, 187);
+  border-width: 0.5rpx;
+}
+
+.popup-container {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 80%;
+  max-width: 600rpx;
+  border: 2rpx solid #ccc;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%); 
+  overflow: hidden;
+  background: #fff;
+  border-radius: 10rpx;
+}
+.wx-popup-title {
+  width: 100%;
+  padding: 20rpx;
+  text-align: center;
+  font-size: 40rpx;
+  border-bottom: 2rpx solid #07c160;
+}
+.wx-popup-con {
+  text-align: center;
+}
+.wx-popup-btn {
+  margin-top: 15rpx;
+  margin-bottom: 15rpx;
+}
+.wx-popup-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30%;
+  height: 88rpx;
+  border: 2rpx solid #ccc;
+  border-radius: 10rpx;
+}
+.col-1{
+  flex: 1;
+}
+
+.col-2{
+  flex: 2;
+}
+
+.col-3{
+  flex: 3;
+}
+
+.col-4{
+  flex: 4;
+}
+.col-5{
+  flex: 5;
+}
+.col-6{
+  flex: 6;
+}

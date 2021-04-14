@@ -21,19 +21,31 @@
         </mp-cells>
         <mp-cells title="添加人员">
             <mp-cell>
+                <button type="primary" bindtap="showAddPane" disabled="{{scanBtnDisabled}}">
+                    +添加人员
+                </button>
+            </mp-cell>
+            <!-- <mp-cell>
                 <ocr-navigator bind:onSuccess="success" certificateType="idCard" opposite="{{false}}">
                     <button type="primary" disabled="{{scanBtnDisabled}}">扫描身份证</button>
                 </ocr-navigator>
-            </mp-cell>
+            </mp-cell> -->
         </mp-cells>
         <mp-cells ext-class="my-cells" title="名单(左滑条目可删除)">
             <mp-slideview buttons="{{slideButtons}}" bindbuttontap="slideButtonTap" wx:for-index="index" data-index="{{index}}" wx:for="{{list_add}}" wx:key="id">
-                <mp-cell value="{{item.name}} {{item.id}}"></mp-cell>
+                <mp-cell value="{{item._name}} | {{item.id}} | {{item.job}} | 1-4"></mp-cell>
             </mp-slideview>
             <mp-cell value="保费：{{price}}元"></mp-cell>
         </mp-cells>
-        <button style="margin-top:50rpx" type="primary" disabled="{{!calculateBtnEnabled}}" bindtap="calculate">{{CalculateText}}</button>
-        <button style="margin-top:50rpx" disabled="{{!calculated}}" type="primary" bindtap="submit">{{SubmitText}}</button>
+        <button style="margin-top:50rpx" type="primary" disabled="{{!calculateBtnEnabled}}" bindtap="calculate">
+            {{CalculateText}}
+        </button>
+        <button style="margin-top:50rpx" disabled="{{!calculated}}" type="primary" bindtap="submit">
+            {{SubmitText}}
+        </button>
     </view>
     <popup id='popup' title='结果' content="{{ServerMsg}}" btn_ok='确定' bind:success="_success"></popup>
+    <addpopup id='addPopup' emName='{{newName}}' idNum='{{newId}}' job='{{newJob}}' jobType='{{newJobType}}' title='添加人员' btn_ok='确定' bind:cancel="_cancelAdd" bind:scanSuccess="_scanSuccess" bind:success="startAdd">
+
+    </addpopup>
 </view>

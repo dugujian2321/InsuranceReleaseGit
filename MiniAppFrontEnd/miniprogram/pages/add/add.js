@@ -21,7 +21,13 @@ Page({
     CalculateText: "计算保费",
     calculateBtnEnabled: true,
     SubmitText: "提交",
-    scanBtnDisabled: false
+    scanBtnDisabled: false,
+    newAddInfo: {},
+
+    newName: "",
+    newId: "",
+    newJob: "",
+    newJobType: "1-4"
   },
   onLoad: function () {
     var reqTask = wx.request({
@@ -143,19 +149,13 @@ Page({
       })
     }
   },
+  showAddPane: function (e) {
+    this.addpopup = this.selectComponent("#addPopup")
+    this.addpopup.showPopup();
+  },
   calculate: function (e) {
     var that = this
-    // var debugList = [
-    //   {
-    //     name: '胡晓东',
-    //     id: '32072119890505163X',
-    //     jobtype: 'jt1',
-    //     job: 'j1'
-    //   }
-    // ]
-    // this.setData({
-    //   list_add: debugList
-    // })
+
     if (this.data.list_add.length <= 0) {
       this.showErrorMsg("人员列表为空")
       return
@@ -186,8 +186,8 @@ Page({
           this.setData({
             ServerMsg: tempMsg
           })
-          this.popup = this.selectComponent("#popup"),
-            this.popup.showPopup();
+          this.popup = this.selectComponent("#popup")
+          this.popup.showPopup();
           return
         } else {
           if (result.data.indexOf("无误") == -1) {
@@ -195,8 +195,8 @@ Page({
             this.setData({
               ServerMsg: tempMsg
             })
-            this.popup = this.selectComponent("#popup"),
-              this.popup.showPopup();
+            this.popup = this.selectComponent("#popup")
+            this.popup.showPopup();
             return
           }
         }
@@ -217,22 +217,81 @@ Page({
       }
     });
   },
-  success: function (e) {
+
+  startAdd: function (e) {
+    this.popup = this.selectComponent("#addPopup")
+
+    if (!(this.data.newAddInfo.name == "" || this.data.newAddInfo.name == undefined ||
+      this.data.newAddInfo.id == "" || this.data.newAddInfo.id == undefined)) {
+      this.setData({
+        newName: this.data.newAddInfo._name,
+        newId: this.data.newAddInfo.id,
+        newJob: this.popup.data.job
+      })
+    }
+    console.log(this.popup.data)
+    if (this.data.newName == "" || this.data.newName == undefined || this.data.newId == "" || this.data.newId == undefined) {
+      if (this.popup.data.emName != "" && this.popup.data.idNum != "") {
+        this.setData({
+          newName: this.popup.data.emName,
+          newId: this.popup.data.idNum,
+          newJob: this.popup.data.job
+        })
+      } else {
+        return
+      }
+    }
     var newAdd = {
-      name: e.detail.name.text,
-      id: e.detail.id.text,
+      _name: this.data.newName,
+      id: this.data.newId,
+      job: this.data.newJob
+    }
+    this.setData({
+      newAddInfo: newAdd
+    })
+
+    console.log(this.data.newAddInfo)
+    this.data.temp_list.push(this.data.newAddInfo)
+    this.setData({
+      newName: "",
+      newId: "",
+
+      list_add: this.data.temp_list,
+      newAddInfo: {}
+    })
+    this.uncalculate()
+
+    this.popup.hidePopup();
+  },
+
+  _cancelAdd: function (e) {
+    this.setData({
+      newName: "",
+      newId: "",
+      newAddInfo: {}
+    })
+    this.popup = this.selectComponent("#addPopup")
+    this.popup.hidePopup();
+  },
+
+  _success: function (e) {
+    this.popup = this.selectComponent("#popup")
+    this.popup.hidePopup();
+  },
+
+  _scanSuccess: function (e) {
+    console.log("this.popup")
+    this.popup = this.selectComponent("#addPopup")
+    console.log(this.popup)
+    var newAdd = {
+      _name: this.popup.data.emName,
+      id: this.popup.data.idNum,
       jobtype: '',
       job: ''
     }
-    this.data.temp_list.push(newAdd)
     this.setData({
-      list_add: this.data.temp_list
+      newAddInfo: newAdd
     })
-    this.uncalculate()
-  },
-  _success: function (e) {
-    this.popup = this.selectComponent("#popup"),
-      this.popup.hidePopup();
   },
   slideButtonTap(e) {
     var i = e.currentTarget.dataset.index;
