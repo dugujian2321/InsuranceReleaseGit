@@ -22,7 +22,6 @@
       <ocr-navigator bind:onSuccess="success" certificateType="idCard" opposite="{{false}}">
         <button class="wx-popup-btn" type="primary" disabled="{{scanBtnDisabled}}">扫描身份证</button>
       </ocr-navigator>
-
     </view>
     <view class="horizontalview" style="border:none">
       <button class="wx-popup-btn" type="primary" bindtap='_cancel'>{{btn_no}}</button>

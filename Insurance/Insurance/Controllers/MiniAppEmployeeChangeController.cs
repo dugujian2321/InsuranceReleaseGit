@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using VirtualCredit.LogServices;
 using System.Threading;
+using static System.Net.WebRequestMethods;
 
 namespace Insurance.Controllers
 {
@@ -192,6 +193,141 @@ namespace Insurance.Controllers
                 {
                     r_locker.ExitReadLock();
                 }
+            }
+        }
+
+        public JsonResult MiniSearchPeople([FromQuery] string companyName, [FromQuery] string content, [FromQuery] string openid)
+        {
+            MiniSession(openid);
+            var currUser = GetCurrentUser();
+            try
+            {
+                string targetDir = GetSearchExcelsInDir(companyName);
+
+                List<string> summaryFiles = new List<string>();
+                foreach (var plan in Plans)
+                {
+                    if (System.IO.File.Exists(Path.Combine(targetDir, plan, companyName + ".xls")))
+                        summaryFiles.Add(Path.Combine(targetDir, plan, companyName + ".xls"));
+                }
+                //string summaryFiles = Path.Combine(targetDir, companyName, ".xls");
+
+                SearchPeopleModel model = new SearchPeopleModel();
+                model.People = new Employee();
+                DataTable temp = new DataTable();
+                DataTable result = new DataTable();
+                result.Columns.Add(new DataColumn("name"));
+                result.Columns.Add(new DataColumn("id"));
+                result.Columns.Add(new DataColumn("type"));
+                result.Columns.Add(new DataColumn("job"));
+                result.Columns.Add(new DataColumn("isChecked"));
+                currUser.MyLocker.RWLocker.EnterReadLock();
+                foreach (string file in summaryFiles)
+                {
+                    //如果为空则返回该公司全部在职员工
+                    if (string.IsNullOrEmpty(content))
+                    {
+                        using (ExcelTool et = new ExcelTool(file, "Sheet1"))
+                        {
+                            temp = et.ExcelToDataTable("sheet1", true);
+                        }
+                    }
+                    else
+                    {
+                        if (content.Length >= 10 && long.TryParse(content, out long id)) //身份证
+                        {
+                            using (ExcelTool et = new ExcelTool(file, "Sheet1"))
+                            {
+                                temp = et.MiniSelectPeopleByNameAndID("", 3, content, 4);
+                            }
+                        }
+                        else //人名
+                        {
+                            using (ExcelTool et = new ExcelTool(file, "Sheet1"))
+                            {
+                                temp = et.MiniSelectPeopleByNameAndID(content, 3, "", 4);
+                            }
+                        }
+                    }
+                    foreach (DataRow row in temp.Rows)
+                    {
+                        DataRow nr = result.NewRow();
+                        nr[0] = row["姓名"];
+                        nr[1] = row["身份证"];
+                        nr[2] = row["职业类别"];
+                        nr[3] = row["工种"];
+                        nr[4] = false;
+                        result.Rows.Add(nr);
+                    }
+                }
+                DataView dataView = result.DefaultView;
+                dataView.Sort = "id";
+                
+                return new JsonResult(dataView.ToTable());
+                //DataTable res = new DataTable();
+                //string company = currUser.CompanyName;
+                //string debug = "";
+
+                //currUser.MyLocker.RWLocker.EnterReadLock();
+                //foreach (var file in Directory.GetFiles(targetDir, "*", SearchOption.AllDirectories))
+                //{
+                //    debug = file;
+                //    FileInfo fi = new FileInfo(file);
+                //    if (!DateTime.TryParse(fi.Directory.Name, out DateTime date)) continue;
+                //    string[] excelInfo = fi.Name.Split("@");
+                //    string mode = excelInfo[3].Equals("Add", StringComparison.CurrentCultureIgnoreCase) ? "加保" : "减保";
+                //    string uploadtime = excelInfo[0] + " " + excelInfo[5].Replace('-', ':');
+                //    string comp = fi.Directory.Parent.Parent.Name;
+                //    string uploader = excelInfo[2];
+                //    using (ExcelTool et = new ExcelTool(file, "Sheet1"))
+                //    {
+                //        //temp = et.SelectPeopleByNameAndID(em_name, nameCol, em_id, idCol);
+                //    }
+                //    if (temp != null && temp.Rows.Count > 0)
+                //    {
+                //        if (res.Columns.Count <= 0)
+                //        {
+                //            res = temp.Clone(); //拷贝表结构
+                //            DataColumn dc = new DataColumn("History");
+                //            res.Columns.Add(dc);
+                //        }
+                //        if (temp.Rows[0][1].ToString() == "未找到符合条件的人员")
+                //        {
+                //            continue;
+                //        }
+                //        foreach (DataRow row in temp.Rows)
+                //        {
+                //            string history = string.Join('%', uploadtime, mode, row["start_date"], row["end_date"], comp, uploader);
+                //            DataRow[] t = res.Select($"id = '{row["id"]}'");
+                //            if (t != null && t.Length > 0)
+                //            {
+                //                t[0]["History"] = string.Join("+", t[0]["History"], history);
+                //            }
+                //            else
+                //            {
+                //                DataRow newRow = res.NewRow();
+                //                newRow.ItemArray = row.ItemArray;
+                //                newRow["History"] = history;
+                //                res.Rows.Add(newRow);
+                //            }
+
+                //        }
+                //    }
+
+                //}
+
+                //model.Result = res;
+                //// CacheSearchResult(res);
+                //return new JsonResult("");
+            }
+            catch (Exception e)
+            {
+                return new JsonResult("");
+            }
+            finally
+            {
+                if (currUser.MyLocker.RWLocker.IsReadLockHeld)
+                    currUser.MyLocker.RWLocker.ExitReadLock();
             }
         }
 

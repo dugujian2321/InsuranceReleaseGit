@@ -2,38 +2,56 @@
 <mp-toptips msg="{{error}}" type="error" show="{{error}}"></mp-toptips>
 <view class="page">
     <view class="page__bd">
-        <mp-cells title="填写公司及方案">
+        <mp-cells title="名单检索">
             <mp-cell>
                 <picker range="{{company_list}}" bindchange="bindCompanyChange">
                     <view class="picker">公司: {{selected_company}}</view>
                 </picker>
             </mp-cell>
             <mp-cell>
-                <picker range="{{plan}}" value="{{index}}" bindchange="bindPlanChange">
-                    <view class="picker">方案: {{selected_plan}}</view>
-                </picker>
+                <view style="margin:0" class="">
+                    <input value="{{employee_info}}" bindblur="handleInfoInput" placeholder="姓名或身份证，不填则搜索全部" />
+                </view>
             </mp-cell>
+            <mp-cell>
+                <button type="primary" bindtap="handleSearch" disabled="{{bSearchDisabled}}">
+                    搜索
+                </button>
+            </mp-cell>
+            <mp-cell style="display:{{showSearchList}}">
+                <scroll-view style="max-height:500rpx" scroll-y="{{true}}">
+                    <checkbox-group bindchange="checkboxChange">
+                        <checkbox value="{{index}}" wx:for="{{searchResultList}}" checked="{{item.isChecked!='False'}}" color="">
+                            {{item.name}} | {{item.id}} | {{item.isChecked}}
+                        </checkbox>
+                    </checkbox-group>
+                </scroll-view>
+            </mp-cell>
+            <mp-cell style="display:{{showSearchList}}">
+                <button type="primary" bind:tap="addToSUbList">添加至退保名单</button>
+            </mp-cell>
+        </mp-cells>
+        <mp-cells ext-class="my-cells" title="名单(左滑条目可删除)">
+            <scroll-view class="" scroll-y="{{true}}" style="max-height:500rpx">
+                <mp-slideview style="height:0%" buttons="{{slideButtons}}" bindbuttontap="slideButtonTap" wx:for-index="index" data-index="{{index}}" wx:for="{{list_add}}" wx:key="id">
+                    <mp-cell value="{{item.name}} {{item.id}}"></mp-cell>
+                </mp-slideview>
+            </scroll-view>
+            <view class="" style="border-top-style:groove" hover-class="none" hover-stop-propagation="false">
+                <mp-cell value="保费：{{price}}元"></mp-cell>
+            </view>
             <mp-cell>
                 <picker mode="date" value="{{date}}" start="2019-09-01" end="2050-09-01" bindchange="bindDateChange">
                     <view class="picker">生效日期: {{date}}</view>
                 </picker>
             </mp-cell>
         </mp-cells>
-        <mp-cells title="退保人员">
-            <mp-cell>
-                <ocr-navigator bind:onSuccess="success" certificateType="idCard" opposite="{{false}}">
-                    <button type="primary" disabled="{{scanBtnDisabled}}">扫描身份证</button>
-                </ocr-navigator>
-            </mp-cell>
-        </mp-cells>
-        <mp-cells ext-class="my-cells" title="名单(左滑条目可删除)">
-            <mp-slideview buttons="{{slideButtons}}" bindbuttontap="slideButtonTap" wx:for-index="index" data-index="{{index}}" wx:for="{{list_add}}" wx:key="id">
-                <mp-cell value="{{item.name}} {{item.id}}"></mp-cell>
-            </mp-slideview>
-            <mp-cell value="保费：{{price}}元"></mp-cell>
-        </mp-cells>
-        <button style="margin-top:50rpx" type="primary" disabled="{{!calculateBtnEnabled}}" bindtap="calculate">{{CalculateText}}</button>
-        <button style="margin-top:50rpx" disabled="{{!calculated}}" type="primary" bindtap="submit">{{SubmitText}}</button>
+        <button style="margin-top:50rpx" type="primary" disabled="{{!calculateBtnEnabled}}" bindtap="calculate">
+            {{CalculateText}}
+        </button>
+        <button style="margin-top:50rpx" disabled="{{!calculated}}" type="primary" bindtap="submit">
+            {{SubmitText}}
+        </button>
     </view>
     <popup id='popup' title='结果' content="{{ServerMsg}}" btn_ok='确定' bind:success="_success"></popup>
 </view>

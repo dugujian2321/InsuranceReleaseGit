@@ -21,7 +21,14 @@ Page({
     CalculateText: "计算保费",
     calculateBtnEnabled: true,
     SubmitText: "提交",
-    scanBtnDisabled: false
+    scanBtnDisabled: false,
+    employee_info: '',
+    bSearchDisabled: false,
+
+    showSearchList: 'none',
+    searchResultList: [],
+    selectedPeopleList: [],
+    test: ["1", "2", "3", "3", "3", "3", "3", "3"]
   },
   onLoad: function () {
     var reqTask = wx.request({
@@ -63,6 +70,78 @@ Page({
         extClass: 'test',
         //src: '/page/weui/cell/icon_del.svg', // icon的路径
       }],
+    });
+  },
+  handleInfoInput: function (e) {
+    console.log(e)
+    this.setData({
+      employee_info: e.detail.value
+    })
+  },
+  addToSUbList: function (e) {
+    var resultArray = this.data.list_add
+    for (var i = 0; i < this.data.selectedPeopleList.length; i++) {
+      var index = this.data.selectedPeopleList[i]
+      var temp = {
+        name: this.data.searchResultList[index].name,
+        id: this.data.searchResultList[index].id,
+        job: this.data.searchResultList[index].job,
+        jobtype: this.data.searchResultList[index].type
+      }
+      this.data.searchResultList[index].isChecked = "False"
+      resultArray.push(temp)
+    }
+
+    this.setData({
+      list_add: resultArray,
+      selectedPeopleList: [],
+      searchResultList: this.data.searchResultList
+    })
+    console.log(this.data.list_add)
+  },
+  checkboxChange: function (e) {
+    //console.log(e)
+    this.setData({
+      selectedPeopleList: e.detail.value
+    })
+  },
+  handleSearch: function (e) {
+    console.log(e)
+    this.setData({
+      searchResultList: [],
+      bSearchDisabled: true
+    })
+    var info = {
+      companyName: this.data.selected_company,
+      content: this.data.employee_info
+    }
+    console.log(info)
+    var reqTask = wx.request({
+      url: getApp().globalData.baseUrl + 'mini/miniappemployeechange/minisearchpeople?companyName=' +
+        this.data.selected_company + '&content=' + this.data.employee_info + '&openId=' + getApp().globalData.openId,
+      header: { 'content-type': 'application/json' },
+      method: 'POST',
+      dataType: 'json',
+      responseType: 'text',
+      success: (result) => {
+        var tempMsg = []
+        console.log(result)
+        this.setData({
+          showSearchList: '',
+          searchResultList: result.data,
+        })
+
+        console.log(this.data.searchResultList)
+      },
+      fail: (f) => {
+        console.log(f)
+      },
+      complete: () => {
+        this.setData({
+          bSearchDisabled: false
+
+        })
+      }
     });
   },
   uncalculate: function () {
@@ -144,6 +223,11 @@ Page({
     }
   },
   calculate: function (e) {
+    this.setData({
+      showSearchList: 'none',
+      bSearchDisabled: true,
+      calculated: false
+    })
     var that = this
     // var debugList = [
     //   {
@@ -214,6 +298,9 @@ Page({
       },
       complete: () => {
         this.changeCalculateBtnState()
+        this.setData({
+          bSearchDisabled: false
+        })
       }
     });
   },
@@ -231,12 +318,17 @@ Page({
     this.uncalculate()
   },
   _success: function (e) {
-    this.popup = this.selectComponent("#popup"),
-      this.popup.hidePopup();
+    this.popup = this.selectComponent("#popup")
+    this.popup.hidePopup();
   },
   slideButtonTap(e) {
+    this.setData({
+      temp_list: this.data.list_add
+    })
+
     var i = e.currentTarget.dataset.index;
     var t = this.data.temp_list.splice(i, 1)
+
     this.setData({
       list_add: this.data.temp_list
     })
@@ -253,6 +345,9 @@ Page({
       console.log("no data")
       return
     }
+    this.setData({
+      bSearchDisabled: true
+    })
     this.changeSubmitBtnState()
     var reqTask = wx.request({
       url: getApp().globalData.baseUrl + 'mini/miniappemployeechange/MiniUpdateSummary?date=' + this.data.date +
@@ -277,7 +372,8 @@ Page({
             tempMsg.push("本次保费：" + result.data[4])
 
             this.setData({
-              ServerMsg: tempMsg
+              ServerMsg: tempMsg,
+              list_add: []
             })
             this.popup = this.selectComponent("#popup")
             this.popup.showPopup();
@@ -292,6 +388,9 @@ Page({
       complete: () => {
         var su = this.data.calculated
         this.changeSubmitBtnState()
+        this.setData({
+          bSearchDisabled: false
+        })
         if (su == false) {
           this.setData({
             calculated: false

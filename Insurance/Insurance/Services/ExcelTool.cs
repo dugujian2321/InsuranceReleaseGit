@@ -873,6 +873,74 @@ namespace Insurance.Services
             return em;
         }
 
+        public DataTable MiniSelectPeopleByNameAndID(string name, int nameCol, string id, int idCol)
+        {
+            try
+            {
+                DataTable result = new DataTable();
+                result.Columns.Add(new DataColumn("工种"));
+                result.Columns.Add(new DataColumn("职业类别"));
+                result.Columns.Add(new DataColumn("姓名"));
+                result.Columns.Add(new DataColumn("身份证"));
+
+                DataTable source;
+                ExcelToDataTable("Sheet1", true, out source);
+                if (source is null)
+                {
+                    DataRow newRow = result.NewRow();
+                    newRow["name"] = "未找到符合条件的人员";
+                    newRow["id"] = string.Empty;
+                    result.Rows.Add(newRow);
+                    return result;
+                }
+                if (string.IsNullOrEmpty(id))
+                {
+                    foreach (DataRow row in source.Rows)
+                    {
+                        if (row["姓名"].ToString().IndexOf(name) >= 0)
+                        {
+                            DataRow newRow = result.NewRow();
+                            newRow["姓名"] = row["姓名"];
+                            newRow["身份证"] = row["身份证"];
+                            newRow["工种"] = row["工种"];
+                            newRow["职业类别"] = row["职业类别"];
+                            //newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
+                            result.Rows.Add(newRow);
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (DataRow row in source.Rows)
+                    {
+                        if (row["身份证"].ToString() == id)
+                        {
+                            DataRow newRow = result.NewRow();
+                            newRow["姓名"] = row["姓名"];
+                            newRow["身份证"] = id;
+                            newRow["工种"] = row["工种"];
+                            newRow["职业类别"] = row["职业类别"];
+                            //newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
+                            result.Rows.Add(newRow);
+                        }
+                    }
+                }
+                if (result.Rows.Count <= 0)
+                {
+                    DataRow newRow = result.NewRow();
+                    newRow["name"] = "未找到符合条件的人员";
+                    newRow["id"] = string.Empty;
+                    result.Rows.Add(newRow);
+                }
+                return result;
+            }
+            catch (Exception e)
+            {
+                throw;
+            }
+
+        }
+
         public DataTable SelectPeopleByNameAndID(string name, int nameCol, string id, int idCol)
         {
             try
@@ -1039,11 +1107,16 @@ namespace Insurance.Services
                     {
                         ID = id,
                         Name = currentRow.Cells[0].ToString(),
-                        JobType = currentRow.Cells[2].ToString(),
-                        Job = currentRow.Cells[3].ToString(),
+                        
+
                         DataDesc = "身份证错误或年龄不在16-65周岁：" + id,
                         Valid = false
                     };
+                    if (currentRow.Cells.Count > 2)
+                    {
+                        e.JobType = currentRow.Cells[2].ToString();
+                        e.Job = currentRow.Cells[3].ToString();
+                    }
                     result.Add(e);
                 }
                 else
@@ -1052,11 +1125,14 @@ namespace Insurance.Services
                     {
                         ID = id,
                         Name = currentRow.Cells[0].ToString(),
-                        JobType = currentRow.Cells[2].ToString(),
-                        Job = currentRow.Cells[3].ToString(),
                         DataDesc = "",
                         Valid = true
                     };
+                    if (currentRow.Cells.Count > 2)
+                    {
+                        e.JobType = currentRow.Cells[2].ToString();
+                        e.Job = currentRow.Cells[3].ToString();
+                    }
                     result.Add(e);
                 }
             }
