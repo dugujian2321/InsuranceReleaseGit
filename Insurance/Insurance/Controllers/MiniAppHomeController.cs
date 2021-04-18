@@ -3,6 +3,7 @@ using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -507,6 +508,46 @@ namespace Insurance.Controllers
             detailModel.Company = companyName;
             ViewBag.Page = "未结算汇总";
             return View("MiniRecipeSummaryDetail", detailModel);
+        }
+
+        [HttpGet]
+        public string MiniProofTable(string company, string date, string openid)
+        {
+            MiniSession(openid);
+            UserInfoModel currUser = GetCurrentUser();
+            string companyDir = GetSearchExcelsInDir(company);
+            List<string> summaries = new List<string>();
+            DateTime month = DateTime.Parse(date);
+            bool isCurrentMonth = month.Month == DateTime.Now.Month;
+            foreach (var plan in Plans)
+            {
+                string planDir = Path.Combine(companyDir, plan);
+                if (!Directory.Exists(planDir)) continue;
+
+                //compDir = Directory.GetDirectories(companyDir, comp, SearchOption.AllDirectories).FirstOrDefault();
+                if (isCurrentMonth)
+                    summaries.AddRange(Directory.GetFiles(planDir, company + ".xls"));
+                else
+                    summaries.AddRange(Directory.GetFiles(planDir, company + "_" + month.ToString("yyyy-MM") + "_bk.xls"));
+            }
+
+            DataTable dt = new DataTable();
+            foreach (var summary in summaries)
+            {
+                dt.Merge(new ExcelTool(summary, "Sheet1").ExcelToDataTable("Sheet1", true));
+            }
+            if (dt.Rows.Count > 0)
+            {
+                var dt2 = dt.DefaultView.ToTable(false, "姓名", "身份证", "生效日期", "离职日期");
+                dt2.Columns[2].ColumnName = "生效";
+                dt2.Columns[3].ColumnName = "离职";
+                return JsonConvert.SerializeObject(dt2);
+            }
+            dt.Columns.Add(new DataColumn());
+            DataRow r = dt.NewRow();
+            r[0] = "无数据";
+            dt.Rows.Add(r);
+            return JsonConvert.SerializeObject(dt);
         }
 
         public IActionResult MiniRecipeSummary([FromQuery] string date, [FromQuery] string name, string openid)
