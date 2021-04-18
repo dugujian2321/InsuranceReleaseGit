@@ -4,8 +4,8 @@ App({
         openId:"",
         userInfo: null,
         screenHeight: '',
-        //baseUrl: 'http://192.168.1.11:5000/'
-        baseUrl: 'https://www.pagzb.com/'
+        baseUrl: 'http://192.168.1.11:5000/'
+        //baseUrl: 'https://www.pagzb.com/'
       },
     onLaunch: function () {
         console.log("当前服务器"+ this.globalData.baseUrl)

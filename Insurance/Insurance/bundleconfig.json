@@ -6,9 +6,9 @@
     ]
   },
   {
-    "outputFileName": "wwwroot/js/site_2.4.min.js",
+    "outputFileName": "wwwroot/js/site_2.8.min.js",
     "inputFiles": [
-      "wwwroot/js/site_2.4.js"
+      "wwwroot/js/site_2.8.js"
     ]
   },
   {
