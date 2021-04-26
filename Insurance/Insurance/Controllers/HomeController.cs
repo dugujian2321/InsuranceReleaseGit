@@ -470,13 +470,17 @@ namespace VirtualCredit.Controllers
                 SearchOption so = SearchOption.AllDirectories;
                 if (isSelf) so = SearchOption.TopDirectoryOnly;
                 List<string> monthDirs = new List<string>();
-                if (!string.IsNullOrEmpty(currUser._Plan))
+                List<string> planDirs = new List<string>();
+
+                if (!string.IsNullOrEmpty(currUser._Plan)) //plan!=""
                 {
-                    foreach (var plan in currUser._Plan.Split(' '))
+                    foreach (var plan in currUser._Plan.Split(' ',StringSplitOptions.RemoveEmptyEntries))
                     {
-                        DirectoryInfo di = new DirectoryInfo(Path.Combine(companyDir, plan));
-                        if (di.Exists)
-                            monthDirs.AddRange(Directory.GetDirectories(Path.Combine(companyDir, plan), month, so));
+                        planDirs.AddRange(Directory.GetDirectories(companyDir, plan, so));
+                    }
+                    foreach (var planDir in planDirs)
+                    {
+                        monthDirs.AddRange(Directory.GetDirectories(planDir, month, so));
                     }
                 }
                 else
@@ -534,13 +538,13 @@ namespace VirtualCredit.Controllers
                 }
                 allexcels.Sort((l, r) =>
                 {
-                    if (DateTime.Parse(l.UploadDate) != DateTime.Parse(r.UploadDate))
+                    if (l.Company != r.Company)
                     {
-                        return DateTime.Parse(r.UploadDate).CompareTo(DateTime.Parse(l.UploadDate));
+                        return r.Company.CompareTo(l.Company);
                     }
                     else
                     {
-                        return l.Cost.CompareTo(r.Cost);
+                        return DateTime.Parse(l.UploadDate).CompareTo(DateTime.Parse(r.UploadDate));
                     }
                 });
                 dm.Company = name;
