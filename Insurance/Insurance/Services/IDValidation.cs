@@ -30,7 +30,7 @@ namespace Insurance.Services
             }
         }
 
-        public bool CheckAge(string idNumber)
+        public bool ValidAge(string idNumber)
         {
             if (idNumber.Length == 18)
             {

@@ -540,8 +540,8 @@ namespace Insurance.Controllers
                     fs.Flush();
                 }
                 ExcelTool et = new ExcelTool(Path.Combine(companyDir, fileName), sheetName);
-
-                result = et.ValidateIDs(idCol); // 验证身份证号码
+                bool checkAge = currUser.AccessLevel != 0;
+                result = et.ValidateIDs(idCol, checkAge); // 验证身份证号码
                 for (int i = 0; i < result.Count - 1; i++)
                 {
                     for (int j = i + 1; j < result.Count; j++)

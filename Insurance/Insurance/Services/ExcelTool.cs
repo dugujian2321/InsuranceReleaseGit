@@ -1090,7 +1090,7 @@ namespace Insurance.Services
             return result;
         }
 
-        public List<Employee> ValidateIDs(int idCol)
+        public List<Employee> ValidateIDs(int idCol, bool bCheckAge = true)
         {
             List<Employee> result = new List<Employee>();
             IRow currentRow;
@@ -1101,14 +1101,12 @@ namespace Insurance.Services
                 currentRow = m_main.GetRow(i);
                 id = currentRow.Cells[idCol].ToString();
                 IDCardValidation idTool = new IDCardValidation();
-                if (!idTool.CheckAge(id) || !idTool.CheckIDCard(id))
+                if ((bCheckAge && !idTool.ValidAge(id)) || !idTool.CheckIDCard(id))
                 {
                     Employee e = new Employee()
                     {
                         ID = id,
                         Name = currentRow.Cells[0].ToString(),
-
-
                         DataDesc = "身份证错误或年龄不在16-65周岁：" + id,
                         Valid = false
                     };
