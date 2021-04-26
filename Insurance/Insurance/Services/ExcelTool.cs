@@ -169,7 +169,7 @@ namespace Insurance.Services
                     string id = GetCellText(i, idCol);
                     for (int j = 1; j <= m_main.GetLastRow(); j++)
                     {
-                        if (GetCellText(j, idCol) == id && GetCellText(j, signDateCol) == GetCellText(i, signDateCol) && string.IsNullOrWhiteSpace(GetCellText(j, resignDateCol)))
+                        if (GetCellText(j, idCol).Equals(id, StringComparison.InvariantCultureIgnoreCase) && GetCellText(j, signDateCol).Equals(GetCellText(i, signDateCol), StringComparison.InvariantCultureIgnoreCase) && string.IsNullOrWhiteSpace(GetCellText(j, resignDateCol)))
                         {
                             RemoveByRowNum(j);
                             i--;
@@ -666,7 +666,7 @@ namespace Insurance.Services
             {
                 for (int j = i + 1; j < dt.Rows.Count; j++)
                 {
-                    if (dt.Rows[j][IdCol].ToString() == dt.Rows[i][IdCol].ToString())
+                    if (dt.Rows[j][IdCol].ToString().Equals(dt.Rows[i][IdCol].ToString(), StringComparison.InvariantCultureIgnoreCase))
                     {
                         DataRow destRow = dt.Rows[i];
                         Employee employee = new Employee()
@@ -707,7 +707,7 @@ namespace Insurance.Services
                 bool found = false;
                 foreach (DataRow sourceRow in summary.Rows)
                 {
-                    if (destRow[thisIdCol].ToString() == sourceRow[sourceIdCol].ToString())//如果身份证相等，则复制信息
+                    if (destRow[thisIdCol].ToString().Equals(sourceRow[sourceIdCol].ToString(), StringComparison.InvariantCultureIgnoreCase))//如果身份证相等，则复制信息
                     {
                         if (mode == "add")
                         {
@@ -803,7 +803,7 @@ namespace Insurance.Services
             ExcelToDataTable("Sheet1", true, out source);
             foreach (DataRow row in source.Rows)
             {
-                if (row[3].ToString() == id) //身份证号码列
+                if (row[3].ToString().Equals(id, StringComparison.InvariantCultureIgnoreCase)) //身份证号码列
                 {
                     int rowNum = source.Rows.IndexOf(row) + 1;
                     if (rowNum == m_main.GetLastRow())
@@ -842,7 +842,7 @@ namespace Insurance.Services
             ExcelToDataTable("Sheet1", true, out source);
             foreach (DataRow row in source.Rows)
             {
-                if (row["身份证"].ToString() == id)
+                if (row["身份证"].ToString().Equals(id, StringComparison.InvariantCultureIgnoreCase))
                 {
                     em = new Employee();
                     em.Name = row["姓名"].ToString();
@@ -901,7 +901,7 @@ namespace Insurance.Services
                         {
                             DataRow newRow = result.NewRow();
                             newRow["姓名"] = row["姓名"];
-                            newRow["身份证"] = row["身份证"];
+                            newRow["身份证"] = row["身份证"].ToString().ToUpper();
                             newRow["工种"] = row["工种"];
                             newRow["职业类别"] = row["职业类别"];
                             //newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
@@ -913,11 +913,11 @@ namespace Insurance.Services
                 {
                     foreach (DataRow row in source.Rows)
                     {
-                        if (row["身份证"].ToString() == id)
+                        if (row["身份证"].ToString().Equals(id, StringComparison.InvariantCultureIgnoreCase))
                         {
                             DataRow newRow = result.NewRow();
                             newRow["姓名"] = row["姓名"];
-                            newRow["身份证"] = id;
+                            newRow["身份证"] = id.ToUpper();
                             newRow["工种"] = row["工种"];
                             newRow["职业类别"] = row["职业类别"];
                             //newRow["company"] = new FileInfo(fileName).Directory.Parent.Name;
@@ -972,7 +972,7 @@ namespace Insurance.Services
                         {
                             DataRow newRow = result.NewRow();
                             newRow["name"] = row["姓名"];
-                            newRow["id"] = row["身份证"];
+                            newRow["id"] = row["身份证"].ToString().ToUpper();
                             newRow["job"] = row["工种"];
                             newRow["type"] = row["职业类别"];
                             newRow["start_date"] = row["保障开始时间"];
@@ -986,7 +986,7 @@ namespace Insurance.Services
                 {
                     foreach (DataRow row in source.Rows)
                     {
-                        if (row["身份证"].ToString() == id)
+                        if (row["身份证"].ToString().Equals(id, StringComparison.InvariantCultureIgnoreCase))
                         {
                             DataRow newRow = result.NewRow();
                             newRow["name"] = row["姓名"];
@@ -1013,7 +1013,7 @@ namespace Insurance.Services
             {
                 throw;
             }
-            
+
         }
 
         public static bool CreateNewCompanyTable(NewUserModel user, out string companyDir)
@@ -1101,13 +1101,13 @@ namespace Insurance.Services
                 currentRow = m_main.GetRow(i);
                 id = currentRow.Cells[idCol].ToString();
                 IDCardValidation idTool = new IDCardValidation();
-                if (!idTool.CheckAge(id) || !idTool.CheckIDCard(id) )
+                if (!idTool.CheckAge(id) || !idTool.CheckIDCard(id))
                 {
                     Employee e = new Employee()
                     {
                         ID = id,
                         Name = currentRow.Cells[0].ToString(),
-                        
+
 
                         DataDesc = "身份证错误或年龄不在16-65周岁：" + id,
                         Valid = false

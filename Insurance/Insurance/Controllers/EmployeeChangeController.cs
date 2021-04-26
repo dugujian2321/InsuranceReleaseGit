@@ -175,7 +175,7 @@ namespace Insurance.Controllers
                             summary.SetCellText(i, 0, i.ToString()); //序号
                             summary.SetCellText(i, 1, targetcompany); //单位
                             summary.SetCellText(i, 2, em.Name); //姓名
-                            summary.SetCellText(i, 3, em.ID); //ID
+                            summary.SetCellText(i, 3, em.ID.ToUpper()); //ID
                             summary.SetCellText(i, 4, em.JobType); //险种
                             summary.SetCellText(i, 5, em.Job); //岗位
                             summary.SetCellText(i, 6, startdate.Date.ToShortDateString()); //生效日期
@@ -247,7 +247,7 @@ namespace Insurance.Controllers
                         DataTable tbl_summary = summary.ExcelToDataTable("Sheet1", true);
                         foreach (Employee guest in employees)
                         {
-                            var row = from DataRow p in tbl_summary.Rows where p[3].ToString() == guest.ID select tbl_summary.Rows.IndexOf(p);
+                            var row = from DataRow p in tbl_summary.Rows where p[3].ToString().Equals(guest.ID, StringComparison.InvariantCultureIgnoreCase) select tbl_summary.Rows.IndexOf(p);
                             foreach (int item in row)
                             {
                                 tbl_summary.Rows.RemoveAt(item);
