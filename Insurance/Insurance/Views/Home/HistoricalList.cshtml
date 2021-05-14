@@ -41,13 +41,13 @@
         {
             if (currentUser.AllowCreateAccount == "1")
             {
-                if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
+                if (currentUser.AccessLevel == 0 && (ViewBag.IsHistory == null || !ViewBag.IsHistory))
                 {
                     <form id="downloadAllProofs" method="get" asp-action="AllProofs" asp-controller="Home" enctype="multipart/form-data">
                         <div class="input-group">
                             <a class="btn btn-warning" style="margin:0px 5px 10px 0px" asp-action="ExportAllEmployees" asp-controller="Home">导出所有在保人员名单</a>
                             <input type="submit" class="btn btn-warning" style="margin:0px 0px 10px 0px" value="下载所有凭证" onclick="downloading(this)" />
-                            <input class="input-group-text" asp-for="ProofDate" type="month" style="margin:0px 0px 10px 0px" id="proofDate" value="1970-1-1"/>
+                            <input class="input-group-text" asp-for="ProofDate" type="month" style="margin:0px 0px 10px 0px" id="proofDate" value="1970-1-1" />
                         </div>
                     </form>
                 }
