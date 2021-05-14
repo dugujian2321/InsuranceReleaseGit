@@ -494,11 +494,12 @@ namespace Insurance.Controllers
                 }
             });
             DetailModel detailModel = new DetailModel();
+            var currUser = GetCurrentUser();
             foreach (var dir in targetDirs)
             {
                 foreach (var file in Directory.GetFiles(dir))
                 {
-                    var excel = GetExcelInfo(file, companyName, plan);
+                    var excel = GetExcelInfo(file, companyName, plan, currUser);
                     if (excel != null && excel.Cost != excel.Paid)
                     {
                         detailModel.Excels.Add(excel);
@@ -616,7 +617,7 @@ namespace Insurance.Controllers
             }
             foreach (string fileName in excels)
             {
-                NewExcel excel = GetExcelInfo(fileName, companyName, plan);
+                NewExcel excel = GetExcelInfo(fileName, companyName, plan, currUser);
                 if (excel != null)
                 {
                     allexcels.Add(excel);

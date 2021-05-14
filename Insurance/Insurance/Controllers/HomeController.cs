@@ -474,7 +474,7 @@ namespace VirtualCredit.Controllers
 
                 if (!string.IsNullOrEmpty(currUser._Plan)) //plan!=""
                 {
-                    foreach (var plan in currUser._Plan.Split(' ',StringSplitOptions.RemoveEmptyEntries))
+                    foreach (var plan in currUser._Plan.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                     {
                         planDirs.AddRange(Directory.GetDirectories(companyDir, plan, so));
                     }
@@ -1128,11 +1128,12 @@ namespace VirtualCredit.Controllers
                 }
             });
             DetailModel detailModel = new DetailModel();
+            var currUser = GetCurrentUser();
             foreach (var dir in targetDirs)
             {
                 foreach (var file in Directory.GetFiles(dir))
                 {
-                    var excel = GetExcelInfo(file, companyName, plan);
+                    var excel = GetExcelInfo(file, companyName, plan, currUser);
                     if (excel != null && excel.Cost != excel.Paid)
                     {
                         detailModel.Excels.Add(excel);
@@ -1210,7 +1211,7 @@ namespace VirtualCredit.Controllers
             }
             foreach (string fileName in excels)
             {
-                NewExcel excel = GetExcelInfo(fileName, companyName, plan);
+                NewExcel excel = GetExcelInfo(fileName, companyName, plan, currUser);
                 if (excel != null)
                 {
                     allexcels.Add(excel);
@@ -1229,9 +1230,9 @@ namespace VirtualCredit.Controllers
 
 
         private Dictionary<string, UserInfoModel> m_CachedUser = new Dictionary<string, UserInfoModel>();
-        protected NewExcel GetExcelInfo(string fileFullName, string companyName, string plan)
+        protected NewExcel GetExcelInfo(string fileFullName, string companyName, string plan, UserInfoModel user = null)
         {
-            var currUser = GetCurrentUser();
+            var currUser = user == null ? GetCurrentUser() : user;
             FileInfo fi = new FileInfo(fileFullName);
             if (fi.Name.Replace(fi.Extension, string.Empty) == companyName)
                 return null;
@@ -1314,7 +1315,7 @@ namespace VirtualCredit.Controllers
                         string str_uploadDate = fi.Name.Split('@')[0];
                         if (DateTime.TryParse(str_uploadDate, out DateTime uploadDate))
                         {
-                            summary.GainData(excel,fi.Directory.Parent.Parent.Name);
+                            summary.GainData(excel, fi.Directory.Parent.Parent.Name);
                         }
                     }
                 }
