@@ -402,7 +402,7 @@ namespace Insurance.Services
             return 0;
         }
 
-        public bool GainData(string sourceFile)
+        public bool GainData(string sourceFile, string accountName)
         {
             bool result = true;
             try
@@ -429,6 +429,8 @@ namespace Insurance.Services
                         else
                             cell.SetCellValue(row[column].ToString());
                     }
+                    ICell cell1 = newrow.CreateCell(sourceTbl.Columns.Count);
+                    cell1.SetCellValue(accountName);
                 }
             }
             catch

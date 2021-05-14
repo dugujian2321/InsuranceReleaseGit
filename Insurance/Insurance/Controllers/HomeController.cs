@@ -1314,7 +1314,7 @@ namespace VirtualCredit.Controllers
                         string str_uploadDate = fi.Name.Split('@')[0];
                         if (DateTime.TryParse(str_uploadDate, out DateTime uploadDate))
                         {
-                            summary.GainData(excel);
+                            summary.GainData(excel,fi.Directory.Parent.Parent.Name);
                         }
                     }
                 }
