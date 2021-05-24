@@ -600,6 +600,10 @@ namespace Insurance.Controllers
         public JsonResult MiniCalculatePrice([FromForm] string personList, [FromForm] string mode1, [FromForm] string date, [FromForm] string company, [FromForm] string plan, [FromForm] string openId)
         {
             MiniSession(openId);
+            if (!personList.Contains("jobType"))
+            {
+                personList = personList.Insert(personList.IndexOf("job"), "jobtype\":\"1-4类\",\"");
+            }
             MiniUpdateEmployees(personList, mode1, company, plan, openId);
             if (!DateTime.TryParse(date, out DateTime startdate))
             {
