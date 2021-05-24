@@ -327,13 +327,21 @@ Page({
         var tempMsg = []
         if (Array.isArray(result.data)) {
           if (result.data[0] == "投保成功") {
-
             tempMsg.push("投保成功")
             tempMsg.push("生效日期：" + result.data[1])
             tempMsg.push("结束日期：" + result.data[2])
             tempMsg.push("本次投保人数：" + result.data[3])
             tempMsg.push("本次保费：" + result.data[4])
-
+            this.setData({
+              ServerMsg: tempMsg
+            })
+            this.popup = this.selectComponent("#popup")
+            this.popup.showPopup();
+            this.uncalculate()
+            return
+          }else{
+            tempMsg.push("投保失败")
+            tempMsg.push(result.data[0])
             this.setData({
               ServerMsg: tempMsg
             })
