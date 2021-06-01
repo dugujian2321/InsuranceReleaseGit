@@ -9,6 +9,7 @@
 </div>
 <div>
     @{
+        int dataYear = ViewBag.DataYear;
         UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
         if (currentUser.AllowCreateAccount == "1")
         {
@@ -33,7 +34,7 @@
                                 <td class="td_middle">@item.TotalCost</td>
                                 <td class="td_middle">@item.CustomerAlreadyPaid</td>
                                 <td class="td_middle">@Math.Round(unpaid, 2)</td>
-                                <td class="td_middle"><a href="/Home/RecipeSummaryByMonth?name=@item.Name" class="btn btn-primary">详细</a></td>
+                                <td class="td_middle"><a href="/Home/RecipeSummaryByMonth?name=@item.Name&dataYear=@dataYear" class="btn btn-primary">详细</a></td>
                             </tr>
                         }
                     }

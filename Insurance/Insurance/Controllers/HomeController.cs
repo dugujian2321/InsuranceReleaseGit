@@ -131,8 +131,9 @@ namespace VirtualCredit.Controllers
             foreach (var account in childAccounts)
             {
                 string company = account.CompanyName;
-                files.Add(GenerateProofFile(company, date, currUser));
+                files.Add(GenerateProofFile(company, date, currUser, account._Plan));
             }
+            files.RemoveAll(x => string.IsNullOrEmpty(x));
             string zipFile = Path.Combine(ExcelRoot, "zip_temp.zip");
             if (System.IO.File.Exists(zipFile))
             {
@@ -1035,7 +1036,7 @@ namespace VirtualCredit.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         [UserLoginFilters]
-        public IActionResult GetAllRecipeSummary()
+        public IActionResult GetAllRecipeSummary(int start)
         {
             try
             {
@@ -1046,7 +1047,7 @@ namespace VirtualCredit.Controllers
                 {
                     Plan p = new Plan();
                     p.Name = plan;
-                    var comp = GetChildrenCompanies(currUser, plan);
+                    var comp = GetChildrenCompanies(currUser, plan, start);
                     p.TotalCost = comp.Sum(x => x.TotalCost);
                     p.TotalPaid = comp.Sum(x => x.CustomerAlreadyPaid);
                     p.HeadCount = comp.Sum(x => x.EmployeeNumber);
@@ -1054,6 +1055,9 @@ namespace VirtualCredit.Controllers
                 }
 
                 CurrentSession.Set("plan", string.Empty);
+
+                ViewBag.Start = start;
+
                 return View("RecieptPlans", sm);
             }
             catch (Exception e)
@@ -1070,16 +1074,18 @@ namespace VirtualCredit.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         [UserLoginFilters]
-        public IActionResult GetTargetPlanData(string plan)
+        public IActionResult GetTargetPlanData(string plan, int year)
         {
             try
             {
+                int dataYear = year == 0 ? From.Year : year;
                 ViewBag.Plan = plan;
                 RecipeSummaryModel model = new RecipeSummaryModel();
                 var currUser = GetCurrentUser();
-                model.CompanyList = GetChildrenCompanies(currUser, plan).ToList();
+                model.CompanyList = GetChildrenCompanies(currUser, plan, dataYear).ToList();
                 model.CompanyList = model.CompanyList.OrderBy(x => x.Name).ToList();
                 CurrentSession.Set("plan", plan);
+                ViewBag.DataYear = year;
                 return View("RecipeSummary", model);
             }
             catch (Exception e)
@@ -1091,7 +1097,7 @@ namespace VirtualCredit.Controllers
 
         [UserLoginFilters]
         [AdminFilters]
-        public IActionResult BanlanceAccount([FromQuery] string companyName)
+        public IActionResult BanlanceAccount([FromQuery] string companyName, [FromQuery] int dataYear)
         {
             string plan = CurrentSession.Get<string>("plan");
             ViewBag.Plan = plan;
@@ -1110,6 +1116,12 @@ namespace VirtualCredit.Controllers
             }
             DateTime from = new DateTime(year, 6, 1);
             DateTime to = new DateTime(year + 1, 5, 31, 23, 59, 59);
+
+            if (dataYear != 0)
+            {
+                from = new DateTime(dataYear, 6, 1);
+                to = new DateTime(dataYear + 1, 5, 31, 23, 59, 59);
+            }
             var allDirs = Directory.GetDirectories(GetSearchExcelsInDir(companyName), "*", SearchOption.AllDirectories);
             List<string> targetDirs = new List<string>();
             allDirs.ToList().ForEach(x =>
@@ -1181,6 +1193,7 @@ namespace VirtualCredit.Controllers
             }
             string month = dt1.ToString("yyyy-MM");
             ViewBag.Date = month;
+            ViewBag.DataYear = dt1.Year;
             string companyName = name;
             string targetDirectory = GetSearchExcelsInDir(companyName);
             List<string> excels = new List<string>();
@@ -1524,17 +1537,56 @@ namespace VirtualCredit.Controllers
         private static readonly object doclocker = new object();
 
 
+        //[UserLoginFilters]
+        //public string ProofTableSingle(string company, string date)
+        //{
+        //    UserInfoModel currUser = GetCurrentUser();
+        //    string companyDir = GetSearchExcelsInDir(company);
+        //    List<string> summaries = new List<string>();
+        //    DateTime month = DateTime.Parse(date);
+        //    bool isCurrentMonth = month.Month == DateTime.Now.Month;
+        //    foreach (var plan in Plans)
+        //    {
+        //        string planDir = Path.Combine(companyDir, plan);
+        //        if (!Directory.Exists(planDir)) continue;
+
+        //        //compDir = Directory.GetDirectories(companyDir, comp, SearchOption.AllDirectories).FirstOrDefault();
+        //        if (isCurrentMonth)
+        //            summaries.AddRange(Directory.GetFiles(planDir, company + ".xls"));
+        //        else
+        //            summaries.AddRange(Directory.GetFiles(planDir, company + "_" + month.ToString("yyyy-MM") + "_bk.xls"));
+        //    }
+        //    DataTable dt = new DataTable();
+        //    foreach (var summary in summaries)
+        //    {
+        //        dt.Merge(new ExcelTool(summary, "Sheet1").ExcelToDataTable("Sheet1", true));
+        //    }
+        //    return JsonConvert.SerializeObject(dt);
+        //}
+
         [UserLoginFilters]
-        public string ProofTable(string company, string date)
+        public string ProofTable(string company, string date, string plan)
         {
             UserInfoModel currUser = GetCurrentUser();
+            List<string> plans = new List<string>();
+            if (string.IsNullOrEmpty(plan))
+            {
+                foreach (var item in currUser._Plan.Split(" ", StringSplitOptions.RemoveEmptyEntries))
+                {
+                    plans.Add(item);
+                }
+            }
+            else
+            {
+                plans.Add(plan);
+            }
             string companyDir = GetSearchExcelsInDir(company);
             List<string> summaries = new List<string>();
             DateTime month = DateTime.Parse(date);
             bool isCurrentMonth = month.Month == DateTime.Now.Month;
-            foreach (var plan in Plans)
+            foreach (var p in plans)
             {
-                string planDir = Path.Combine(companyDir, plan);
+                string planDir = Path.Combine(companyDir, p);
                 if (!Directory.Exists(planDir)) continue;
 
                 //compDir = Directory.GetDirectories(companyDir, comp, SearchOption.AllDirectories).FirstOrDefault();
@@ -1543,7 +1595,6 @@ namespace VirtualCredit.Controllers
                 else
                     summaries.AddRange(Directory.GetFiles(planDir, company + "_" + month.ToString("yyyy-MM") + "_bk.xls"));
             }
-
             DataTable dt = new DataTable();
             foreach (var summary in summaries)
             {
@@ -1553,12 +1604,12 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
-        public string GenerateProofFile(string company, string date, UserInfoModel currUser)
+        public string GenerateProofFile(string company, string date, UserInfoModel currUser, string plan)
         {
             string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
-            string template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", "Insurance_recipet.docx");
-
-            string newdoc = Path.Combine(_hostingEnvironment.WebRootPath, "Word", company + DateTime.Now.ToString("yyyy-MM-dd-HH-hh-ss-mm") + ".docx");
+            string template = "";
+            template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", $"Insurance_recipet_{plan.Replace("万", "") }.docx");
+            string newdoc = Path.Combine(_hostingEnvironment.WebRootPath, "Word", company + "_" + plan + "_" + DateTime.Now.ToString("yyyy-MM-dd-HH-hh-ss-mm") + ".docx");
             XWPFDocument document = null;
 
             lock (doclocker)
@@ -1601,9 +1652,12 @@ namespace VirtualCredit.Controllers
             {
                 int index = 1;
                 DataTable dt = new DataTable();
-                dt = JsonConvert.DeserializeObject<DataTable>(ProofTable(company, date));
+                dt = JsonConvert.DeserializeObject<DataTable>(ProofTable(company, date, plan));
                 //foreach (XWPFTable table in document.Tables)
-
+                if (dt == null || dt.Rows.Count <= 0)
+                {
+                    return string.Empty;
+                }
                 var table = document.Tables[1];
                 foreach (DataRow row in dt.Rows)
                 {
@@ -1643,9 +1697,30 @@ namespace VirtualCredit.Controllers
         public FileStreamResult GenerateInsuranceRecipet(string company, string date)
         {
             string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
-            string newdoc = GenerateProofFile(company, date, GetCurrentUser());
-            FileStream downloadStream = new FileStream(newdoc, FileMode.Open, FileAccess.Read);
-            return File(downloadStream, "text/plain", $"{company}_{monthDir}_保险凭证.docx");
+            var currUser = GetCurrentUser();
+            List<string> files = new List<string>();
+            foreach (var plan in currUser._Plan.Split(" ", StringSplitOptions.RemoveEmptyEntries))
+            {
+                files.Add(GenerateProofFile(company, date, currUser, plan));
+            }
+            files.RemoveAll(x => string.IsNullOrEmpty(x));
+            string zipFile = Path.Combine(ExcelRoot, "zip_temp.zip");
+            if (System.IO.File.Exists(zipFile))
+            {
+                System.IO.File.Delete(zipFile);
+            }
+            using (ZipFile zip = ZipFile.Create(zipFile))
+            {
+                zip.BeginUpdate();
+                foreach (var file in files)
+                {
+                    zip.Add(file, new FileInfo(file).Name);
+                }
+                zip.CommitUpdate();
+                zip.Close();
+            }
+            FileStream downloadStream = new FileStream(zipFile, FileMode.Open, FileAccess.Read);
+            return File(downloadStream, "application/zip", $"{date}_保险凭证.zip");
         }
 
         [HttpPost]
@@ -1711,8 +1786,15 @@ namespace VirtualCredit.Controllers
         }
 
         [UserLoginFilters]
-        public IActionResult RecipeSummaryByMonth([FromQuery] string name, [FromQuery] string accountPlan = "")
+        public IActionResult RecipeSummaryByMonth([FromQuery] string name, [FromQuery] int dataYear, [FromQuery] string accountPlan = "")
         {
+            DateTime dataFrom = From;
+            DateTime dataTo = To;
+            if (dataYear != 0)
+            {
+                dataFrom = new DateTime(dataYear, 6, 1);
+                dataTo = new DateTime(dataYear + 1, 5, 31);
+            }
             string plan = string.Empty;
             if (string.IsNullOrEmpty(accountPlan))
             {
@@ -1725,6 +1807,7 @@ namespace VirtualCredit.Controllers
             if (string.IsNullOrEmpty(plan)) return View("Error");
             ViewBag.Plan = plan;
             ViewBag.Company = name;
+            ViewBag.DataYear = dataYear;
             ReaderWriterLockSlim r_locker = null;
             bool isSelf = false;
             var currUser = GetCurrentUser();
@@ -1748,7 +1831,7 @@ namespace VirtualCredit.Controllers
                 }
                 string companyName = name;
                 string targetCompDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories).FirstOrDefault();
-                for (DateTime date = From; date <= To; date = date.AddMonths(1))
+                for (DateTime date = dataFrom; date <= dataTo; date = date.AddMonths(1))
                 {
                     string monthDir = date.ToString("yyyy-MM");
                     SearchOption so = SearchOption.AllDirectories;

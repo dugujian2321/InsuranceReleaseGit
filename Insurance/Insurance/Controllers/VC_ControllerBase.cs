@@ -20,7 +20,7 @@ namespace VirtualCredit
         public static ConcurrentDictionary<string, string> CachedCompanyDir = new ConcurrentDictionary<string, string>();
         public static ConcurrentDictionary<string, ISession> MiniAppSessions = new ConcurrentDictionary<string, ISession>();
         protected IHostingEnvironment _hostingEnvironment;
-        public static List<string> Plans = new List<string> { "30万", "60万", "80万" };
+        public static List<string> Plans = new List<string> { "60万A", "60万B", "80万A", "80万B" };
         public static long CustomersCount = 0;
         public static string ExcelRoot = Utility.Instance.ExcelRoot;
         protected ImageTool _imageTool;
@@ -55,6 +55,11 @@ namespace VirtualCredit
                 _imageTool = new ImageTool(context);
             }
 
+            UpdateFromTo();
+        }
+
+        public void UpdateFromTo()
+        {
             int y = DateTime.Now.Year;
             if (DateTime.Now.Month < 6)
             {
@@ -444,8 +449,15 @@ namespace VirtualCredit
         /// <param name="user"></param>
         /// <param name="plan"></param>
         /// <returns></returns>
-        public IEnumerable<Company> GetChildrenCompanies(UserInfoModel user, string plan)
+        public IEnumerable<Company> GetChildrenCompanies(UserInfoModel user, string plan, int year)
         {
+            DateTime dataFrom = From;
+            DateTime dataTo = To;
+            if (year != 0)
+            {
+                dataFrom = new DateTime(year, 6, 1);
+                dataTo = new DateTime(year + 1, 5, 31);
+            }
             List<Company> result = new List<Company>();
             string companyName = user.CompanyName;
             string targetDir = Directory.GetDirectories(ExcelRoot, companyName, SearchOption.AllDirectories).FirstOrDefault();
@@ -464,10 +476,10 @@ namespace VirtualCredit
                     if (!new FileInfo(summary).Exists) continue;
                     ExcelTool edr = new ExcelTool(summary, "Sheet1");
                     com.PaidCost = edr.GetPaidCost();
-                    com.TotalCost = edr.GetCostFromJuneToMay(Path.Combine(companyDir.FullName, plan), From.Year);
+                    com.TotalCost = edr.GetCostFromJuneToMay(Path.Combine(companyDir.FullName, plan), dataFrom.Year);
                     com.EmployeeNumber = edr.GetEmployeeNumber();
-                    com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(Path.Combine(companyDir.FullName, plan), From.Year);
-                    com.StartDate = From;
+                    com.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaidFromJuneToMay(Path.Combine(companyDir.FullName, plan), dataFrom.Year);
+                    com.StartDate = dataFrom;
                     com.AbbrName = DatabaseService.CompanyAbbrName(com.Name);
                     com.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name).Rows[0]["UnitPrice"]);
                     result.Add(com);
@@ -477,8 +489,8 @@ namespace VirtualCredit
                     Company com = new Company();
                     com.Name = companyDir.Name;
                     com.AbbrName = DatabaseService.CompanyAbbrName(com.Name);
-                    com.StartDate = From;
-                    ExcelDataReader edr = new ExcelDataReader(companyDir.Name, From.Year, plan);
+                    com.StartDate = dataFrom;
+                    ExcelDataReader edr = new ExcelDataReader(companyDir.Name, dataFrom.Year, plan);
                     com.PaidCost += edr.GetPaidCost();
                     com.TotalCost += edr.GetTotalCost();
                     com.EmployeeNumber += edr.GetEmployeeNumber();

@@ -48,7 +48,7 @@
                         <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Unpaid)</td>
                         @if (currentUser.AccessLevel == 0)
                         {
-                            <td><a href="/Home/BanlanceAccount?companyName=@Model.Company" class="btn btn-primary">结算</a></td>
+                            <td><a href="/Home/BanlanceAccount?companyName=@Model.Company&dataYear=@ViewBag.DataYear" class="btn btn-primary">结算</a></td>
                         }
                         else
                         {

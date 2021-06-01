@@ -22,6 +22,7 @@ namespace Insurance.Services
         int Year = 1970;
         DateTime start = new DateTime();
         DateTime end = new DateTime();
+        static string[] CachedDirectories;
 
         public ExcelDataReader(string companyName, int year, string plan)
         {
@@ -48,11 +49,20 @@ namespace Insurance.Services
             Initialize();
         }
 
+        void UpdateCachedDirs()
+        {
+            CachedDirectories = Directory.GetDirectories(ExcelRootFolder, "*", SearchOption.AllDirectories);
+        }
+
         private void Initialize()
         {
+            if (CachedDirectories == null)
+            {
+                UpdateCachedDirs();   
+            }
             if (string.IsNullOrEmpty(CompanyDir))
             {
-                foreach (var dir in Directory.GetDirectories(ExcelRootFolder, "*", SearchOption.AllDirectories))
+                foreach (var dir in CachedDirectories)
                 {
                     if (!DateTime.TryParse(dir, out DateTime dateTime))
                     {
@@ -63,6 +73,21 @@ namespace Insurance.Services
                         }
                     }
                 } //获取公司文件夹路径
+                if (string.IsNullOrEmpty(CompanyDir))
+                {
+                    UpdateCachedDirs();
+                    foreach (var dir in CachedDirectories)
+                    {
+                        if (!DateTime.TryParse(dir, out DateTime dateTime))
+                        {
+                            if (new DirectoryInfo(dir).Name == CompanyName)
+                            {
+                                CompanyDir = dir;
+                                break;
+                            }
+                        }
+                    } //获取公司文件夹路径
+                }
             }
 
             string searchPattern = "*";
@@ -71,7 +96,6 @@ namespace Insurance.Services
                 searchPattern = Plan;
             }
             dirsContainExcel = Directory.GetDirectories(CompanyDir, searchPattern, SearchOption.AllDirectories).ToList(); //该公司及其子公司所有指定方案的目录
-
         }
 
         /// <summary>

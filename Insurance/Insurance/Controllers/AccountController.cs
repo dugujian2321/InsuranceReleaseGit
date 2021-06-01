@@ -27,7 +27,7 @@ namespace Insurance.Controllers
                 return View("../User/AccountManagement");
             }
             ViewBag.AllowCreateAccount = new SelectList(new List<string>() { "允许", "不允许" });
-            ViewBag.Plans = new SelectList(new List<string>() { "30万", "60万", "80万" });
+            ViewBag.Plans = new SelectList(new List<string>() { "60万A", "60万B", "80万A", "80万B" });
             Response.Cookies.Append("Frontend", MD5Helper.FrontendSalt,
        new CookieOptions() { Expires = DateTimeOffset.UtcNow.AddDays(7) });
             ActionAfterReload(string.Empty);
@@ -295,7 +295,7 @@ namespace Insurance.Controllers
         [AdminFilters]
         public ActionResult Register(NewUserModel user)
         {
-            ViewBag.Plans = new SelectList(new List<string>() { "30万", "60万", "80万" });
+            ViewBag.Plans = new SelectList(new List<string>() { "60万A", "60万B", "80万A", "80万B" });
             UserInfoModel currUser = GetCurrentUser();
             if (currUser is null || /*currUser.AccessLevel > 1 ||*/ currUser.AllowCreateAccount != "1")
             {

@@ -5,29 +5,33 @@
 }
 @model Insurance.Models.SummaryModel
 @{
-    string disable30 = string.Empty;
-    string disable60 = string.Empty;
-    string disable80 = string.Empty;
+    string disable60A = string.Empty;
+    string disable60B = string.Empty;
+    string disable80A = string.Empty;
+    string disable80B = string.Empty;
     var currUser = ViewBag.CurrentUser;
     var openid = ViewBag.OpenId;
     if (currUser.AccessLevel != 0)
     {
-        disable30 = disable60 = disable80 = "disabled";
+        disable60A = disable60B = disable80A = disable80B = "disabled";
         foreach (var plan in VC_ControllerBase.Plans)
         {
             if (plan == currUser._Plan)
             {
-                int num = Convert.ToInt32(plan.Replace("万", string.Empty));
+                string num = plan.Replace("万", string.Empty);
                 switch (num)
                 {
-                    case 30:
-                        disable30 = string.Empty;
+                    case "60A":
+                        disable60A = string.Empty;
                         break;
-                    case 60:
-                        disable60 = string.Empty;
+                    case "60B":
+                        disable60B = string.Empty;
                         break;
-                    case 80:
-                        disable80 = string.Empty;
+                    case "80A":
+                        disable80A = string.Empty;
+                        break;
+                    case "80B":
+                        disable80B = string.Empty;
                         break;
                 }
                 break;
@@ -50,38 +54,51 @@
                 </tr>
             </thead>
             <tbody>
+
                 <tr style="text-align:center">
-                    <td class="td_middle">30万</td>
+                    <td class="td_middle">60万A</td>
                     <td class="td_middle">@Model.PlanList[0].HeadCount</td>
                     <td class="td_middle">@Math.Round(Model.PlanList[0].TotalCost, 2)</td>
                     <td class="td_middle">@Math.Round(Model.PlanList[0].TotalPaid, 2)</td>
                     <td class="td_middle">@Math.Round(Model.PlanList[0].Unpaid, 2)</td>
                     <td>
-                        <button @disable30 class="btn btn-lg btn-block btn-primary" onclick="location.href='/MiniAppHome/MiniGetTargetPlanData?plan=30万&openid=@openid'">
+                        <button @disable60A class="btn btn-lg btn-block btn-primary" onclick="location.href='/MiniAppHome/MiniGetTargetPlanData?plan=60万A&openid=@openid'">
                             详
                         </button>
                     </td>
                 </tr>
                 <tr style="text-align:center">
-                    <td class="td_middle">60万</td>
+                    <td class="td_middle">60万B</td>
                     <td class="td_middle">@Model.PlanList[1].HeadCount</td>
                     <td class="td_middle">@Math.Round(Model.PlanList[1].TotalCost, 2)</td>
                     <td class="td_middle">@Math.Round(Model.PlanList[1].TotalPaid, 2)</td>
                     <td class="td_middle">@Math.Round(Model.PlanList[1].Unpaid, 2)</td>
                     <td>
-                        <button @disable60 class="btn btn-lg btn-block btn-primary" onclick="location.href='/MiniAppHome/MiniGetTargetPlanData?plan=60万&openid=@openid'">
+                        <button @disable60B class="btn btn-lg btn-block btn-primary" onclick="location.href='/MiniAppHome/MiniGetTargetPlanData?plan=60万B&openid=@openid'">
                             详
                         </button>
                     </td>
                 </tr>
                 <tr style="text-align:center">
-                    <td class="td_middle">80万</td>
+                    <td class="td_middle">80万A</td>
                     <td class="td_middle">@Model.PlanList[2].HeadCount</td>
                     <td class="td_middle">@Math.Round(Model.PlanList[2].TotalCost, 2)</td>
                     <td class="td_middle">@Math.Round(Model.PlanList[2].TotalPaid, 2)</td>
                     <td class="td_middle">@Math.Round(Model.PlanList[2].Unpaid, 2)</td>
                     <td class="td_middle">
-                        <button @disable80 class="btn btn-lg btn-block btn-primary" onclick="location.href='/MiniAppHome/MiniGetTargetPlanData?plan=80万&openid=@openid'">
+                        <button @disable80A class="btn btn-lg btn-block btn-primary" onclick="location.href='/MiniAppHome/MiniGetTargetPlanData?plan=80万A&openid=@openid'">
+                            详
+                        </button>
+                    </td>
+                </tr>
+                <tr style="text-align:center">
+                    <td class="td_middle">80万B</td>
+                    <td class="td_middle">@Model.PlanList[3].HeadCount</td>
+                    <td class="td_middle">@Math.Round(Model.PlanList[3].TotalCost, 2)</td>
+                    <td class="td_middle">@Math.Round(Model.PlanList[3].TotalPaid, 2)</td>
+                    <td class="td_middle">@Math.Round(Model.PlanList[3].Unpaid, 2)</td>
+                    <td class="td_middle">
+                        <button @disable80B class="btn btn-lg btn-block btn-primary" onclick="location.href='/MiniAppHome/MiniGetTargetPlanData?plan=80万B&openid=@openid'">
                             详
                         </button>
                     </td>

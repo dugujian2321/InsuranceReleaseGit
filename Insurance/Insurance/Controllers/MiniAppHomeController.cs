@@ -444,7 +444,7 @@ namespace Insurance.Controllers
                 ViewBag.Plan = plan;
                 RecipeSummaryModel model = new RecipeSummaryModel();
                 var currUser = GetCurrentUser();
-                model.CompanyList = GetChildrenCompanies(currUser, plan).ToList();
+                model.CompanyList = GetChildrenCompanies(currUser, plan, From.Year).ToList();
                 model.CompanyList = model.CompanyList.OrderBy(x => x.Name).ToList();
                 CurrentSession.Set("plan", plan);
                 return View("MiniRecipeSummary", model);
@@ -512,17 +512,30 @@ namespace Insurance.Controllers
         }
 
         [HttpGet]
-        public string MiniProofTable(string company, string date, string openid)
+        public string MiniProofTable(string company, string date, string plan, string openid)
         {
             MiniSession(openid);
             UserInfoModel currUser = GetCurrentUser();
+            List<string> plans = new List<string>();
+            if (string.IsNullOrEmpty(plan))
+            {
+                foreach (var item in currUser._Plan.Split(" ", StringSplitOptions.RemoveEmptyEntries))
+                {
+                    plans.Add(item);
+                }
+            }
+            else
+            {
+                plans.Add(plan);
+            }
+
             string companyDir = GetSearchExcelsInDir(company);
             List<string> summaries = new List<string>();
             DateTime month = DateTime.Parse(date);
             bool isCurrentMonth = month.Month == DateTime.Now.Month;
-            foreach (var plan in Plans)
+            foreach (var p in plans)
             {
-                string planDir = Path.Combine(companyDir, plan);
+                string planDir = Path.Combine(companyDir, p);
                 if (!Directory.Exists(planDir)) continue;
 
                 //compDir = Directory.GetDirectories(companyDir, comp, SearchOption.AllDirectories).FirstOrDefault();
@@ -649,7 +662,7 @@ namespace Insurance.Controllers
                 {
                     Plan p = new Plan();
                     p.Name = plan;
-                    var comp = GetChildrenCompanies(currUser, plan);
+                    var comp = GetChildrenCompanies(currUser, plan, From.Year);
                     p.TotalCost = comp.Sum(x => x.TotalCost);
                     p.TotalPaid = comp.Sum(x => x.CustomerAlreadyPaid);
                     p.HeadCount = comp.Sum(x => x.EmployeeNumber);

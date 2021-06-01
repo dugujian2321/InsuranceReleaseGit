@@ -16,9 +16,29 @@
 
   <ItemGroup>
     <Compile Remove="Images\**" />
+    <Compile Remove="wwwroot\20209月服务器数据备份\**" />
+    <Compile Remove="wwwroot\Excel - 副本\**" />
+    <Compile Remove="wwwroot\Excel\**" />
+    <Compile Remove="wwwroot\巴斯夫中国\**" />
+    <Compile Remove="wwwroot\艾斯本\**" />
     <Content Remove="Images\**" />
+    <Content Remove="wwwroot\20209月服务器数据备份\**" />
+    <Content Remove="wwwroot\Excel - 副本\**" />
+    <Content Remove="wwwroot\Excel\**" />
+    <Content Remove="wwwroot\巴斯夫中国\**" />
+    <Content Remove="wwwroot\艾斯本\**" />
     <EmbeddedResource Remove="Images\**" />
+    <EmbeddedResource Remove="wwwroot\20209月服务器数据备份\**" />
+    <EmbeddedResource Remove="wwwroot\Excel - 副本\**" />
+    <EmbeddedResource Remove="wwwroot\Excel\**" />
+    <EmbeddedResource Remove="wwwroot\巴斯夫中国\**" />
+    <EmbeddedResource Remove="wwwroot\艾斯本\**" />
     <None Remove="Images\**" />
+    <None Remove="wwwroot\20209月服务器数据备份\**" />
+    <None Remove="wwwroot\Excel - 副本\**" />
+    <None Remove="wwwroot\Excel\**" />
+    <None Remove="wwwroot\巴斯夫中国\**" />
+    <None Remove="wwwroot\艾斯本\**" />
   </ItemGroup>
 
   <ItemGroup>
