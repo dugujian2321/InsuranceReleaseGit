@@ -98,14 +98,14 @@ namespace VirtualCredit.Models
             List<UserInfoModel> result = new List<UserInfoModel>();
             if (user.ChildAccounts != null && user.ChildAccounts.Count > 0)
             {
-                foreach (var item in user.ChildAccounts)
+                foreach (var childAccount in user.ChildAccounts)
                 {
-                    result.Add(item);
-                    foreach (var spring in GetSpringAccounts(item))
+                    result.Add(childAccount);
+                    foreach (var springAccount in GetSpringAccounts(childAccount))
                     {
-                        if (!result.Any(x => x.CompanyName == spring.CompanyName))
+                        if (!result.Any(a => a.UserName == springAccount.UserName))
                         {
-                            result.Add(spring);
+                            result.Add(springAccount);
                         }
                     }
                 }

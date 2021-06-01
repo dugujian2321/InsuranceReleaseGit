@@ -295,6 +295,7 @@ namespace Insurance.Controllers
         [AdminFilters]
         public ActionResult Register(NewUserModel user)
         {
+            ViewBag.AllowCreateAccount = new SelectList(new List<string>() { "允许", "不允许" });
             ViewBag.Plans = new SelectList(new List<string>() { "60万A", "60万B", "80万A", "80万B" });
             UserInfoModel currUser = GetCurrentUser();
             if (currUser is null || /*currUser.AccessLevel > 1 ||*/ currUser.AllowCreateAccount != "1")
@@ -323,11 +324,12 @@ namespace Insurance.Controllers
                 return View();
             }
             #endregion
-
-            if (DatabaseService.UserMatchUserNameOnly(user))
+            UserInfoModel admin = DatabaseService.SelectUser("oliver");
+            bool compNameExists = admin.SpringAccounts.Any(c => c.CompanyName == user.CompanyName);
+            if (DatabaseService.UserMatchUserNameOnly(user) || compNameExists)
             {
-                CurrentSession.Set<string>("noAccessCreateAccout", "用户名已存在");
-                ViewBag.UserNameUsed = "用户名已存在";
+                CurrentSession.Set<string>("noAccessCreateAccout", "用户名或公司名称已存在");
+                ViewBag.UserNameUsed = "用户名或公司名称已存在";
                 pass = false;
             }
             if (user.userPassword != user.confirmPassword)
