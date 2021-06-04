@@ -1318,6 +1318,7 @@ namespace VirtualCredit.Controllers
 
             ExcelTool summary = new ExcelTool(summary_file_temp, "Sheet1");
             string companyDir = GetSearchExcelsInDir(company);
+            DataTable summaryTbl = new DataTable();
             foreach (string monthDir in Directory.GetDirectories(companyDir, Convert.ToDateTime(date).ToString("yyyy-MM"), SearchOption.AllDirectories))
             {
                 if (Directory.Exists(monthDir))
@@ -1326,13 +1327,53 @@ namespace VirtualCredit.Controllers
                     {
                         FileInfo fi = new FileInfo(excel);
                         string str_uploadDate = fi.Name.Split('@')[0];
-                        if (DateTime.TryParse(str_uploadDate, out DateTime uploadDate))
+                        //int rowBeforeMerge = summary.ExcelToDataTable("sheet1", true).Rows.Count;
+                        if (!DateTime.TryParse(str_uploadDate, out DateTime uploadDate))
                         {
-                            summary.GainData(excel, fi.Directory.Parent.Parent.Name);
+                            continue;
                         }
+                        //DataTable dt = summary.ExcelToDataTable("sheet1", true);
+                        string plan = fi.Directory.Parent.Name;
+                        string account = fi.Directory.Parent.Parent.Name;
+                        bool hasPlanColumn = false;
+                        bool hasAccountColumn = false;
+
+                        ExcelTool et = new ExcelTool(excel, "sheet1");
+                        DataTable dt = et.ExcelToDataTable("sheet1", true);
+                        foreach (DataColumn column in dt.Columns)
+                        {
+                            if (column.ColumnName == "方案")
+                            {
+                                hasPlanColumn = true;
+                            }
+                            else if (column.ColumnName == "所属账号")
+                            {
+                                hasAccountColumn = true;
+                            }
+                        }
+                        if (!hasPlanColumn)
+                        {
+                            dt.Columns.Add(new DataColumn("方案"));
+                        }
+                        if (!hasAccountColumn)
+                        {
+                            dt.Columns.Add(new DataColumn("所属账号"));
+                        }
+                        for (int i = 0; i < dt.Rows.Count; i++)
+                        {
+                            dt.Rows[i]["方案"] = plan;
+                            dt.Rows[i]["所属账号"] = account;
+                        }
+
+                        if (summaryTbl.Columns.Count == 0)
+                        {
+                            summaryTbl = dt.Clone();
+                        }
+                        summaryTbl.Merge(dt);
                     }
                 }
             }
+            summary.RawDatatableToExcel(summaryTbl);
             summary.RemoveDuplicate();
             summary.CreateAndSave(summary_file);
             System.IO.File.Delete(summary_file_temp);

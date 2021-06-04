@@ -43,7 +43,7 @@ Page({
         })
         var plans = result.data.plans
         if (result.data.plans == "all") {
-          plans = ["60万","60万A","60万B", "80万A", "80万B"],
+          plans = ["60万A","60万B", "80万A", "80万B"],
             this.setData({
               selected_plan: plans[0],
             })
