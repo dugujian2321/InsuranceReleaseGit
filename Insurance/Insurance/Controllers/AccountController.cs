@@ -325,8 +325,8 @@ namespace Insurance.Controllers
             }
             #endregion
             UserInfoModel admin = DatabaseService.SelectUser("oliver");
-            bool compNameExists = admin.SpringAccounts.Any(c => c.CompanyName == user.CompanyName);
-            if (DatabaseService.UserMatchUserNameOnly(user) || compNameExists)
+            //bool compNameExists = admin.SpringAccounts.Any(c => c.CompanyName == user.CompanyName);
+            if (DatabaseService.UserMatchUserNameOnly(user)/* || compNameExists*/)
             {
                 CurrentSession.Set<string>("noAccessCreateAccout", "用户名或公司名称已存在");
                 ViewBag.UserNameUsed = "用户名或公司名称已存在";

@@ -207,7 +207,7 @@ namespace Insurance.Services
                     }
                 }
             });
-            return Math.Round(result, 2);
+            return result;
         }
 
         public double GetTotalCost()
@@ -232,6 +232,7 @@ namespace Insurance.Services
                         }
                         foreach (FileInfo file in info.GetFiles())
                         {
+                            if (!file.Extension.Contains("xls")) continue;
                             string[] excelinfo = file.Name.Split('@');
                             result += Convert.ToDouble(excelinfo[1]);
                         }

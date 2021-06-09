@@ -280,7 +280,7 @@ namespace Insurance.Services
                     }
                 }
             }
-            return Math.Round(cost, 2);
+            return cost;
         }
         public double GetCostFromJuneToMay(string companyDir, int year)
         {
