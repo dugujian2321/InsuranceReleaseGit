@@ -77,7 +77,10 @@
                                 <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.TotalCost)</strong></td>
                                 <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.FirstOrDefault().StartDate.ToString("yyyy/M/d")</strong></td>
                                 <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.PaidCost)</strong></td>
-                                <td><a class="btn btn-primary" href="/Home/SummaryByYear">历年详细</a></td>
+                                @if (currentUser.ChildAccounts.Count > 0)
+                                {
+                                    <td><a class="btn btn-primary" href="/Home/SummaryByYear">历年详细</a></td>
+                                }
                             </tr>
                         }
                         @if (Model.CompanyList != null && Model.CompanyList.Count > 0)

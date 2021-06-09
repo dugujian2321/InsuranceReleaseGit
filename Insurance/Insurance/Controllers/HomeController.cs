@@ -80,31 +80,52 @@ namespace VirtualCredit.Controllers
         [UserLoginFilters]
         public IActionResult YearHistory([FromQuery] int year)
         {
+            string backUpDir = string.Empty;
+            var currUser = GetCurrentUser();
             if (year == From.Year)
             {
                 return HistoricalList();
             }
+            else
+            {
+                backUpDir = Path.Combine(ExcelRoot, "历年归档", year.ToString());
+            }
+            //string dataDir = Path.Combine(ExcelRoot, "历年归档", year.ToString(), "管理员");
+            string dataDir = Directory.GetDirectories(backUpDir, currUser.CompanyName, SearchOption.AllDirectories).FirstOrDefault(); //当前账号所属公司的文件夹
 
-            string dataDir = Path.Combine(ExcelRoot, "历年归档", year.ToString(), "管理员");
             if (!Directory.Exists(dataDir)) return View("Error");
-            string[] companyList = Directory.GetDirectories(dataDir, "*", SearchOption.TopDirectoryOnly).Where(d =>
-              {
-                  DirectoryInfo di = new DirectoryInfo(d);
-                  return !Plans.Contains(di.Name) && !DateTime.TryParse(di.Name, out DateTime dt);
-              }).ToArray();
+            //string[] companyList = Directory.GetDirectories(dataDir, "*", SearchOption.TopDirectoryOnly).Where(d =>
+            //  {
+            //      DirectoryInfo di = new DirectoryInfo(d);
+            //      return !Plans.Contains(di.Name) && !DateTime.TryParse(di.Name, out DateTime dt);
+            //  }).ToArray();
+
+            List<string> subCompanyList = new List<string>();
+            foreach (string plan in currUser._Plan.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var accessibleDirs = Directory.GetDirectories(dataDir, plan, SearchOption.AllDirectories);
+                foreach (string dir in accessibleDirs)
+                {
+                    DirectoryInfo di = new DirectoryInfo(dir);
+                    if (!subCompanyList.Contains(di.Parent.FullName))
+                        subCompanyList.Add(di.Parent.FullName);
+                }
+            }
+
+
             HistoricalModel model = new HistoricalModel();
             List<Company> compList = new List<Company>();
-            foreach (string company in companyList)
+            foreach (string company in subCompanyList)
             {
                 DirectoryInfo di = new DirectoryInfo(company);
                 Company comp = new Company();
                 comp.Name = di.Name;
                 comp.StartDate = new DateTime(year, 6, 1);
-                foreach (string plan in Plans)
+                foreach (string plan in currUser._Plan.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                 {
                     ExcelDataReader edr = new ExcelDataReader(di, year, plan);
                     comp.PaidCost += edr.GetPaidCost();
-                    comp.TotalCost += edr.GetTotalCost();
+                    comp.TotalCost += edr.GetTotalCostExcludeChildren();
                     comp.EmployeeNumber += edr.GetEmployeeNumber();
                 }
                 compList.Add(comp);
@@ -1492,18 +1513,35 @@ namespace VirtualCredit.Controllers
             string dataDir = Directory.GetDirectories(backUpDir, currUser.CompanyName, SearchOption.AllDirectories).FirstOrDefault(); //当前账号所属公司的文件夹
             if (string.IsNullOrEmpty(dataDir)) return result;
             //if (currUser.AllowCreateAccount != "1") return new DataTable(); //如果当前公司没有子账号，则无法查看合计信息
-            var subCompanyList = Directory.GetDirectories(dataDir, "*", SearchOption.AllDirectories).Where(d =>
+            //var subCompanyList = Directory.GetDirectories(dataDir, "*", SearchOption.AllDirectories).Where(d =>
+            //    {
+            //        DirectoryInfo di = new DirectoryInfo(d);
+            //        return !Plans.Contains(di.Name) && !DateTime.TryParse(di.Name, out DateTime dt);
+            //    }
+            //).ToList();
+
+
+            List<string> subCompanyList = new List<string>();
+            foreach (string plan in currUser._Plan.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var accessibleDirs = Directory.GetDirectories(dataDir, plan, SearchOption.AllDirectories);
+                foreach (string dir in accessibleDirs)
                 {
-                    DirectoryInfo di = new DirectoryInfo(d);
-                    return !Plans.Contains(di.Name) && !DateTime.TryParse(di.Name, out DateTime dt);
+                    DirectoryInfo di = new DirectoryInfo(dir);
+                    if (!subCompanyList.Contains(di.Parent.FullName))
+                        subCompanyList.Add(di.Parent.FullName);
                 }
-            ).ToList();
+            }
+
             if (currUser.AccessLevel != 0)
-                subCompanyList.Add(dataDir);
+            {
+                if (!subCompanyList.Contains(dataDir))
+                    subCompanyList.Add(dataDir);
+            }
             foreach (string comp in subCompanyList)
             {
                 DirectoryInfo di = new DirectoryInfo(comp);
-                var data = SummaryByCompany(di.FullName);
+                var data = SummaryByCompany(di.FullName, year, currUser._Plan);
                 headCount += (int)data["headCount"];
                 totalIn += (double)data["totalIn"];
                 totalOut += (double)data["totalOut"];
@@ -1519,19 +1557,19 @@ namespace VirtualCredit.Controllers
         /// </summary>
         /// <param name="dataDir"></param>
         /// <returns></returns>
-        private Dictionary<string, ValueType> SummaryByCompany(string companyDataDir)
+        private Dictionary<string, ValueType> SummaryByCompany(string companyDataDir, int year, string currUserPlan)
         {
             string companyName = new DirectoryInfo(companyDataDir).Name;
             int headCount = 0;
             double totalIn = 0;
             double totalOut = 0;
-            foreach (var plan in Plans)
+            foreach (var plan in currUserPlan.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 string summaryFile = Path.Combine(companyDataDir, plan, companyName + ".xls");
                 if (!new FileInfo(summaryFile).Exists) continue;
                 ExcelTool et = new ExcelTool(summaryFile, "Sheet1");
                 headCount += et.m_main.GetLastRow();
-                totalIn = et.GetTotalCost(companyDataDir);
+                totalIn = et.GetCostFromJuneToMay(companyDataDir, year, plan);
                 string txtFile = Directory.GetFiles(Path.Combine(companyDataDir, plan), "*", SearchOption.TopDirectoryOnly)
                     .Where(file => file.Contains(".txt", StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
                 if (txtFile == null) throw new Exception("txt file not found");

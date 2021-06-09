@@ -250,24 +250,32 @@ namespace Insurance.Services
             from = new DateTime(year, 6, 1);
             to = new DateTime(year + 1, 5, 31, 23, 59, 59);
 
-
-            double cost = 0;
-            if (Directory.Exists(companyDir))
+            List<string> dataDirs = new List<string>();
+            foreach (string p in plan.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
-                foreach (string monthDir in Directory.GetDirectories(companyDir))
+                dataDirs.Add(Path.Combine(companyDir, p));
+            }
+            double cost = 0;
+
+            foreach (string dir in dataDirs)
+            {
+                if (Directory.Exists(dir))
                 {
-                    if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
+                    foreach (string monthDir in Directory.GetDirectories(dir))
                     {
-                        continue;
-                    }
-                    DateTime dirDate = Convert.ToDateTime(new DirectoryInfo(monthDir).Name);
-                    dirDate = new DateTime(dirDate.Year, dirDate.Month, 1);
-                    if (dirDate >= from && dirDate <= to)
-                    {
-                        foreach (string file in Directory.GetFiles(monthDir))
+                        if (!DateTime.TryParse(new DirectoryInfo(monthDir).Name, out DateTime dateTime))
                         {
-                            string[] excelinfo = file.Split('@');
-                            cost += Convert.ToDouble(excelinfo[1]);
+                            continue;
+                        }
+                        DateTime dirDate = Convert.ToDateTime(new DirectoryInfo(monthDir).Name);
+                        dirDate = new DateTime(dirDate.Year, dirDate.Month, 1);
+                        if (dirDate >= from && dirDate <= to)
+                        {
+                            foreach (string file in Directory.GetFiles(monthDir))
+                            {
+                                string[] excelinfo = file.Split('@');
+                                cost += Convert.ToDouble(excelinfo[1]);
+                            }
                         }
                     }
                 }
@@ -313,12 +321,12 @@ namespace Insurance.Services
         /// </summary>
         /// <param name="companyDir"></param>
         /// <returns></returns>
-        public double GetTotalCost(string companyDir)
+        public double GetTotalCost(string companyDir, string plans)
         {
             double cost = 0;
             if (Directory.Exists(companyDir))
             {
-                foreach (var plan in VC_ControllerBase.Plans)
+                foreach (var plan in plans.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                 {
                     string planDir = Path.Combine(companyDir, plan);
                     if (!Directory.Exists(planDir)) continue;

@@ -18,6 +18,7 @@ namespace Insurance.Services
         string ExcelRootFolder = string.Empty;
         string Plan = string.Empty;
         UserInfoModel Account;
+        List<string> directDirsContainExcel = new List<string>();
         List<string> dirsContainExcel = new List<string>();
         int Year = 1970;
         DateTime start = new DateTime();
@@ -96,6 +97,7 @@ namespace Insurance.Services
                 searchPattern = Plan;
             }
             dirsContainExcel = Directory.GetDirectories(CompanyDir, searchPattern, SearchOption.AllDirectories).ToList(); //该公司及其子公司所有指定方案的目录
+            directDirsContainExcel = Directory.GetDirectories(CompanyDir, searchPattern, SearchOption.TopDirectoryOnly).ToList(); //该公司所有指定方案的目录
         }
 
         /// <summary>
@@ -172,6 +174,37 @@ namespace Insurance.Services
                 {
                     var txtName = txt.FirstOrDefault().Name;
                     result += Convert.ToDouble(txtName.Split("_")[1].Replace(".txt", string.Empty));
+                }
+            });
+            return Math.Round(result, 2);
+        }
+
+        public double GetTotalCostExcludeChildren()
+        {
+            double result = 0;
+            directDirsContainExcel.ForEach(x =>
+            {
+                var di = new DirectoryInfo(x);
+                string excel = Path.Combine(x, di.Parent.Name + ".xls");
+                if (di.Exists)
+                {
+                    foreach (string dir in Directory.GetDirectories(x))
+                    {
+                        DirectoryInfo info = new DirectoryInfo(dir);
+                        if (!DateTime.TryParse(info.Name, out DateTime dateTime)) //如果不是月份文件夹
+                        {
+                            continue;
+                        }
+                        if (!(dateTime >= start && dateTime <= end))
+                        {
+                            continue;
+                        }
+                        foreach (FileInfo file in info.GetFiles())
+                        {
+                            string[] excelinfo = file.Name.Split('@');
+                            result += Convert.ToDouble(excelinfo[1]);
+                        }
+                    }
                 }
             });
             return Math.Round(result, 2);
