@@ -2058,12 +2058,12 @@ namespace VirtualCredit.Controllers
                 return null;
             }
         }
-        public FileStreamResult DownloadPlan()
+        public FileStreamResult DownloadPlan(string plan)
         {
             try
             {
                 string fileName = "保障方案.doc";//客户端保存的文件名
-                string filePath = Path.Combine(Utility.Instance.TemplateFolder, "home_download_plan.doc");//路径
+                string filePath = Path.Combine(Utility.Instance.TemplateFolder, $"home_download_plan_{plan}.docx");//路径
                 FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
                 return File(fs, "text/plain", fileName);
             }
