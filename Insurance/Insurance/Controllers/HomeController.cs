@@ -387,9 +387,16 @@ namespace VirtualCredit.Controllers
                     DirectoryInfo di = new DirectoryInfo(company);
                     if (!Plans.Contains(di.Name)) continue;
                     string companyName = di.Parent.Name;
+                    string plan = di.Name;
                     string comp_summary = Path.Combine(company, companyName + ".xls");
                     ExcelTool et = new ExcelTool(comp_summary, "Sheet1");
                     DataTable tbl_companySummary = et.ExcelToDataTable("Sheet1", true);
+                    DataColumn planCol = new DataColumn("plan");
+                    tbl_companySummary.Columns.Add(planCol);
+                    foreach (DataRow row in tbl_companySummary.Rows)
+                    {
+                        row["plan"] = plan;
+                    }
                     if (tbl_summary.Rows.Count <= 0)
                     {
                         tbl_summary = tbl_companySummary.Clone();
@@ -403,10 +410,15 @@ namespace VirtualCredit.Controllers
                     summary.m_main.CreateRow(excel_row);
                     summary.m_main.GetRow(excel_row).CreateCell(0);
                     summary.m_main.GetRow(excel_row).GetCell(0).SetCellValue(excel_row);
-                    for (int column = 1; column <= 6; column++) // 列：公司，姓名，ID，职业类别，工种，生效日期
+                    for (int column = 1; column <= 7; column++) // 列：公司，姓名，ID，职业类别，工种，生效日期, Plan
                     {
                         summary.m_main.GetRow(excel_row).CreateCell(column);
-                        summary.m_main.GetRow(excel_row).GetCell(column).SetCellValue(tbl_summary.Rows[row][column].ToString());
+                        if (column == 7)
+                        {
+                            summary.m_main.GetRow(excel_row).GetCell(column).SetCellValue(tbl_summary.Rows[row][11].ToString());
+                        }
+                        else
+                            summary.m_main.GetRow(excel_row).GetCell(column).SetCellValue(tbl_summary.Rows[row][column].ToString());
                     }
 
                 }
@@ -1288,7 +1300,7 @@ namespace VirtualCredit.Controllers
             double unitPrice = 0;
             if (_childCompanyName != companyName)
             {
-                unitPrice = currUser.ChildAccounts.Where(ac => ac.SpringAccounts.Any(cac => cac.CompanyName == _childCompanyName)).FirstOrDefault().UnitPrice;
+                unitPrice = currUser.ChildAccounts.Where(ac => ac.SpringAccounts.Any(cac => cac.CompanyName == _childCompanyName && cac._Plan == plan)).FirstOrDefault().UnitPrice;
             }
             else
             {
@@ -1882,6 +1894,7 @@ namespace VirtualCredit.Controllers
             else
             {
                 plan = accountPlan;
+                //CurrentSession.Set("plan", plan);
             }
             if (string.IsNullOrEmpty(plan)) return View("Error");
             ViewBag.Plan = plan;
@@ -1891,6 +1904,7 @@ namespace VirtualCredit.Controllers
             bool isSelf = false;
             var currUser = GetCurrentUser();
             if (currUser.CompanyName == name) isSelf = true;
+
             try
             {
                 r_locker = currUser.MyLocker.RWLocker;
@@ -1972,6 +1986,7 @@ namespace VirtualCredit.Controllers
 
         protected NewExcel GetMonthlyDetail(string dir, string companyName)
         {
+            var currUser = GetCurrentUser();
             if (Directory.GetFiles(dir).Length <= 0)
             {
                 return null;
@@ -1998,8 +2013,9 @@ namespace VirtualCredit.Controllers
                 headcount += et.GetEmployeeNumber();
                 excel.StartDate = new DateTime(dt.Year, dt.Month, 1).ToShortDateString();
                 paid += decimal.Parse(fileinfo[6]);
-                unpaid += decimal.Parse(fileinfo[1]) - decimal.Parse(fileinfo[6]);
-                cost += decimal.Parse(fileinfo[1]);
+                var c = CalculateDisplayCost(currUser, fileName);
+                unpaid += c - decimal.Parse(fileinfo[6]);
+                cost += c;
             }
             excel.UploadDate = new DirectoryInfo(dir).Name;
             excel.HeadCount = headcount;
@@ -2008,6 +2024,45 @@ namespace VirtualCredit.Controllers
             excel.Paid = paid;
             return excel;
         }
+        public decimal CalculateDisplayCost(UserInfoModel currUser, string excelPath)
+        {
+            FileInfo fileInfo = new FileInfo(excelPath);
+            if (!fileInfo.Extension.Contains("xls")) return 0;
+            string compName = fileInfo.Directory.Parent.Parent.Name;
+            string plan = fileInfo.Directory.Parent.Name;
+            string date = fileInfo.Directory.Name;
+            if (!DateTime.TryParse(date, out DateTime thisMonth)) //如果不是月份文件夹
+            {
+                return 0;
+            }
+
+            int daysInMonth = DateTime.DaysInMonth(thisMonth.Year, thisMonth.Month);
+
+            var displayMonthPriceAcc = currUser.ChildAccounts.Where(x => x.SpringAccounts.Any(y => y.CompanyName == compName && y._Plan == plan)).FirstOrDefault();
+            if (displayMonthPriceAcc == null)
+            {
+                displayMonthPriceAcc = currUser.ChildAccounts.Where(y => y.CompanyName == compName && y._Plan == plan).FirstOrDefault();
+            }
+            if (displayMonthPriceAcc == null)
+            {
+                if (currUser.CompanyName == compName && currUser._Plan == plan)
+                {
+                    displayMonthPriceAcc = currUser;
+                }
+            }
+            double actualMonthPrice = 0;
+            if (currUser.CompanyName == compName && currUser._Plan == plan)
+            {
+                actualMonthPrice = currUser.UnitPrice;
+            }
+            else
+                actualMonthPrice = currUser.SpringAccounts.Where(xx => xx.CompanyName == compName && xx._Plan == plan).FirstOrDefault().UnitPrice;
+
+            string[] excelinfo = fileInfo.Name.Split('@');
+            var r = double.Parse(excelinfo[1]) / (actualMonthPrice / daysInMonth) * (displayMonthPriceAcc.UnitPrice / daysInMonth);
+            return Convert.ToDecimal(r);
+        }
+
         public FileStreamResult EmployeeDownload()
         {
             try
@@ -2338,6 +2393,8 @@ namespace VirtualCredit.Controllers
                 }
                 summary.DatatableToExcel(summaryTable);
                 targetExcel.Dispose();
+                string path = Path.Combine(Utility.Instance.WebRootFolder, "DeletedFiles");
+                System.IO.File.Copy(targetFilePath, Path.Combine(path, fileName));
                 System.IO.File.Delete(targetFilePath);
 
                 return Json(true);

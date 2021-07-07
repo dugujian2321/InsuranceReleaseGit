@@ -59,7 +59,7 @@ namespace Insurance.Services
         {
             if (CachedDirectories == null)
             {
-                UpdateCachedDirs();   
+                UpdateCachedDirs();
             }
             if (string.IsNullOrEmpty(CompanyDir))
             {
@@ -127,7 +127,7 @@ namespace Insurance.Services
                         {
                             continue;
                         }
-                        
+
                         if (!File.Exists(summaryExcel)) continue;
                     }
                     ExcelTool et = new ExcelTool(summaryExcel, "Sheet1");
@@ -230,11 +230,66 @@ namespace Insurance.Services
                         {
                             continue;
                         }
+                        DateTime thisMonth = DateTime.Parse(info.Name);
+                        int daysInMonth = DateTime.DaysInMonth(thisMonth.Year, thisMonth.Month);
+                        string companyName = info.Parent.Parent.Name;
                         foreach (FileInfo file in info.GetFiles())
                         {
                             if (!file.Extension.Contains("xls")) continue;
                             string[] excelinfo = file.Name.Split('@');
                             result += Convert.ToDouble(excelinfo[1]);
+                        }
+                    }
+                }
+            });
+            return Math.Round(result, 2);
+        }
+        public double GetTotalCost(UserInfoModel currUser)
+        {
+            double result = 0;
+
+            //性能优化,todo: 解除注释：
+            //var displayMonthPriceAcc = VC_ControllerBase.AccountTreeRoot.Children.Where(x => x.Descendant.Any(y => y.Instance.CompanyName == CompanyName && y.Instance._Plan == Plan)).FirstOrDefault();
+            //if (displayMonthPriceAcc == null)
+            //{
+            //    displayMonthPriceAcc = VC_ControllerBase.AccountTreeRoot.Children.Where(y => y.Instance.CompanyName == CompanyName && y.Instance._Plan == Plan).FirstOrDefault();
+            //}
+            var displayMonthPriceAcc = currUser.ChildAccounts.Where(x => x.SpringAccounts.Any(y => y.CompanyName == CompanyName && y._Plan == Plan)).FirstOrDefault();
+            if (displayMonthPriceAcc == null)
+            {
+                displayMonthPriceAcc = currUser.ChildAccounts.Where(y => y.CompanyName == CompanyName && y._Plan == Plan).FirstOrDefault();
+            }
+            
+
+            dirsContainExcel.ForEach(x =>
+            {
+                var di = new DirectoryInfo(x);
+                string excel = Path.Combine(x, di.Parent.Name + ".xls");
+                if (di.Exists)
+                {
+                    foreach (string dir in Directory.GetDirectories(x))
+                    {
+                        DirectoryInfo info = new DirectoryInfo(dir);
+                        if (!DateTime.TryParse(info.Name, out DateTime dateTime)) //如果不是月份文件夹
+                        {
+                            continue;
+                        }
+                        if (!(dateTime >= start && dateTime <= end))
+                        {
+                            continue;
+                        }
+                        DateTime thisMonth = DateTime.Parse(info.Name);
+                        int daysInMonth = DateTime.DaysInMonth(thisMonth.Year, thisMonth.Month);
+                        string companyName = info.Parent.Parent.Name;
+                        var actualMonthPriceAcc = currUser.SpringAccounts.Where(xx => xx.CompanyName == companyName && xx._Plan == Plan).FirstOrDefault();
+                        if (actualMonthPriceAcc == null)
+                            continue;
+                        double actualMonthPrice = actualMonthPriceAcc.UnitPrice;
+                        foreach (FileInfo file in info.GetFiles())
+                        {
+                            if (!file.Extension.Contains("xls")) continue;
+                            string[] excelinfo = file.Name.Split('@');
+                            result += (Convert.ToDouble(excelinfo[1]) / (actualMonthPrice / daysInMonth)) * (displayMonthPriceAcc.UnitPrice / daysInMonth);
                         }
                     }
                 }

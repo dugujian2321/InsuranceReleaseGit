@@ -82,7 +82,9 @@ namespace VirtualCredit.Models
         {
             get
             {
-                return GetSpringAccounts(this);
+                if (springAccounts != null && springAccounts.Count > 0) return springAccounts;
+                springAccounts = GetSpringAccounts(this);
+                return springAccounts;
             }
             set
             {

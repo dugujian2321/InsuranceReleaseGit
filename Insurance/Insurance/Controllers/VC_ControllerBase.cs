@@ -1,4 +1,5 @@
-﻿using Insurance.Models;
+﻿using Insurance;
+using Insurance.Models;
 using Insurance.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -17,6 +18,7 @@ namespace VirtualCredit
 {
     public class VC_ControllerBase : Controller
     {
+        public static TreeNode<UserInfoModel> AccountTreeRoot = new TreeNode<UserInfoModel>();
         public static ConcurrentDictionary<string, string> CachedCompanyDir = new ConcurrentDictionary<string, string>();
         public static ConcurrentDictionary<string, ISession> MiniAppSessions = new ConcurrentDictionary<string, ISession>();
         protected IHostingEnvironment _hostingEnvironment;
@@ -48,14 +50,44 @@ namespace VirtualCredit
         }
         public VC_ControllerBase(HttpContext context)
         {
-
             if (context != null)
             {
                 CurrentSession = context.Session;
                 _imageTool = new ImageTool(context);
             }
 
+            UpdateAccountTree();
             UpdateFromTo();
+            var t = AccountTreeRoot.Descendant;
+        }
+
+        public void UpdateAccountTree()
+        {
+            UserInfoModel admin = DatabaseService.SelectUser("oliver");
+            AccountTreeRoot = new TreeNode<UserInfoModel>();
+            AccountTreeRoot.Instance = admin;
+            AccountTreeRoot.Parent = null;
+            foreach (var item in admin.ChildAccounts)
+            {
+                AddNode(AccountTreeRoot, item);
+            }
+        }
+
+        void AddNode(TreeNode<UserInfoModel> parent, UserInfoModel account)
+        {
+            TreeNode<UserInfoModel> treeNode = new TreeNode<UserInfoModel>();
+            treeNode.Instance = account;
+            treeNode.Parent = parent;
+
+            if (account.ChildAccounts.Count <= 0)
+            {
+                return;
+            }
+
+            foreach (var child in account.ChildAccounts)
+            {
+                AddNode(treeNode, child);
+            }
         }
 
         public void UpdateFromTo()
@@ -381,13 +413,13 @@ namespace VirtualCredit
                     company.AbbrName = companyAccount[0].CompanyNameAbb;
                     foreach (var account in companyAccount)
                     {
-                        ExcelDataReader edr = new ExcelDataReader(company.Name, From.Year, account._Plan);
+                        ExcelDataReader edr = new ExcelDataReader(account.CompanyName, From.Year, account._Plan);
                         company.EmployeeNumber += edr.GetCurrentEmployeeNumber();
                         company.StartDate = From;
                         company.PaidCost += edr.GetPaidCost();
                         company.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
                         company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
-                        company.TotalCost += edr.GetTotalCost();
+                        company.TotalCost += edr.GetTotalCost(currUser);
                     }
                     result.Add(company);
                 }
@@ -492,7 +524,7 @@ namespace VirtualCredit
                     com.StartDate = dataFrom;
                     ExcelDataReader edr = new ExcelDataReader(companyDir.Name, dataFrom.Year, plan);
                     com.PaidCost += edr.GetPaidCost();
-                    com.TotalCost += edr.GetTotalCost();
+                    com.TotalCost += edr.GetTotalCost(user);
                     com.EmployeeNumber += edr.GetEmployeeNumber();
                     com.CustomerAlreadyPaid += edr.GetCustomerAlreadyPaid();
                     var temp = DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", com.Name);
@@ -505,34 +537,34 @@ namespace VirtualCredit
             return result;
         }
 
-        public List<Company> GetAllCompanies()
-        {
-            List<Company> result = new List<Company>();
-            string companiesDirectory = GetSearchExcelsInDir("管理员");
-            foreach (string comp in Directory.GetDirectories(companiesDirectory))
-            {
-                DirectoryInfo di = new DirectoryInfo(comp);
-                ExcelDataReader edr;
-                if (System.IO.File.Exists(Path.Combine(comp, new DirectoryInfo(comp).Name + ".xls")))
-                {
-                    edr = new ExcelDataReader(di.Name, From.Year, "");
-                }
-                else
-                {
-                    continue;
-                }
-                Company company = new Company();
-                company.Name = Path.GetFileName(comp);
-                company.EmployeeNumber = edr.GetEmployeeNumber();
-                company.StartDate = new DateTime(DateTime.Now.Date.Year, DateTime.Now.Date.Month, 1);
-                company.PaidCost = edr.GetPaidCost();
-                company.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
-                company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
-                company.TotalCost = edr.GetTotalCost();
-                result.Add(company);
-            }
-            return result;
-        }
+        //public List<Company> GetAllCompanies()
+        //{
+        //    List<Company> result = new List<Company>();
+        //    string companiesDirectory = GetSearchExcelsInDir("管理员");
+        //    foreach (string comp in Directory.GetDirectories(companiesDirectory))
+        //    {
+        //        DirectoryInfo di = new DirectoryInfo(comp);
+        //        ExcelDataReader edr;
+        //        if (System.IO.File.Exists(Path.Combine(comp, new DirectoryInfo(comp).Name + ".xls")))
+        //        {
+        //            edr = new ExcelDataReader(di.Name, From.Year, "");
+        //        }
+        //        else
+        //        {
+        //            continue;
+        //        }
+        //        Company company = new Company();
+        //        company.Name = Path.GetFileName(comp);
+        //        company.EmployeeNumber = edr.GetEmployeeNumber();
+        //        company.StartDate = new DateTime(DateTime.Now.Date.Year, DateTime.Now.Date.Month, 1);
+        //        company.PaidCost = edr.GetPaidCost();
+        //        company.CustomerAlreadyPaid = edr.GetCustomerAlreadyPaid();
+        //        company.UnitPrice = Convert.ToDouble(DatabaseService.SelectPropFromTable("UserInfo", "CompanyName", company.Name).Rows[0]["UnitPrice"]);
+        //        company.TotalCost = edr.GetTotalCost();
+        //        result.Add(company);
+        //    }
+        //    return result;
+        //}
         protected void AdaptModel(ViewModelBase model)
         {
             UserInfoModel uim = CurrentSession.Get<UserInfoModel>("CurrentUser");
@@ -572,6 +604,7 @@ namespace VirtualCredit
             var currUser = CurrentSession.Get<UserInfoModel>("CurrentUser");
             user.UserName = currUser.UserName;
             user.userPassword = currUser.userPassword;
+
             UserInfoModel uim = DatabaseService.UserMatchUserNamePassword(user);
             uim.MyLocker = Utility.GetCompanyLocker(uim.CompanyName);
             if (uim.ChildAccounts == null || uim.ChildAccounts.Count == 0)

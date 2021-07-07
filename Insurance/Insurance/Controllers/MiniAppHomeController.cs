@@ -61,7 +61,7 @@ namespace Insurance.Controllers
             {
                 return HistoricalList();
             }
-
+            var currUser = GetCurrentUser();
             string dataDir = Path.Combine(ExcelRoot, "历年归档", year.ToString(), "管理员");
             if (!Directory.Exists(dataDir)) return View("Error");
             string[] companyList = Directory.GetDirectories(dataDir, "*", SearchOption.TopDirectoryOnly).Where(d =>

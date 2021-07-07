@@ -394,6 +394,7 @@ namespace Insurance.Controllers
             if (DatabaseService.InsertStory("UserInfo", user))
             {
                 LogService.Log($"New User {user.UserName} Registered");
+                UpdateAccountTree();
                 return View("../User/RegisterSucceed");
             }
             else
