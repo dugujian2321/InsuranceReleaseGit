@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Net.Http.Headers;
+using System;
 
 namespace Insurance.Models
 {
@@ -12,7 +13,7 @@ namespace Insurance.Models
 
         public string EndDate { get; set; }
 
-        public double Cost { get; set; }
+        public decimal Cost { get; set; }
 
         public int HeadCount { get; set; }
 
@@ -22,9 +23,18 @@ namespace Insurance.Models
 
         public string FileName { get; set; }
 
-        public double Paid { get; set; }
+        public decimal Paid { get; set; }
 
-        public double Unpaid { get; set; }
+        public decimal Unpaid
+        {
+            get;set;
+        }
+        public string Uploader { get; set; }
+        public string Plan { get; set; }
+        /// <summary>
+        /// //结算状态 true-已结算 false-未结算
+        /// </summary>
+        public bool Status { get { return Cost - Paid == 0; } } 
     }
 
 

@@ -15,17 +15,27 @@ namespace Insurance.Services
         private static bool shouldRenew = false;
         string rootpath = Utility.Instance.WebRootFolder;
         static DateTime nextEndDate;
+        public AutoRenewAllCompanies()
+        {
+            nextEndDate = DateTime.Now;
+        }
 
         private void RenewAllCompanies()
         {
-            string excelDir = Path.Combine(rootpath, "Excel");
-            foreach (string company in Directory.GetDirectories(excelDir))
+            string excelDir = Path.Combine(rootpath, "Excel", "管理员");
+            foreach (string company in Directory.GetDirectories(excelDir, "*", SearchOption.AllDirectories))
             {
-                string companyName = new DirectoryInfo(company).Name;
+                DirectoryInfo di = new DirectoryInfo(company);
+                if (!VC_ControllerBase.Plans.Contains(di.Name)) continue;
+                string plan = di.Name;
+                string companyName = di.Parent.Name;
                 string summary = Path.Combine(company, companyName + ".xls");
                 string summary_bk_file = Path.Combine(company, companyName + "_" + DateTime.Now.AddMonths(-1).ToString("yyyy-MM") + "_bk.xls");
+                if (File.Exists(summary_bk_file))
+                {
+                    continue;
+                }
                 File.Copy(summary, summary_bk_file, true);
-
                 ExcelTool et = new ExcelTool(summary, "Sheet1");
                 DateTime currDate;
 
@@ -45,6 +55,7 @@ namespace Insurance.Services
                 {
                     continue;
                 }
+                
                 DataTable tbl_summary = et.ExcelToDataTable("Sheet1", true);
                 foreach (DataRow row in tbl_summary.Rows)
                 {
@@ -52,22 +63,23 @@ namespace Insurance.Services
                     row["生效日期"] = new DateTime(dt.Year, dt.Month, 1).ToString("yyyy-MM-dd");
                 }
                 et.DatatableToExcel(tbl_summary);
-                GenerateNewExcelForRenewAsync(companyName, true);
+                GenerateNewExcelForRenewAsync(company, plan, true);
             }
         }
 
-        private bool GenerateNewExcelForRenewAsync(string company, bool auto = false)
+        private bool GenerateNewExcelForRenewAsync(string companyFolder, string plan, bool auto = false)
         {
+            string company = new DirectoryInfo(companyFolder).Parent.Name;
             LogService.Log($"{company}开始自动流转");
             string summary_bk = string.Empty;
             try
             {
-                UserInfoModel currUser = DatabaseService.SelectUserByCompany(company);
+                UserInfoModel currUser = InsuranceDatabaseService.SelectUserByCompanyAndPlan(company, plan);
                 if (currUser == null)
                 {
                     return false;
                 }
-                string companyDir = Path.Combine(rootpath, "Excel", company);
+                string companyDir = companyFolder;
                 string summaryPath = Path.Combine(companyDir, company + ".xls");
 
                 string monDir = Path.Combine(companyDir, DateTime.Now.ToString("yyyy-MM"));
@@ -116,7 +128,7 @@ namespace Insurance.Services
         {
             do
             {
-                if (configuration["AutoRenew"].ToString().Equals("False",StringComparison.CurrentCultureIgnoreCase))
+                if (configuration["AutoRenew"].ToString().Equals("False", StringComparison.CurrentCultureIgnoreCase))
                 {
                     Thread.Sleep(1000);
                     continue;
@@ -124,6 +136,7 @@ namespace Insurance.Services
                 if (nextEndDate.Year < 2000)
                 {
                     nextEndDate = DateTime.Now;
+                    //nextEndDate = new DateTime(2020, 10, 30, 23, 59, 59);
                 }
                 DateTime monthLastDay = new DateTime(nextEndDate.Year, nextEndDate.Month, DateTime.DaysInMonth(nextEndDate.Year, nextEndDate.Month));
                 string monthlastsecond = monthLastDay.ToString("yyyy-MM-dd 23:59:59");
@@ -131,9 +144,10 @@ namespace Insurance.Services
                 if (DateTime.Now > nextEndDate)
                 {
                     shouldRenew = true;
+                    Thread.Sleep(2000);
                 }
                 if (shouldRenew)
-                {
+                {               
                     foreach (var locker in Utility.LockerList)
                     {
                         locker.RWLocker.EnterWriteLock();

@@ -8,6 +8,11 @@ namespace Insurance.Models
 {
     public class DetailModel : ViewModelBase
     {
+        public DetailModel()
+        {
+            Excels = new List<NewExcel>();
+            MonthlyExcel = new List<NewExcel>();
+        }
         public string Company { get; set; }
 
         public List<NewExcel> Excels { get; set; }

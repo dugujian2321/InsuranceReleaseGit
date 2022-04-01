@@ -18,13 +18,9 @@ namespace Insurance.Controllers
 {
     public class EmployeeChangeController : VC_ControllerBase
     {
-        private readonly int idCol = 1;
-        private readonly int jobCol = 2;
-        public static string ExcelDirectory;
-        private readonly IHostingEnvironment _hostingEnvironment;
-        string companyFolder;
-        string summaryFileName;
-        string summaryFilePath;
+        protected string companyFolder;
+        protected string summaryFileName;
+        protected string targetCompany;
         private static readonly object summaryLocker = new object();
 
         public EmployeeChangeController(IHostingEnvironment hostingEnvironment)
@@ -33,16 +29,27 @@ namespace Insurance.Controllers
             ExcelDirectory = _hostingEnvironment.WebRootPath;
         }
 
-        private void Initialize()
+        private void Initialize(string company)
         {
-            companyFolder = GetCompanyFolder();
-            summaryFileName = GetCurrentUser().CompanyName + ".xls";
-            summaryFilePath = Path.Combine(companyFolder, summaryFileName);
+            Initialize(company, string.Empty);
         }
 
-        [UserLoginFilters]
-        public JsonResult UpdateSummary(DateTime startdate)
+
+        private void Initialize(string company, string plan)
         {
+            if (string.IsNullOrEmpty(company)) company = HttpContext.Session.Get<string>("company");
+            companyFolder = GetSearchExcelsInDir(company);
+            targetCompany = company;
+            summaryFileName = company + ".xls";
+            summaryFilePath = Path.Combine(companyFolder, plan, summaryFileName);
+        }
+
+
+
+        [UserLoginFilters]
+        public JsonResult UpdateSummary(DateTime startdate, string plan)
+        {
+            var currUser = GetCurrentUser();
             try
             {
                 //判断是否已计算保费
@@ -51,9 +58,10 @@ namespace Insurance.Controllers
                     return Json("NotCalculated");
                 }
                 string summary_backup = string.Empty;
+                string targetcompany = HttpContext.Session.Get<string>("company");
                 //验证前后端价格计算是否一致
                 double price = HttpContext.Session.Get<double>("price");
-                double calculatedprice = CalculatePrice(startdate);
+                double calculatedprice = CalculatePrice(startdate, targetcompany, HttpContext.Session.Get<string>("plan"));
                 if (price != calculatedprice)
                 {
                     return Json("NotCalculated");
@@ -67,17 +75,33 @@ namespace Insurance.Controllers
                 //===================================================//
                 if (string.IsNullOrEmpty(summaryFilePath))
                 {
-                    Initialize();
+                    Initialize(targetcompany);
                 }
                 string mode = HttpContext.Session.Get<string>("mode");
-                string excelsDirectory = GetCompanyFolder();
-                string monthDir = GetMonthFolder(startdate);
-                if (!Directory.Exists(Path.Combine(excelsDirectory, monthDir)))
+                string currUserDir = GetSearchExcelsInDir(currUser.CompanyName);
+                var di = new DirectoryInfo(currUserDir);
+                string excelsDirectory = string.Empty;
+                if (di.Name == targetcompany)
                 {
-                    Directory.CreateDirectory(Path.Combine(excelsDirectory, monthDir));
+                    excelsDirectory = currUserDir;
+                }
+                else
+                {
+                    excelsDirectory = Directory.GetDirectories(currUserDir, targetcompany, SearchOption.AllDirectories).FirstOrDefault();
+                }
+
+                if (string.IsNullOrEmpty(excelsDirectory))
+                {
+                    return Json("No Permission");
+                }
+                string month = GetMonthFolder(startdate);
+                currUser.MyLocker.RWLocker.EnterWriteLock(); //进入写锁
+                string monthDir = Path.Combine(excelsDirectory, plan, month);
+                if (!Directory.Exists(monthDir))
+                {
+                    Directory.CreateDirectory(monthDir);
                 }
                 //=========================================================================================================//
-                GetCurrentUser().MyLocker.RWLocker.EnterWriteLock(); //进入写锁
 
                 ExcelTool summary = new ExcelTool(summaryFilePath, "Sheet1");
                 DateTime currentMonth;
@@ -110,10 +134,13 @@ namespace Insurance.Controllers
                 summary_backup = Path.Combine(companyFolder, Guid.NewGuid() + "_summary_temp.xls");
                 System.IO.File.Copy(summaryFilePath, summary_backup, true);
                 //======================添加新员工===================
+
+                int headCount = 0;
+
                 if (mode == "add")
                 {
-                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{GetCurrentUser().UserName}@Add@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + "@0@.xls"; //命名规则： 上传日期_保费_上传账号_加/减保_GUID_时间_已结保费.xls
-                    string newfilepath = Path.Combine(excelsDirectory, monthDir, fileName);
+                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{currUser.UserName}@Add@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + $"@0@{HttpContext.Session.Get<int>("effectiveDays")}@.xls"; //命名规则： 上传日期_投保时保费_上传账号_加/减保_GUID_时间_已结保费_投保日次.xls
+                    string newfilepath = Path.Combine(excelsDirectory, plan, month, fileName);
                     try
                     {
                         //1 - 新员工excel中，添加生效日期,然后保存文件
@@ -126,6 +153,7 @@ namespace Insurance.Controllers
                             fs.Flush();
                         }
                         ExcelTool et = new ExcelTool(newfilepath, "Sheet1");
+                        headCount = et.GetEmployeeNumber();
                         et.SetCellText(0, 4, "保障开始时间");
                         et.SetCellText(0, 5, "保障结束时间");
                         for (int i = 1; i <= et.m_main.GetLastRow(); i++)
@@ -136,12 +164,12 @@ namespace Insurance.Controllers
 
                         //2 - 总表中添加新员工信息
                         int startrow = summary.m_main.GetLastRow() + 1;
+                        string company = currUser.CompanyName;
                         for (int i = startrow; i < startrow + employees.Count; i++)
                         {
                             Employee em = employees[i - startrow];
-                            string company = GetCurrentUser().CompanyName;
                             summary.SetCellText(i, 0, i.ToString()); //序号
-                            summary.SetCellText(i, 1, company); //单位
+                            summary.SetCellText(i, 1, targetcompany); //单位
                             summary.SetCellText(i, 2, em.Name); //姓名
                             summary.SetCellText(i, 3, em.ID); //ID
                             summary.SetCellText(i, 4, em.JobType); //险种
@@ -149,34 +177,44 @@ namespace Insurance.Controllers
                             summary.SetCellText(i, 6, startdate.Date.ToShortDateString()); //生效日期
                         }
                         summary.Save();
-                        System.IO.File.Delete(summary_backup);
                         List<string> result = new List<string>();
                         result.Add("投保成功");
+
+                        DailyDetailModel detail = new DailyDetailModel()
+                        {
+                            Company = targetcompany,
+                            SubmittedBy = currUser.UserName,
+                            Product = plan,
+                            TotalPrice = price,
+                            Date = DateTime.Now.Date,
+                            NewAdd = headCount
+                        };
+                        UpdateDailyDetail(detail);
                         string kickoffDate = startdate.Date.ToString("yyyy/MM/dd 00:00:01");
                         string endDate = (new DateTime(startdate.Year, startdate.Month, DateTime.DaysInMonth(startdate.Year, startdate.Month))).ToString("yyyy/MM/dd 23:59:59");
                         result.Add(kickoffDate);
                         result.Add(endDate);
-                        HttpContext.Session.Set<List<Employee>>("validationResult", null);
-                        HttpContext.Session.Set<string>("readyToSubmit", "N");
+                        ClearSession();
+                        Utility.DailyAdd += headCount;
+                        Utility.DailyTotalCost += price;
                         return Json(result);
 
                     }
                     catch (Exception e)
                     {
                         RevertSummaryFile(summaryFilePath, summary_backup);
-                        if (System.IO.File.Exists(summary_backup))
-                            System.IO.File.Delete(summary_backup);
                         return Json("failed");
                     }
                     finally
                     {
-
+                        if (System.IO.File.Exists(summary_backup))
+                            System.IO.File.Delete(summary_backup);
                     }
                 }
                 else if (mode == "sub")
                 {
-                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{GetCurrentUser().UserName}@Sub@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + "@0@.xls"; //命名规则： 上传日期_保费_上传账号_加/减保_GUID_时间_已结保费_.xls
-                    string newfilepath = Path.Combine(excelsDirectory, monthDir, fileName);
+                    string fileName = DateTime.Now.ToString("yyyy-MM-dd") + $"@{price}@{currUser.UserName}@Sub@{Guid.NewGuid()}" + DateTime.Now.ToString("@HH-mm-ss") + $"@0@{HttpContext.Session.Get<int>("effectiveDays")}@.xls"; //命名规则： 上传日期_投保时保费_上传账号_加/减保_GUID_时间_已结保费_退费日次.xls
+                    string newfilepath = Path.Combine(excelsDirectory, plan, month, fileName);
                     try
                     {
                         //1 - 新表中添加离职信息，并保存文件
@@ -188,6 +226,7 @@ namespace Insurance.Controllers
                             fs.Flush();
                         }
                         ExcelTool et = new ExcelTool(newfilepath, "Sheet1");
+                        headCount = et.GetEmployeeNumber();
                         et.SetCellText(0, 4, "保障开始时间");
                         et.SetCellText(0, 5, "保障结束时间");
                         Employee employee = null;
@@ -212,27 +251,37 @@ namespace Insurance.Controllers
                             }
                         }
                         summary.DatatableToExcel(tbl_summary);
-                        System.IO.File.Delete(summary_backup);
                         List<string> result = new List<string>();
                         result.Add("投保成功");
                         string kickoffDate = employee.StartDate + " 00:00:01";
                         string endDate = startdate.ToString("yyyy/MM/dd 23:59:59");
                         result.Add(kickoffDate);
                         result.Add(endDate);
-                        HttpContext.Session.Set<List<Employee>>("validationResult", null);
-                        HttpContext.Session.Set<string>("readyToSubmit", "N");
+                        DailyDetailModel detail = new DailyDetailModel()
+                        {
+                            Company = targetcompany,
+                            SubmittedBy = currUser.UserName,
+                            Product = plan,
+                            TotalPrice = price,
+                            Date = DateTime.Now.Date,
+                            Reduce = headCount
+                        };
+
+                        UpdateDailyDetail(detail);
+                        ClearSession();
+                        Utility.DailySub += headCount;
+                        Utility.DailyTotalCost += price;
                         return Json(result);
                     }
                     catch (Exception e)
                     {
                         RevertSummaryFile(summaryFilePath, summary_backup);
-                        if (System.IO.File.Exists(summary_backup))
-                            System.IO.File.Delete(summary_backup);
                         return Json("fail");
                     }
                     finally
                     {
-
+                        if (System.IO.File.Exists(summary_backup))
+                            System.IO.File.Delete(summary_backup);
                     }
                 }
                 else
@@ -249,9 +298,22 @@ namespace Insurance.Controllers
             }
             finally
             {
-                if (GetCurrentUser().MyLocker.RWLocker.IsWriteLockHeld)
-                    GetCurrentUser().MyLocker.RWLocker.ExitWriteLock(); //退出写锁
+                if (currUser.MyLocker.RWLocker.IsWriteLockHeld)
+                    currUser.MyLocker.RWLocker.ExitWriteLock(); //退出写锁
             }
+        }
+
+        private bool UpdateDailyDetail(DailyDetailModel model)
+        {
+            return InsuranceDatabaseService.InsertDailyDetail(model);
+        }
+
+        private void ClearSession()
+        {
+            HttpContext.Session.Set<List<Employee>>("validationResult", null);
+            HttpContext.Session.Set<string>("readyToSubmit", "N");
+            HttpContext.Session.Set<string>("company", string.Empty);
+            HttpContext.Session.Set<int>("effectiveDays", 0);
         }
 
         private void RevertSummaryFile(string path, string backup)
@@ -264,67 +326,68 @@ namespace Insurance.Controllers
             }
         }
 
-        [UserLoginFilters]
-        public IActionResult UpdateEmployees([FromForm] IFormFile newExcel, string mode)
+        public JsonResult UserDaysBefore([FromQuery] string company)
         {
+            var user = InsuranceDatabaseService.SelectUserByCompany(company);
+
+            int days = user.DaysBefore;
+            DateTime dt = DateTime.Now.Date.AddDays(-1 * days);
+            ClearSession();
+            return Json(dt.ToString("yyyy-MM-dd"));
+        }
+
+        /// <summary>
+        /// 验证保单文件，返回验证结果
+        /// </summary>
+        /// <param name="newExcel"></param>
+        /// <param name="mode"></param>
+        /// <param name="company"></param>
+        /// <param name="plan"></param>
+        /// <returns></returns>
+        [UserLoginFilters]
+        public JsonResult UpdateEmployees([FromForm] IFormFile newExcel, string mode, string company, string plan)
+        {
+            HttpContext.Session.Set("validationResult", new List<Employee>());
+            HttpContext.Session.Set("company", string.Empty);
+            HttpContext.Session.Set("price", 0);
+            //TODO: 添加验证格式代码
+            //将FormFile中的Sheet1转换成DataTable
+            string template = Path.Combine(Utility.Instance.TemplateFolder, "employee_download.xls");
+            string uploadedExcel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + Path.GetExtension(newExcel.FileName));
+            FileStream ms = System.IO.File.Create(uploadedExcel);
+            HttpContext.Session.Set("readyToSubmit", "N");
+            newExcel.CopyTo(ms);
+            ExcelTool et = new ExcelTool(ms, "Sheet1");
+            var dt = et.ExcelToDataTable("Sheet1", true);
+            et.Dispose();
+            System.IO.File.Delete(uploadedExcel);
+
+            //将DataTable转成Excel
+            Initialize(company);
+            string temp_excel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
+            System.IO.File.Copy(template, temp_excel);
+            MemoryStream stream = new MemoryStream();
+            using (FileStream fs = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite))
+            {
+                ExcelTool test = new ExcelTool(fs, "Sheet1");
+                test.RawDatatableToExcel(dt);
+            }
+
+            FileStream inputStream = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite);
+            inputStream.CopyTo(stream);
+            HttpContext.Session.Set("newExcel", stream.ToArray());
+            HttpContext.Session.Set("validationResult", new List<Employee>());
             if (newExcel is null)
             {
-                return BadRequest();
+                return null;
             }
-            FileInfo fi = new FileInfo(newExcel.FileName);
-            string temp_excel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + ".xls");
-            try
-            {
-                //TODO: 添加验证格式代码
-                //将FormFile中的Sheet1转换成DataTable
-                string template = Path.Combine(Utility.Instance.TemplateFolder, "employee_download.xls");
-                string uploadedExcel = Path.Combine(Utility.Instance.WebRootFolder, "Temp", Guid.NewGuid() + fi.Extension);
-                DataTable dt = new DataTable();
-                using (FileStream ms = System.IO.File.Create(uploadedExcel))
-                {
-                    HttpContext.Session.Set("readyToSubmit", "N");
-                    newExcel.CopyTo(ms);
-                    ms.Flush();
-                }
-                using (ExcelTool et = new ExcelTool(uploadedExcel, "Sheet1"))
-                {
-                    dt = et.ExcelToDataTable("Sheet1", true);
-                }
-                System.IO.File.Delete(uploadedExcel);
-
-
-                //将DataTable转成Excel
-                Initialize();
-                System.IO.File.Copy(template, temp_excel);
-                MemoryStream stream = new MemoryStream();
-                using (ExcelTool test = new ExcelTool(temp_excel, "Sheet1"))
-                {
-                    test.RawDatatableToExcel(dt);
-                }
-
-                using (FileStream inputStream = System.IO.File.Open(temp_excel, FileMode.Open, FileAccess.ReadWrite))
-                {
-                    inputStream.CopyTo(stream);
-                    HttpContext.Session.Set("newExcel", stream.ToArray());
-                    HttpContext.Session.Set("validationResult", new List<Employee>());
-                    List<Employee> validationResult = ValidateExcel(inputStream, "Sheet1", mode);
-                    HttpContext.Session.Set("validationResult", validationResult);
-                    return Json(validationResult);
-                }
-            }
-            catch (Exception e)
-            {
-                Response.StatusCode = 500;
-                Response.WriteAsync("模板数据结构异常，请重新下载本站提供的模板文件填入数据后再试");
-                LogService.Log(e.Message);
-                LogService.Log(e.StackTrace);
-                return StatusCode(500);
-            }
-            finally
-            {
-                System.IO.File.Delete(temp_excel);
-            }
-
+            List<Employee> validationResult = ValidateExcel(inputStream, "Sheet1", mode, company, plan);
+            HttpContext.Session.Set("validationResult", validationResult);
+            HttpContext.Session.Set("company", company);
+            inputStream.Close();
+            inputStream.Dispose();
+            System.IO.File.Delete(temp_excel);
+            return Json(validationResult);
         }
 
         [UserLoginFilters]
@@ -333,11 +396,16 @@ namespace Insurance.Controllers
         {
             DataTable res = new DataTable();
             ReaderWriterLockSlim r_locker = null;
-            string dirPath = Path.Combine(ExcelDirectory, "Excel");
+            string dirPath = ExcelRoot;
             string tempDir = Path.Combine(ExcelDirectory, "Temp");
             string temp_file = "SummaryTemplate.xls";
+            if (exportEnd < exportStart)
+            {
+                return File(new FileStream(Path.Combine(dirPath, temp_file), FileMode.Open, FileAccess.Read), "text/plain", "错误.xls");
+            }
             string summary_file = Path.Combine(dirPath, DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss") + ".xls");
             string summary_file_temp = Path.Combine(dirPath, DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss") + "_temp.xls");
+
             try
             {
                 r_locker = GetCurrentUser().MyLocker.RWLocker;
@@ -350,23 +418,35 @@ namespace Insurance.Controllers
 
                 System.IO.File.Copy(Path.Combine(dirPath, temp_file), summary_file_temp, true);
                 ExcelTool summary = new ExcelTool(summary_file_temp, "Sheet1");
-                foreach (string dir in Directory.GetDirectories(dirPath))
+                var companies = GetSpringCompaniesName(true);
+                foreach (string company in companies) //获取所有后代公司的文件夹
                 {
-                    foreach (string month in Directory.GetDirectories(dir))
+                    if (company == "管理员") continue;
+                    var companyDir = GetSearchExcelsInDir(company);
+                    foreach (var plan in Plans)
                     {
-                        foreach (string excel in Directory.GetFiles(month))
+                        string planDir = Path.Combine(companyDir, plan);
+                        if (!System.IO.Directory.Exists(planDir)) continue;
+                        foreach (string month in Directory.GetDirectories(planDir)) //遍历各方案下月份文件夹
                         {
-                            DateTime date;
-                            FileInfo fi = new FileInfo(excel);
-                            string uploadDate = fi.Name.Split('@')[0];
-                            if (DateTime.TryParse(uploadDate, out date))
+                            DirectoryInfo di = new DirectoryInfo(month);
+                            if (!DateTime.TryParse(di.Name, out DateTime dt)) continue;
+                            if (dt.Month < exportStart.Month || dt.Month > exportEnd.Month) continue;
+                            foreach (string excel in Directory.GetFiles(month))
                             {
-                                if (date.Date >= exportStart.Date && date.Date <= exportEnd.Date)
-                                    summary.GainDataFromNewFile(excel, fi.Directory.Parent.Name);
+                                DateTime date;
+                                FileInfo fi = new FileInfo(excel);
+                                string uploadDate = fi.Name.Split('@')[0];
+                                if (DateTime.TryParse(uploadDate, out date))
+                                {
+                                    if (date.Date >= exportStart.Date && date.Date <= exportEnd.Date)
+                                        summary.GainDataFromNewFile(excel, company);
+                                }
                             }
-                        }
 
+                        }
                     }
+
                 }
                 summary.CreateAndSave(summary_file);
                 System.IO.File.Delete(summary_file_temp);
@@ -412,119 +492,36 @@ namespace Insurance.Controllers
             }
         }
 
-        public List<Employee> ValidateExcel(FileStream formFile, string sheetName, string mode)
+
+        public double CalculatePrice([FromForm] DateTime startdate, string company, string plan)
         {
-            formFile.Position = 0;
-            ReaderWriterLockSlim r_locker = null;
-            string excelsDirectory = GetCompanyFolder();
-            var result = new List<Employee>();
-            try
+            int effectiveDays = 0;
+            var currUser = GetCurrentUser();
+            if (string.IsNullOrEmpty(summaryFilePath))
             {
-                r_locker = GetCurrentUser().MyLocker.RWLocker;
-                r_locker.EnterReadLock();
-                ExcelTool summary = new ExcelTool(Path.Combine(excelsDirectory, GetCurrentUser().CompanyName + ".xls"), sheetName);
-                DataTable sourceDT = summary.ExcelToDataTable("Sheet1", true);
-                r_locker.ExitReadLock();
-
-                string fileName = Guid.NewGuid().ToString() + ".xls";
-
-                using (FileStream fs = System.IO.File.Create(Path.Combine(excelsDirectory, fileName)))
-                {
-                    formFile.CopyTo(fs);
-                    fs.Flush();
-                }
-                ExcelTool et = new ExcelTool(Path.Combine(excelsDirectory, fileName), sheetName);
-
-                result = et.ValidateIDs(idCol); // 验证身份证号码
-                for (int i = 0; i < result.Count - 1; i++)
-                {
-                    for (int j = i + 1; j < result.Count; j++)
-                    {
-                        if (result[i].ID == result[j].ID)
-                        {
-                            result[i].Valid = false;
-                            result[i].DataDesc = "所提交的表格中存在人员重复：" + result[i].ID;
-                            result[j].Valid = false;
-                            result[j].DataDesc = "所提交的表格中存在人员重复：" + result[j].ID;
-                        }
-                    }
-                }
-                MergeList(et.CheckJobType(jobCol), result); //验证岗位类型
-
-                if (!System.IO.File.Exists(summaryFilePath))
-                {
-                    string source = Path.Combine(ExcelDirectory, "templates", "recipe.xls");
-                    System.IO.File.Copy(source, summaryFilePath);
-                }
-
-                var temp = et.CheckDuplcateWithSummary(sourceDT, 3, idCol, mode); //验证总表中是否有重复
-                MergeList(temp, result);
-                HttpContext.Session.Set("mode", mode);
-                HttpContext.Session.Set("newTable", et.ExcelToDataTable("Sheet1", true));
-                System.IO.File.Delete(Path.Combine(excelsDirectory, fileName));
-                return result;
+                Initialize(company, plan);
             }
-            catch
+            var targetUser = InsuranceDatabaseService.SelectUserByCompanyAndPlan(targetCompany, plan);
+            if (targetUser == null)
             {
-                result.Add(
-                    new Employee()
-                    {
-                        Valid = false
-                    }
-                    );
-                return result;
-            }
-            finally
-            {
-                if (r_locker != null && r_locker.IsReadLockHeld)
+                if (!currUser.ChildAccounts.Any(_ => _.CompanyName == company))
                 {
-                    r_locker.ExitReadLock();
+                    return -9999996;
                 }
             }
-
-        }
-
-        private void MergeList(List<Employee> newEmployees, List<Employee> employees)
-        {
-            if (newEmployees != null)
-            {
-                bool isSame = false;
-                foreach (Employee item in newEmployees)
-                {
-                    isSame = false;
-                    foreach (Employee item1 in employees)
-                    {
-                        if (item.ID == item1.ID && item.DataDesc == item1.DataDesc)
-                        {
-                            isSame = true;
-                            item1.StartDate = item.StartDate;
-                            break;
-                        }
-                    }
-                    if (!isSame)
-                    {
-                        employees.Add(item);
-                    }
-                }
-            }
-        }
-        static object locker1 = new object();
-        public double CalculatePrice([FromForm] DateTime startdate)
-        {
-
             if (startdate.Year > DateTime.Now.Year)
             {
                 return -9999997;
             }
-            if (GetCurrentUser() != null && GetCurrentUser().AccessLevel != 0)
+
+            int offset = currUser.DaysBefore;
+            if (DateTime.Now.Date.AddDays(offset * -1) > startdate.Date)
             {
-                int offset = GetCurrentUser().DaysBefore;
-                if (DateTime.Now.Date.AddDays(offset * -1) > startdate.Date)
-                {
-                    return -9999999;
-                }
+                return -9999999;
             }
+
             HttpContext.Session.Set("price", 0);
+            HttpContext.Session.Set("effectiveDays", 0);
             var validationResult = HttpContext.Session.Get<List<Employee>>("validationResult");
             var mode = HttpContext.Session.Get<string>("mode");
 
@@ -533,26 +530,26 @@ namespace Insurance.Controllers
                 return -9999998; //存在invalid信息
             }
             DataTable dt = new DataTable();
-            if (string.IsNullOrEmpty(summaryFilePath))
-            {
-                Initialize();
-            }
-            var locker = GetCurrentUser().MyLocker.RWLocker;
+
+            var locker = currUser.MyLocker.RWLocker;
             locker.EnterReadLock();
             try
             {
                 string dateTime = startdate.ToShortDateString();
-
-                using (ExcelTool et = new ExcelTool(summaryFilePath, "Sheet1"))
+                using (FileStream fs = System.IO.File.Open(summaryFilePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    dt = et.ExcelToDataTable("Sheet1", true);
+                    lock (fs)
+                    {
+                        ExcelTool et = new ExcelTool(fs, "Sheet1");
+                        dt = et.ExcelToDataTable("Sheet1", true);
+                    }
                 }
-
                 if (mode == "add")
                 {
-                    double temp = CalculateAddPrice(startdate);
+                    double temp = CalculateAddPrice(targetUser, startdate, out effectiveDays);
                     HttpContext.Session.Set("price", temp);
                     HttpContext.Session.Set("readyToSubmit", "Y");
+                    HttpContext.Session.Set("effectiveDays", effectiveDays);
                     return temp;
                 }
                 else if (mode == "sub")
@@ -561,16 +558,20 @@ namespace Insurance.Controllers
                     var employees = HttpContext.Session.Get<List<Employee>>("validationResult");
                     foreach (Employee item in employees)
                     {
+                        int tempEffectiveDays = 0;
                         DateTime start = DateTime.Parse(item.StartDate);
                         if (startdate < start.Date)
                         {
                             return -9999995;
                         }
-                        result += CalculateSubPrice(start.Date, startdate);
+                        result += CalculateSubPrice(start.Date, startdate, targetUser.UnitPrice, out tempEffectiveDays);
+                        effectiveDays += tempEffectiveDays;
                     }
                     double temp = Math.Round(result, 2);
                     HttpContext.Session.Set("price", temp);
                     HttpContext.Session.Set("readyToSubmit", "Y");
+                    HttpContext.Session.Set("plan", plan);
+                    HttpContext.Session.Set("effectiveDays", effectiveDays);
                     return temp;
                 }
                 else
@@ -578,6 +579,7 @@ namespace Insurance.Controllers
                     HttpContext.Session.Set("price", 0);
                     return 0;
                 }
+
             }
             catch
             {
@@ -585,7 +587,8 @@ namespace Insurance.Controllers
             }
             finally
             {
-                locker.ExitReadLock();
+                if (locker.IsReadLockHeld)
+                    locker.ExitReadLock();
             }
 
         }

@@ -21,7 +21,7 @@ namespace Insurance.Controllers
         public IActionResult Register()
         {
             UserInfoModel currUser = GetCurrentUser();
-            if (currUser is null || currUser.AccessLevel > 1 || currUser.AllowCreateAccount != "1")
+            if (currUser is null || currUser.AllowCreateAccount != "1")
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "当前用户权限不足");
                 return View("../User/AccountManagement");
@@ -51,12 +51,13 @@ namespace Insurance.Controllers
             try
             {
                 UserInfoModel currUser = GetCurrentUser();
-                DataTable dt = DatabaseService.SelectChildAccounts(currUser);
+                DataTable dt = InsuranceDatabaseService.SelectChildAccounts(currUser);
                 ResetPwdModel model = new ResetPwdModel();
                 model.CompanyName = currUser.CompanyName;
                 model.CompanyNameAbb = currUser.CompanyNameAbb;
                 model.Mail = currUser.Mail;
                 model.Name = currUser.Name;
+                model.newPassword = currUser.userPassword;
                 model.RecipeAccount = currUser.RecipeAccount;
                 model.RecipeAddress = currUser.RecipeAddress;
                 model.RecipeBank = currUser.RecipeBank;
@@ -81,7 +82,7 @@ namespace Insurance.Controllers
         public IActionResult ResetPassword(ResetPwdModel model)
         {
             HttpContext.Session.Set<string>("msg", string.Empty);
-            var user = DatabaseService.SelectUser(model.userName);
+            var user = InsuranceDatabaseService.SelectUser(model.userName);
             UserInfoModel currUser = GetCurrentUser();
             if (user is null)
             {
@@ -104,7 +105,7 @@ namespace Insurance.Controllers
             user.ResetPwd = string.Empty;
             user.Token_Reset = string.Empty;
             user.ExpiredTime = 0;
-            bool res = DatabaseService.UpdateUserInfo(user, new List<string>() { "userPassword" });
+            bool res = InsuranceDatabaseService.UpdateUserInfo(user, new List<string>() { "userPassword" });
             if (res)
             {
                 HttpContext.Session.Set<string>("msg", "密码修改成功");
@@ -121,6 +122,24 @@ namespace Insurance.Controllers
             ViewBag.LoginResult = msg;
         }
 
+        public JsonResult ValidateDaysBefore([FromQuery] string days)
+        {
+            string result = "√";
+            if (!int.TryParse(days, out int res))
+            {
+                return Json("请输入数字");
+            }
+
+            var currUser = GetCurrentUser();
+
+            if (Convert.ToInt32(days) > currUser.DaysBefore)
+            {
+                result = $"追溯期不能大于{currUser.DaysBefore.ToString()}天";
+            }
+
+            return Json(result);
+        }
+
         [HttpGet]
         [UserLoginFilters]
         public JsonResult GetAccountDetail(string userName)
@@ -132,10 +151,10 @@ namespace Insurance.Controllers
             {
                 return Json("fail");
             }
-            UserInfoModel uim = DatabaseService.SelectUser(userName);
+            UserInfoModel uim = InsuranceDatabaseService.SelectUser(userName);
             uim.userPassword = string.Empty;
             uim.UserNameEdit = userName;
-            if (currUser.AccessLevel == 0) //管理员账号读取其他公司账号
+            if (currUser.AccessLevel == 0) //超级管理员账号读取其他公司账号
             {
                 uim.AllowEdit = true;
                 return Json(uim);
@@ -148,7 +167,7 @@ namespace Insurance.Controllers
             }
 
             if (currUser.AccessLevel > 0 && uim.Father.Equals(currUser.UserName, StringComparison.CurrentCultureIgnoreCase)
-                && uim.CompanyName.Equals(currUser.CompanyName, StringComparison.CurrentCultureIgnoreCase)) //非管理员账号：可以读取其创建的账号及其自身
+                /*&& uim.CompanyName.Equals(currUser.CompanyName, StringComparison.CurrentCultureIgnoreCase)*/) //非超级管理员账号：可以读取其创建的账号及其自身
             {
                 uim.AllowEdit = true;
                 return Json(uim);
@@ -166,7 +185,7 @@ namespace Insurance.Controllers
                 return false;
             }
 
-            if (!DatabaseService.UserMatchUserNameOnly(new UserInfoModel() { UserName = userName }))
+            if (!InsuranceDatabaseService.UserMatchUserNameOnly(new UserInfoModel() { UserName = userName }))
             {
                 return false;
             }
@@ -179,29 +198,30 @@ namespace Insurance.Controllers
         {
             UserInfoModel currUser = GetCurrentUser();
             string user = HttpContext.Session.Get<string>("editUser");
-            if (currUser.AccessLevel != 0 && (currUser.UserName.Equals(user, StringComparison.CurrentCultureIgnoreCase))) //管理员账号读取其他公司账号
+            if (currUser.AccessLevel != 0 && (currUser.UserName.Equals(user, StringComparison.CurrentCultureIgnoreCase))) //非超级管理员账号读取其他公司账号
             {
                 return false;
             }
 
-            UserInfoModel uim = DatabaseService.SelectUser(user);
+            UserInfoModel uim = InsuranceDatabaseService.SelectUser(user);
             uim._Plan = model._Plan;
             uim.UnitPrice = model.UnitPrice;
             uim.DaysBefore = model.DaysBefore;
-            uim.AllowCreateAccount = model.AllowCreateAccount;
             if (model.AllowCreateAccount == "1")
             {
+                uim.AllowCreateAccount = "1";
                 uim.AccessLevel = 1;
             }
             else
             {
+                uim.AllowCreateAccount = "2";
                 uim.AccessLevel = 2;
             }
             List<string> paras = new List<string>()
             {
-                "AccessLevel","AllowCreateAccount","DaysBefore","_Plan","UnitPrice"
+                "AccessLevel","AllowCreateAccount","AccessLevel","DaysBefore","_Plan","UnitPrice"
             };
-            if (DatabaseService.UpdateUserInfo(uim, paras))
+            if (InsuranceDatabaseService.UpdateUserInfo(uim, paras))
             {
                 return true;
             }
@@ -217,12 +237,12 @@ namespace Insurance.Controllers
         {
             UserInfoModel currUser = GetCurrentUser();
             string user = HttpContext.Session.Get<string>("editUser");
-            if (currUser.AccessLevel != 0 && (currUser.UserName.Equals(user, StringComparison.CurrentCultureIgnoreCase))) //管理员账号读取其他公司账号
+            if (currUser.AccessLevel != 0 && (currUser.UserName.Equals(user, StringComparison.CurrentCultureIgnoreCase))) //账号不能修改自身信息
             {
                 return false;
             }
 
-            UserInfoModel uim = DatabaseService.SelectUser(user);
+            UserInfoModel uim = InsuranceDatabaseService.SelectUser(user);
             uim.CompanyNameAbb = model.CompanyNameAbb;
             uim.Mail = model.Mail;
             uim.TaxNum = model.TaxNum;
@@ -239,7 +259,7 @@ namespace Insurance.Controllers
                 "CompanyNameAbb","Mail","TaxNum","Telephone","Name","RecipeAccount",
                 "RecipeAddress","RecipeBank","RecipeCompany","RecipePhone","RecipeType"
             };
-            if (DatabaseService.UpdateUserInfo(uim, paras))
+            if (InsuranceDatabaseService.UpdateUserInfo(uim, paras))
             {
                 return true;
             }
@@ -253,24 +273,19 @@ namespace Insurance.Controllers
         [AdminFilters]
         public ActionResult Register(NewUserModel user)
         {
+            ViewBag.Plans = new SelectList(new List<string>() { "30万", "60万", "80万" });
             UserInfoModel currUser = GetCurrentUser();
-            if (currUser is null || currUser.AccessLevel > 1 || currUser.AllowCreateAccount == "0")
+            if (currUser is null || /*currUser.AccessLevel > 1 ||*/ currUser.AllowCreateAccount != "1")
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "当前用户权限不足");
                 return View("../User/AccountManagement");
             }
-            if (currUser.AccessLevel == 1)
-            {
-                if (user.CompanyName != currUser.CompanyName)
-                {
-                    return View("Error");
-                }
-            }
+
             if (!ModelState.IsValid)
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "输入信息不合规范");
                 ActionAfterReload("输入信息不合规范");
-                return View();
+                return View("../User/Register");
             }
             bool pass = true;
 
@@ -287,7 +302,7 @@ namespace Insurance.Controllers
             }
             #endregion
 
-            if (DatabaseService.UserMatchUserNameOnly(user))
+            if (InsuranceDatabaseService.UserMatchUserNameOnly(user))
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "用户名已存在");
                 ViewBag.UserNameUsed = "用户名已存在";
@@ -299,45 +314,59 @@ namespace Insurance.Controllers
                 ViewBag.PwdNotMatch = "两次输入的密码不一致，请重新输入";
                 pass = false;
             }
+            if (currUser.AccessLevel != 0)
+            {
+                if (user.DaysBefore > currUser.DaysBefore)
+                {
+                    HttpContext.Session.Set<string>("noAccessCreateAccout", $"追溯期不能大于{currUser.DaysBefore}天");
+                    ViewBag.DaysBeforeIncorrect = "追溯期不正确";
+                    pass = false;
+                }
+            }
+            if (currUser.AccessLevel != 0)
+            {
+                if (user._Plan != currUser._Plan)
+                {
+                    HttpContext.Session.Set<string>("noAccessCreateAccout", "子账户方案必须与其父账户相同");
+                    ViewBag.PlanIncorrect = "子账户方案必须与其父账户相同";
+                    pass = false;
+                }
+            }
+            if (currUser.CompanyName == user.CompanyName)
+            {
+                HttpContext.Session.Set<string>("noAccessCreateAccout", "子账号公司名称不能与父账号相同");
+                ViewBag.CompanyNameIncorrect = "子账号公司名称不能与父账号相同";
+                pass = false;
+            }
             if (!pass)
             {
                 HttpContext.Session.Set<string>("noAccessCreateAccout", "输入信息不合规范");
                 ActionAfterReload("输入信息不合规范");
-                return View();
+                return View("../User/Register", user);
             }
             MD5Helper md5 = new MD5Helper();
             //user.userPassword = md5.EncryptNTimesWithBackendSalt(user.userPassword, 500);
             TimeSpan ts1 = DateTime.UtcNow.AddMinutes(10) - new DateTime(1970, 1, 1, 0, 0, 0, 0);
             long temp = Convert.ToInt64(ts1.TotalSeconds);
-            if (user.AllowCreateAccount == "1")
-            {
-                user.AccessLevel = 1;
-            }
-            else
-            {
-                user.AccessLevel = 2;
-            }
             user.Father = currUser.UserName;
+            user.AccessLevel = currUser.AccessLevel + 1;
+            user.CompanyName = user.CompanyName.Trim();
+            user.CompanyNameAbb = user.CompanyNameAbb.Trim();
+            //var t = companies.Where(p => p.Name == user.CompanyName); //是否已有同名公司
 
-            List<Company> companies = GetAllCompanies(Path.Combine(Utility.Instance.WebRootFolder, "Excel"));
-
-            var t = companies.Where(p => p.Name == user.CompanyName);
-
-            if (t.Count() == 0)
+            if (!ExcelTool.CreateNewCompanyTable(user, out string compDir))
             {
-                if (!ExcelTool.CreateNewCompanyTable(user.CompanyName))
-                {
-                    return View("Error");
-                }
+                return View("Error");
             }
 
-            if (DatabaseService.InsertStory("UserInfo", user))
+            if (InsuranceDatabaseService.InsertStory("UserInfo", user))
             {
                 LogService.Log($"New User {user.UserName} Registered");
                 return View("../User/RegisterSucceed");
             }
             else
             {
+                Directory.Delete(compDir, true);
                 return View("../Shared/Error");
             }
 

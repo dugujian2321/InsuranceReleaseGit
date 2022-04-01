@@ -16,7 +16,7 @@ namespace VirtualCredit.Controllers
                 return RedirectToAction(actionName: "Index", controllerName: "Home");
             }
             user.IsOnline = null;
-            DatabaseService.UpdateUserInfo(user, new List<string>() { "IsOnline" });
+            InsuranceDatabaseService.UpdateUserInfo(user, new List<string>() { "IsOnline" });
             HttpContext.Session.Set<UserInfoModel>("CurrentUser", null);
             SessionService.SetUserOffline(HttpContext);
             return View();

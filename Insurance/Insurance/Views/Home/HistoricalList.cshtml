@@ -4,46 +4,159 @@
 }
 @using Insurance.Models
 @model Insurance.Models.HistoricalModel
+<div class="alert alert-primary" style="font-size:20px" role="alert">
+    @ViewBag.PageInfo
+</div>
+
 <div>
     @{
         UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
-        if (currentUser.AccessLevel == 0)
+        if (Model.SummaryByYearTable != null)
         {
-            <a class="btn btn-warning" style="margin:10px" asp-action="ExportAllEmployees" asp-controller="Home">导出所有在保人员名单</a>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th scope="col">公司名称</th>
+            <table class="table table-striped table-bordered">
+                <thead class="thead-dark">
+                    <tr style="text-align:center">
+                        <th scope="col">年份</th>
                         <th scope="col">人数</th>
-                        <th scope="col">累积保费</th>
-                        <th scope="col">开始时间</th>
-                        <th scope="col">赔款金额</th>
+                        <th scope="col">总保费</th>
+                        <th scope="col">总赔款</th>
                         <th scope="col">操作</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model.CompanyList != null && Model.CompanyList.Count > 0)
+                    @foreach (System.Data.DataRow row in Model.SummaryByYearTable.Rows)
                     {
-                        @foreach (Company item in Model.CompanyList)
-                        {
-                            <tr>
-                                <td>@item.Name</td>
-                                <td>@item.EmployeeNumber</td>
-                                <td>@item.TotalCost</td>
-                                <td>@item.StartDate.ToShortDateString()</td>
-                                <td><input type="text" value="@item.PaidCost" onchange="SaveCost('@item.Name',this)"/></td>
-                                <td><a href="/Home/CompanyHisitoryByMonth?name=@item.Name" class="btn btn-primary">详细</a></td>
-                            </tr>
-                        }
+                        <tr style="text-align:center">
+                            <td class="td_middle">@row[0]</td>
+                            <td class="td_middle">@row[1]</td>
+                            <td class="td_middle">@row[2]</td>
+                            <td class="td_middle">@row[3]</td>
+                            <td class="td_middle"><a href="/Home/YearHistory?year=@row[0]" class="btn btn-primary">详细</a></td>
+                        </tr>
                     }
                 </tbody>
             </table>
         }
+        else
+        {
+            if (currentUser.AllowCreateAccount == "1")
+            {
+                if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
+                {
+                    <form id="downloadAllProofs" method="get" asp-action="AllProofs" asp-controller="Home" enctype="multipart/form-data">
+                        <div class="input-group">
+                            <a class="btn btn-warning" style="margin:0px 5px 10px 0px" asp-action="ExportAllEmployees" asp-controller="Home">导出所有在保人员名单</a>
+                            <input type="submit" class="btn btn-warning" style="margin:0px 0px 10px 0px" value="下载所有凭证" onclick="downloading(this)" />
+                            <input class="input-group-text" asp-for="ProofDate" type="month" style="margin:0px 0px 10px 0px" id="proofDate" value="1970-1-1"/>
+                        </div>
+                    </form>
+                }
+                <table class="table table-striped table-bordered">
+                    <thead class="thead-dark">
+                        <tr style="text-align:center">
+                            @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
+                            {
+                                <th>操作</th>
+                            }
+                            <th scope="col">公司名称</th>
+                            <th scope="col">人数</th>
+                            <th scope="col">累积保费</th>
+                            <th scope="col">开始时间</th>
+                            <th scope="col">赔款金额</th>
+                            <th scope="col">操作</th>
+
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
+                        {
+                            <tr style="text-align:center">
+                                <td></td>
+                                <td class="td_middle" style="color:blue"><strong>合计</strong></td>
+                                <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.EmployeeNumber)</strong></td>
+                                <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.TotalCost)</strong></td>
+                                <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.FirstOrDefault().StartDate.ToString("yyyy/M/d")</strong></td>
+                                <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.PaidCost)</strong></td>
+                                <td><a class="btn btn-primary" href="/Home/SummaryByYear">历年详细</a></td>
+                            </tr>
+                        }
+                        @if (Model.CompanyList != null && Model.CompanyList.Count > 0)
+                        {
+                            @foreach (Company item in Model.CompanyList)
+                            {
+                    <tr style="text-align:center">
+                        @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
+                        {
+                            <td>
+                                @if (currentUser.AccessLevel == 0)
+                                {
+                                    <button type="button" class="btn btn-danger" data-toggle="modal" data-company="@item.Name" data-target="#confirmDeleteCompany">
+                                        删除
+                                    </button>
+                                }
+                            </td>
+                        }
+                        <td class="td_middle">@item.Name</td>
+                        <td class="td_middle">@item.EmployeeNumber</td>
+                        <td class="td_middle">@item.TotalCost</td>
+                        <td class="td_middle">@item.StartDate.ToShortDateString()</td>
+                        @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
+                        {
+                            <td class="td_middle"><input type="text" value="@item.PaidCost" onchange="SaveCost('@item.Name',this)" /></td>
+                        }
+                        else
+                        {
+                            <td class="td_middle"><span>@item.PaidCost</span></td>
+                        }
+                        @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
+                        {
+
+                                <td class="td_middle"><a href="/Home/CompanyHisitoryByMonth?name=@item.Name&viewdetail=@item.ViewDetail" class="btn btn-primary">详细</a></td>
+
+                        }
+                        else
+                        {
+                            <td class="td_middle"><a href="/Home/YearlyHistoryData?companyName=@item.Name&year=@item.StartDate.Year" class="btn btn-primary">历史详细</a></td>
+                        }
+                    </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            }
+        }
     }
 
 </div>
+
+<div class="modal fade" id="confirmDeleteCompany" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">确认删除</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                ...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button id="btn_ok" class="btn btn-danger">确认删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+    $(RegisterEvents);
     $("a.active").removeClass('active');
     $("#page_2").addClass('active');
+    function downloading(obj) {
+        obj.disabled = true;
+        obj.value = '下载中请等待...'
+        $("#downloadAllProofs").submit();
+    }
 </script>
 

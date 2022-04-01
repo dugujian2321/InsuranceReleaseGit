@@ -1,4 +1,7 @@
-﻿using VirtualCredit.Services;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
+using VirtualCredit.Services;
 
 namespace VirtualCredit.Models
 {
@@ -41,16 +44,74 @@ namespace VirtualCredit.Models
         [DatabaseProp]
         public double UnitPrice { get; set; }
 
+        /// <summary>
+        /// 1 - 允许创建子账户
+        /// 0 - 不允许创建子账户
+        /// </summary>
         [DatabaseProp]
         public string AllowCreateAccount { get; set; }
 
         [DatabaseProp]
         public string _Plan { get; set; }
 
-        [DatabaseProp]
-        public string Father { get; set; }
+        private List<UserInfoModel> childAccounts;
+
+        /// <summary>
+        /// 直接子账号
+        /// </summary>
+        public List<UserInfoModel> ChildAccounts
+        {
+            get
+            {
+                if (childAccounts != null && childAccounts.Count > 0) return childAccounts;
+                var children = InsuranceDatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(Father)].ToString() == UserName);
+                childAccounts = new List<UserInfoModel>();
+                foreach (var item in children)
+                {
+                    childAccounts.Add(InsuranceDatabaseService.SelectUser(item[nameof(UserName)].ToString()));
+                }
+                return childAccounts;
+            }
+            set
+            {
+                childAccounts = value;
+            }
+        }
+        private List<UserInfoModel> springAccounts;
+        public List<UserInfoModel> SpringAccounts
+        {
+            get
+            {
+                return GetSpringAccounts(this);
+            }
+            set
+            {
+                springAccounts = value;
+            }
+        }
 
         public int StartDate { get; set; }
         public bool AllowEdit { get; set; }
+
+        private List<UserInfoModel> GetSpringAccounts(UserInfoModel user)
+        {
+            List<UserInfoModel> result = new List<UserInfoModel>();
+            if (user.ChildAccounts != null && user.ChildAccounts.Count > 0)
+            {
+                foreach (var item in user.ChildAccounts)
+                {
+                    result.Add(item);
+                    foreach (var spring in GetSpringAccounts(item))
+                    {
+                        if (!result.Any(x => x.CompanyName == spring.CompanyName))
+                        {
+                            result.Add(spring);
+                        }
+                    }
+                }
+                springAccounts = result;
+            }
+            return result;
+        }
     }
 }

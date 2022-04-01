@@ -76,7 +76,30 @@ namespace DatabaseHelper
                 return 0;
             }
         }
-
+        public static bool BulkInsert(string tblName, DataTable dt)
+        {
+            SqlBulkCopy sqlBulkCopy;
+            try
+            {
+                if (dt == null || dt.Rows.Count == 0)
+                {
+                    return false;
+                }
+                using (SqlConnection conn = new SqlConnection(ConnectionString))
+                {
+                    sqlBulkCopy = new SqlBulkCopy(conn);
+                    sqlBulkCopy.DestinationTableName = tblName;
+                    sqlBulkCopy.BatchSize = dt.Rows.Count;
+                    conn.Open();
+                    sqlBulkCopy.WriteToServer(dt);
+                }
+                return true;
+            }
+            catch(Exception e)
+            {
+                return false;
+            }
+        }
         public static bool ExecuteNonQuery(string commandText, params SqlParameter[] sqlParam)
         {
             if (IsConnectionStringEmpty()) //若连接字符串为空，则返回false

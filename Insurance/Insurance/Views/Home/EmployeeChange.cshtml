@@ -5,18 +5,12 @@
 @model Insurance.Models.EmployeeChangeModel
 <form id="employeeChange" method="post" enctype="multipart/form-data" asp-controller="EmployeeChange" asp-action="UpdateSummary">
     <div>
-        <div style="margin:10px" class="input-group-prepend">
+        <div class="input-group-prepend">
             @{
                 UserInfoModel currentUser = Context.Session.Get<UserInfoModel>("CurrentUser");
-                if (currentUser != null && currentUser.AccessLevel > 0)
+                if (currentUser != null && currentUser.ChildAccounts.Count > 0)
                 {
-                    <span class="input-group-text">公司名称：</span>
-                    <select class="custom-select" id="companyGroup">
-                        <option selected>@currentUser.CompanyName</option>
-                    </select>
-                }
-                else if (currentUser != null && currentUser.AccessLevel == 0)
-                {
+
                     <div class="input-group mb-3">
                         <div class="input-group-prepend">
                             <span class="input-group-text">开始时间</span>
@@ -29,35 +23,60 @@
                         <input class="btn btn-info" type="submit" asp-action="ExportUploadedFiles" asp-controller="EmployeeChange" value="导出名单汇总" />
                     </div>
                 }
+            }
+        </div>
+        <div class="input-group mb-3">
+            <span class="input-group-text">公司名称</span>
+            <select class="custom-select" id="companyGroup" onchange="UpdateAllowedStartDate()">
+                @foreach (var company in Model.CompanyNameList)
+                {
+                    if (company == "管理员")
+                    {
+                        continue;
+                    }
+
+                    <option selected>@company</option>
+                }
+            </select>
+        </div>
+        <div class="input-group mb-3">
+            <span class="input-group-text">保单方案</span>
+            <select class="custom-select" id="planGroup" name="plan" onchange="UpdatePlan()">
+                @if (Model.Plans.Equals("all", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    @foreach (var item in VC_ControllerBase.Plans)
+                    {
+                        <option>@item</option>
+                    }
+                }
                 else
                 {
-                    <select class="custom-select" id="companyGroup"></select>
+                    <option>@Model.Plans</option>
                 }
-            }
+            </select>
         </div>
     </div>
     @{
-        if (currentUser.AccessLevel != 0)
-        {
-            <div class="input-group mb-3 justify-content-between" style="margin-top:10px">
-                <button onclick="Add()" type="button" class="btn btn-primary btn-custom">批量加保</button>
-                <input onchange="SubmitAdd(this)" id="add" type="file" accept=".xlsx,.xls,.xlsm" style="visibility:collapse;width:0px;margin:0px;padding:0px" class="btn btn-primary btn-custom" />
-                <button onclick="Sub()" type="button" class="btn btn-secondary btn-custom">批量减保</button>
-                <input onchange="SubmitAdd(this)" id="sub" type="file" accept=".xlsx,.xls,.xlsm" style="visibility:collapse;width:0px;margin:0px;padding:0px" class="btn btn-success btn-custom" />
-                <a class="btn btn-info btn-custom" asp-action="EmployeeDownload" asp-controller="Home">加减保模板下载</a>
-                <div style="margin-left:10px" class="input-group-prepend">
-                    <span class="input-group-text">生效日期：</span>
-                    <input id="startdate" name="startdate" min="@Model.AllowedStartDate" type="date" style="width:200px">
-                </div>
-                <button type="button" onclick="Calculate()" class="btn btn-primary btn-custom">计算保费</button>
-                <button type="button" style="margin-right:5px" class="btn btn-warning btn-custom" onclick="SubmitRecipet(this)">立即投保</button>
+
+        <div class="input-group mb-3 justify-content-between" style="margin-top:10px">
+            <button onclick="Add()" type="button" class="btn btn-primary btn-custom">批量加保</button>
+            <input onchange="SubmitAdd(this)" id="add" type="file" accept=".xlsx,.xls,.xlsm" style="visibility:collapse;width:0px;margin:0px;padding:0px" class="btn btn-primary btn-custom" />
+            <button onclick="Sub()" type="button" class="btn btn-secondary btn-custom">批量减保</button>
+            <input onchange="SubmitAdd(this)" id="sub" type="file" accept=".xlsx,.xls,.xlsm" style="visibility:collapse;width:0px;margin:0px;padding:0px" class="btn btn-success btn-custom" />
+            <a class="btn btn-info btn-custom" asp-action="EmployeeDownload" asp-controller="Home">加减保模板下载</a>
+            <div style="margin-left:10px" class="input-group-prepend">
+                <span class="input-group-text">生效日期：</span>
+                <input id="startdate" name="startdate" min="@Model.AllowedStartDate" type="date" style="width:200px">
             </div>
-        }
+            <button type="button" onclick="Calculate()" class="btn btn-primary btn-custom">计算保费</button>
+            <button type="button" style="margin-right:5px" class="btn btn-warning btn-custom" onclick="SubmitRecipet(this)">立即投保</button>
+        </div>
+
     }
 
 </form>
-<table id="invalidTable" class="table table-striped" style="visibility:visible">
-    <thead>
+<table id="invalidTable" class="table table-striped table-bordered" style="visibility:visible">
+    <thead class="thead-dark">
         <tr style="text-align:center">
             <th scope="col">序号</th>
             <th scope="col">姓名</th>
@@ -68,8 +87,8 @@
     </thead>
     <tbody id="invalidInfo"></tbody>
 </table>
-<table id="validTable" class="table table-striped" style="visibility:collapse">
-    <thead>
+<table id="validTable" class="table table-striped table-bordered" style="visibility:collapse">
+    <thead class="thead-dark">
         <tr style="text-align:center">
             <th scope="col">说明</th>
             <th scope="col">投保人数</th>

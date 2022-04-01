@@ -18,44 +18,97 @@
         <link rel="stylesheet" href="~/css/site_0.4.min.css" />
     </environment>
     <environment include="Development">
-        <script src="~/js/site_1.9.js" asp-append-version="true"></script>
+        <script src="~/js/site_2.4.js" asp-append-version="true"></script>
     </environment>
     <environment include="Production">
-        <script src="~/js/site_1.9.min.js"></script>
+        <script src="~/js/site_2.4.min.js"></script>
     </environment>
 </head>
 <body style="width:95%;overflow-y:scroll;padding-right:0px">
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
-                <div style="float:left" class="d-sm-inline-flex flex-sm-row-reverse">
+            <div class="container" style="margin:10px;max-width:9999px">
 
-                    @{
-                        var user = Context.Session.Get<UserInfoModel>("CurrentUser");
-                        if (user != null)
-                        {
-                            <h2>@user.CompanyName</h2>
+                @{
+                    var user = Context.Session.Get<UserInfoModel>("CurrentUser");
+                    var dailyPrice = Context.Session.Get<double>("DailyPrice");
+                    var dailyHeadCount = Context.Session.Get<int>("DailyHeadCount");
+                    if (user != null)
+                    {
+                        <h2 class="mb-3">@user.CompanyName</h2>
 
-                        }
-                        else
-                        {
-                            <h2>未登录</h2>
-                        }
+                        <div class="card text-black bg-light mb-2 shadow-sm" style="margin-left:auto">
+                            <div class="card-header">
+                                <h5 class="my-0 font-weight-normal">
+                                    今日总人数
+                                </h5>
+                            </div>
+                            <div class="card-body" style="text-align:center">
+                                <h6 class="card-title">
+                                    @dailyHeadCount
+                                </h6>
+                            </div>
+                        </div>
+                        <div class="card mb-2 bg-info text-white shadow-sm">
+                            <div class="card-header">
+                                <h5 class="my-0 font-weight-normal">
+                                    今日加保
+                                </h5>
+                            </div>
+                            <div class="card-body" style="text-align:center">
+                                <h6 class="card-title pricing-card-title">
+                                    @VirtualCredit.Services.Utility.DailyAdd
+                                </h6>
+                            </div>
+                        </div>
+                        <div class="card text-white bg-success mb-2">
+                            <div class="card-header">
+                                <h5 class="my-0 font-weight-normal">
+                                    今日减保
+                                </h5>
+                            </div>
+                            <div class="card-body" style="text-align:center">
+                                <h6 class="card-title pricing-card-title">
+                                    @VirtualCredit.Services.Utility.DailySub
+                                </h6>
+                            </div>
+                        </div>
+                        <div class="card text-white bg-warning mb-2">
+                            <div class="card-header">
+                                <h5 class="my-0 font-weight-normal">
+                                    今日保费
+                                </h5>
+                            </div>
+                            <a href="/Home/DailyDetail" style="text-decoration:none">
+                                <div class="card-body" style="text-align:center">
+                                    <h6 class="card-title pricing-card-title">
+                                        @dailyPrice
+                                    </h6>
+                                </div>
+                            </a>
+                        </div>
+
                     }
-                </div>
+                    else
+                    {
+                        <h2>未登录</h2>
+                    }
+                }
+
+
+
                 <div style="float:right;margin-bottom:0px;text-align:center" class="UBar">
                     @{
                         if (Context.Session.Get<bool>("Online"))
                         {
-                            UserInfoModel userInfoModel = Context.Session.Get<UserInfoModel>("CurrentUser");
                             <div style="margin-top:20px">
                                 <form method="get">
-                                    <button class="btn btn-info" type="button" data-toggle="modal" onclick="ShowAccountDetail('@userInfoModel.UserName',true)" data-target="#exampleModal" data-whatever="@@mdo">已登录：@userInfoModel.UserName</button>
-                                    <button class="btn btn-info" type="submit" asp-action="Logout" asp-controller="Logout">注销</button>
+                                    <button class="btn btn-outline-primary" type="button" data-toggle="modal" onclick="ShowAccountDetail('@user.UserName',true)" data-target="#exampleModal" data-whatever="@@mdo">已登录：@user.UserName</button>
+                                    <button class="btn btn-outline-primary" type="submit" asp-action="Logout" asp-controller="Logout">注销</button>
                                     @{
-                                        if (!string.IsNullOrEmpty(userInfoModel.AllowCreateAccount) && userInfoModel.AllowCreateAccount == "1")
+                                        if (!string.IsNullOrEmpty(user.AllowCreateAccount) && user.AllowCreateAccount == "1")
                                         {
-                                            <a class="btn btn-info" asp-action="Account" asp-controller="Account">子账户管理</a>
+                                            <a class="btn btn-outline-primary" asp-action="Account" asp-controller="Account">子账户管理</a>
                                         }
                                     }
                                 </form>
@@ -163,49 +216,66 @@
                 <nav class="navbar navbar-expand-lg navbar-light bg-light">
                     <ul class="nav nav-pills mb-3" id="myTab" role="tablist">
                         <li class="nav-item">
-                            <a id="page_1" class="nav-link" asp-action="Index" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">我的方案</a>
+                            <a id="page_1" class="nav-link" asp-action="Index" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">
+                                我的方案
+                            </a>
                         </li>
                         <li class="nav-item">
                             @{
-                                if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+                                if (user.AllowCreateAccount == "1")
                                 {
-                                    <a id="page_2" class="nav-link" asp-action="HistoricalList" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">保单列表</a>
+                                    <a id="page_2" class="nav-link" asp-action="HistoricalList" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">
+                                        保单列表
+                                    </a>
                                 }
                                 else
                                 {
-                                    string str = Context.Session.Get<UserInfoModel>("CurrentUser").CompanyName;
-                                    <a id="page_2" class="nav-link" href="/Home/CompanyHisitoryByMonth?name=@str" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">保单列表</a>
+                                    string str = user.CompanyName;
+                                    <a id="page_2" class="nav-link" href="/Home/CompanyHisitoryByMonth?name=@str" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">
+                                        保单列表
+                                    </a>
                                 }
                             }
                         </li>
                         @{
 
-                            if (Context.Session.Get<UserInfoModel>("CurrentUser").CompanyName != string.Empty &&
-                                Context.Session.Get<UserInfoModel>("CurrentUser").CompanyName != "管理员")
+                            if (user.CompanyName != string.Empty &&
+                                user.CompanyName != "管理员")
                             {
                                 <li class="nav-item">
-                                    <a id="page_3" class="nav-link" asp-action="AutoRenew" asp-controller="Home">投保/续保</a>
+                                    <a id="page_3" class="nav-link" asp-action="AutoRenew" asp-controller="Home">
+                                        投保/续保
+                                    </a>
                                 </li>
                             }
 
                         }
 
                         <li class="nav-item">
-                            <a id="page_4" class="nav-link" asp-action="SearchPeople" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">人员查询</a>
+                            <a id="page_4" class="nav-link" asp-action="SearchPeople" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">
+                                在线报案
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a id="page_5" class="nav-link" asp-action="EmployeeChange" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">人员变更</a>
+                            <a id="page_5" class="nav-link" asp-action="EmployeeChange" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">
+                                人员变更
+                            </a>
                         </li>
                         <li class="nav-item">
                             @{
-                                if (Context.Session.Get<UserInfoModel>("CurrentUser").AccessLevel == 0)
+                                if (user.AllowCreateAccount == "1")
                                 {
-                                    <a id="page_6" class="nav-link" asp-action="GetAllRecipeSummary" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">保费汇总</a>
+                                    <a id="page_6" class="nav-link" asp-action="GetAllRecipeSummary" asp-controller="Home" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">
+                                        保费汇总
+                                    </a>
                                 }
                                 else
                                 {
-                                    string str = Context.Session.Get<UserInfoModel>("CurrentUser").CompanyName;
-                                    <a id="page_6" class="nav-link" href="/Home/RecipeSummaryByMonth?name=@str" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">保费汇总</a>
+                                    string str = user.CompanyName;
+                                    string plan = user._Plan;
+                                    <a id="page_6" class="nav-link" href="/Home/RecipeSummaryByMonth?name=@str&accountPlan=@plan" data-ajax="true" data-ajax-method="GET" data-ajax-mode="replace" data-ajax-update="#content">
+                                        保费汇总
+                                    </a>
                                 }
                             }
                         </li>
@@ -215,19 +285,15 @@
         }
     </header>
     <div class="container">
-        <partial name="_CookieConsentPartial" />
-        <main role="main">
-            <div id="content">
-                @RenderBody()
-            </div>
-        </main>
+
+        <div id="content">
+            @RenderBody()
+        </div>
+
     </div>
     <footer class="border-top footer text-muted">
         <div class="container">
-            <div style="width:300px;margin:0 auto; padding:5px 0;">
-                <a target="_blank" href="http://beian.miit.gov.cn/" style="display:inline-block;text-decoration:none;height:20px;line-height:20px;">
-                    <p style="float:left;height:20px;line-height:20px;margin: 0px 0px 0px 5px; color:#939393;">沪ICP备19048015号-1</p>
-                </a>
+            <div style="width:300px;margin:0 auto; padding:20px 0;">
                 <a target="_blank" href=" " style="display:inline-block;text-decoration:none;height:20px;line-height:20px;">
                     <img src="~/Images/gongan.png" style="float:left;" /><p style="float:left;height:20px;line-height:20px;margin: 0px 0px 0px 5px; color:#939393;">沪公网安备 31011202012056号</p>
                 </a>

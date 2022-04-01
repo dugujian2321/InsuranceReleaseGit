@@ -9,5 +9,11 @@ namespace VirtualCredit.Models
     {
         public string TemplateFolder { get; set; }
         public string WebRootFolder { get; set; }
+
+        public string ExcelRoot { get; set; }
+
+        public string SearchExcelsIn { get; set; }
+
+        
     }
 }

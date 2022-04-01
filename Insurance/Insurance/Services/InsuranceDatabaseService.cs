@@ -1,4 +1,5 @@
 ﻿using DatabaseHelper;
+using Insurance.Models;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
@@ -25,11 +26,11 @@ namespace VirtualCredit
     }
 
 
-    public static class DatabaseService
+    public static class InsuranceDatabaseService
     {
         public static string ConnStr;
         public static string userInfoTableName;
-        static DatabaseService()
+        static InsuranceDatabaseService()
         {
             userInfoTableName = "UserInfo";
         }
@@ -57,6 +58,34 @@ namespace VirtualCredit
             }
             return res;
         }
+
+        /// <summary>
+        /// 添加一个新故事
+        /// </summary>
+        /// <param name="tableName">往tableName表中添加数据</param>
+        /// <param name="story">要添加的故事</param>
+        /// <returns></returns>
+        public static bool InsertDailyDetail(DailyDetailModel model)
+        {
+            try
+            {
+                SQLServerHelper.ConnectionString = ConnStr;
+                string cmdText = $"Insert into DailyDetail (Date,Company,SubmittedBy,TotalPrice,Product,NewAdd,Reduce) values ('{model.Date.ToString("yyyy-MM-dd")}','{model.Company}','{model.SubmittedBy}',{model.TotalPrice},'{model.Product}',{model.NewAdd},{model.Reduce})";
+                return SQLServerHelper.ExecuteNonQuery(cmdText);
+            }
+            catch (Exception e)
+            {
+                LogService.Log(e.Message);
+                return false;
+            }
+
+        }
+
+        public static bool BulkInsert(string tblName, DataTable dataTable)
+        {
+            return SQLServerHelper.BulkInsert(tblName, dataTable);
+        }
+
 
         /// <summary>
         /// 添加一个新故事
@@ -93,7 +122,39 @@ namespace VirtualCredit
             }
 
         }
-
+        public static UserInfoModel SelectUserByCompanyAndPlan(string companyname, string plan)
+        {
+            UserInfoModel uim = new UserInfoModel();
+            string[] cols = new string[] { "CompanyName", "_Plan" };
+            string[] values = new string[] { companyname, plan };
+            DataTable dt = SelectMultiPropFromTable("UserInfo", cols, values);
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                DataRow row = dt.Rows[0];
+                foreach (DataColumn col in dt.Columns)
+                {
+                    foreach (var prop in uim.GetType().GetProperties())
+                    {
+                        if (prop.Name.Equals(col.ColumnName, StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            object obj = new object();
+                            obj = row[col.ColumnName];
+                            if (row[col.ColumnName] is DBNull)
+                            {
+                                obj = null;
+                            }
+                            prop.SetValue(uim, obj);
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                uim = null;
+            }
+            return uim;
+        }
         public static UserInfoModel SelectUserByCompany(string companyname)
         {
             UserInfoModel uim = new UserInfoModel();
@@ -157,7 +218,7 @@ namespace VirtualCredit
             {
                 string cmd = string.Empty;
                 DataTable temp = new DataTable();
-                if (currUser.AccessLevel == 0)
+                if (currUser.AccessLevel == 0) //如果是超管
                 {
                     cmd = "select * from UserInfo where userName=@userName";
                     SqlParameter sp = new SqlParameter("@userName", currUser.UserName);
@@ -176,7 +237,7 @@ namespace VirtualCredit
                 }
                 else
                 {
-                    cmd = $"select * from UserInfo where (CompanyName = '{currUser.CompanyName}' and Father = @Father and userName <> '{currUser.UserName}')";
+                    cmd = $"select * from UserInfo where (Father = @Father and userName <> '{currUser.UserName}')";
                     SqlParameter sp1 = new SqlParameter("@Father", currUser.UserName);
                     temp = SQLServerHelper.ExecuteReader(cmd, sp1);
                     if (temp != null && temp.Rows.Count > 0)
@@ -291,7 +352,7 @@ namespace VirtualCredit
                 string cmd = $"select * from {tableName} where userName=@userName";
                 SqlParameter userNamePara = new SqlParameter("@userName", userName);
                 dt = SQLServerHelper.ExecuteReader(cmd, userNamePara);
-                if (dt.Rows.Count > 0)
+                if (dt != null && dt.Rows.Count > 0)
                 {
                     DataRow row = dt.Rows[0];
                     UserInfoModel uim = new UserInfoModel();
@@ -379,7 +440,8 @@ namespace VirtualCredit
                 SqlParameter userNamePara = new SqlParameter("@userName", user.UserName);
                 SqlParameter userPwdPara = new SqlParameter("@userPassword", user.userPassword);
                 dt = SQLServerHelper.ExecuteReader(cmd, userNamePara, userPwdPara);
-                if (dt.Rows.Count > 0)
+
+                if (dt != null && dt.Rows.Count > 0)
                 {
                     DataRow row = dt.Rows[0];
                     UserInfoModel uim = new UserInfoModel();
@@ -400,6 +462,9 @@ namespace VirtualCredit
                     uim.RecipeCompany = row["RecipeCompany"].ToString();
                     uim.RecipePhone = row["RecipePhone"].ToString();
                     uim.RecipeType = row["RecipeType"].ToString();
+                    uim.Father = row["Father"].ToString();
+                    uim._Plan = row["_Plan"].ToString();
+                    uim.ChildAccounts = new List<UserInfoModel>();
                     if (!string.IsNullOrEmpty(row["UnitPrice"].ToString()))
                     {
                         uim.UnitPrice = Convert.ToInt32(row["UnitPrice"].ToString());
@@ -417,7 +482,7 @@ namespace VirtualCredit
                     {
                         uim.DaysBefore = 0;
                     }
-                    
+
                     return uim;
                 }
                 else
@@ -441,6 +506,37 @@ namespace VirtualCredit
             else
                 return false;
         }
+        public static DataTable SelectDailyDetailByDatetime(List<DateTime> dateTimes, List<string> companies, List<string> plans)
+        {
+            string dateList = "(";
+            foreach (var date in dateTimes)
+            {
+                dateList += $"'{date.ToString("yyyy-MM-dd")}',";
+            }
+            dateList = dateList.Remove(dateList.LastIndexOf(","));
+            dateList += ")";
+
+            string companyList = "(";
+            foreach (var comp in companies)
+            {
+                companyList += $"'{comp}',";
+            }
+            companyList = companyList.Remove(companyList.LastIndexOf(","));
+            companyList += ")";
+
+            string planList = "(";
+            foreach (var plan in plans)
+            {
+                planList += $"'{plan}',";
+            }
+            planList = planList.Remove(planList.LastIndexOf(","));
+            planList += ")";
+
+            string cmd = $"Select YMDDate,Sum(DailyPrice),Sum(HeadCount) from DailyDetailData where YMDDate in {dateList} and Company in {companyList} and Product in {planList} group by YMDDate";
+            return SQLServerHelper.ExecuteReader(cmd, null);
+        }
+
+
 
         public static DataTable Select(string tableName)
         {
@@ -562,6 +658,31 @@ namespace VirtualCredit
             string cmdText = $"select * from {tableName} where {colName}= @value";
             SqlParameter parameter = new SqlParameter("@value", colValue);
             return SQLServerHelper.ExecuteReader(cmdText, parameter);
+        }
+        public static DataTable SelectMultiPropFromTable(string tableName, string[] colNames, string[] colValues)
+        {
+            if (colNames == null || colNames.Length <= 0)
+            {
+                return null;
+            }
+            if (string.IsNullOrEmpty(SQLServerHelper.ConnectionString) || SQLServerHelper.ConnectionString != ConnStr)
+            {
+                SQLServerHelper.ConnectionString = ConnStr;
+            }
+
+            string cmdText = $"select * from {tableName} where 1=1";
+            List<string> colNamesList = new List<string>(colNames);
+            foreach (var item in colNames)
+            {
+                cmdText += $" and {item}=@{item}";
+            }
+            List<SqlParameter> sqlParameters = new List<SqlParameter>();
+            foreach (var item in colNamesList)
+            {
+                var para = new SqlParameter($"@{item}", colValues[colNamesList.IndexOf(item)]);
+                sqlParameters.Add(para);
+            }
+            return SQLServerHelper.ExecuteReader(cmdText, sqlParameters.ToArray());
         }
 
         public static DataTable SelectPeopleByNameAndID(string tableName, string name, string id)

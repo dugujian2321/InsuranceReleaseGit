@@ -1,10 +1,11 @@
 ﻿/* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
 for details on configuring this project to bundle and minify static web assets. */
 
-*{
-    margin:0px;
-    padding:0px;
+* {
+    margin: 0px;
+    padding: 0px;
 }
+
 a.navbar-brand {
     white-space: normal;
     text-align: center;
@@ -17,28 +18,32 @@ html {
     font-size: 14px;
 }
 
-.input-group-prepend > span{
-    width:80px;
+.input-group-prepend > span {
+    width: 80px;
 }
 
 .carousel-control-prev-icon {
     background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2333ff33' viewBox='0 0 8 8'%3E%3Cpath d='M5.25 0l-4 4 4 4 1.5-1.5-2.5-2.5 2.5-2.5-1.5-1.5z'/%3E%3C/svg%3E");
 }
 
+.tagpic{
+    margin-bottom:3px
+}
+
 .carousel-control-next-icon {
     background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2333ff33' viewBox='0 0 8 8'%3E%3Cpath d='M2.75 0l-1.5 1.5 2.5 2.5-2.5 2.5 1.5 1.5 4-4-4-4z'/%3E%3C/svg%3E");
 }
 
-.li_tab{
-    float:left;
-    margin-left:10px;
-    width:80px;
-    cursor:pointer;
-    border-bottom:solid;
-    border-bottom-color:lightgrey;
-    text-align:center;
-    border-top:solid;
-    border-top-color:white;
+.li_tab {
+    float: left;
+    margin-left: 10px;
+    width: 80px;
+    cursor: pointer;
+    border-bottom: solid;
+    border-bottom-color: lightgrey;
+    text-align: center;
+    border-top: solid;
+    border-top-color: white;
 }
 
 .li_tab_active {
@@ -46,19 +51,17 @@ html {
     border-top-color: #0069d9;
 }
 
-.imgBox{
-    width:100%;
-    height:100%;
-    text-align:center;
+.imgBox {
+    width: 100%;
+    height: 100%;
+    text-align: center;
 }
 
-tr>td {
-    vertical-align:middle;
-}
 
 #btnSubmit {
     width: 100px;
 }
+
 #flat {
     float: left;
     margin: 0.2% 0.667%;
@@ -68,22 +71,32 @@ tr>td {
     border-Color: grey;
 }
 
-td.td_middle{
-    vertical-align:middle;
+.numbericDashboard {
+    float: left;
+    margin-right:10px;
+    width:30%
+}
+
+td.td_middle {
+    vertical-align: middle;
+}
+
+tbody tr td {
+    vertical-align: middle;
 }
 
 .resultTable {
     table-layout: fixed;
 }
 
-.storyForm{
-    width:100%;
+.storyForm {
+    width: 100%;
 }
 
-.img_loading{
-    padding-left:5px;
-    margin-bottom:5px;
-    visibility:hidden
+.img_loading {
+    padding-left: 5px;
+    margin-bottom: 5px;
+    visibility: hidden
 }
 
 #linkUpload {
@@ -111,18 +124,19 @@ td.td_middle{
 }
 
 
-.input-group-text>input.btn{
-    width:20%;
-    max-width:120px;
-    height:35px;
-    border:outset;
-    border-width:1px;
-    background-color:orange;
-    margin-left:auto;
-    margin-right:1%;
-    color:white;
-    font-weight:500;
+.input-group-text > input.btn {
+    width: 20%;
+    max-width: 120px;
+    height: 35px;
+    border: outset;
+    border-width: 1px;
+    background-color: orange;
+    margin-left: auto;
+    margin-right: 1%;
+    color: white;
+    font-weight: 500;
 }
+
 .toolItem {
     margin-left: 3px;
     width: 60px;
@@ -131,8 +145,8 @@ td.td_middle{
 }
 
 
-.btn-custom{
-    margin-left:10px;
+.btn-custom {
+    margin-left: 10px;
 }
 
 .line {
@@ -192,8 +206,8 @@ form.formHome {
 .btn-submit {
     vertical-align: middle;
     margin-top: 20px;
-    text-align:center;
-    padding:10px 20px;
+    text-align: center;
+    padding: 10px 20px;
 }
 
 .btn-search {
@@ -213,7 +227,6 @@ form.formHome {
 
 .searchBox {
     width: 70%;
-    
     height: 40px;
     vertical-align: middle;
     /*border-width: 1px;
@@ -226,7 +239,6 @@ form.formHome {
 div.UBar {
     margin-left: auto;
     margin-right: 5px;
-    
 }
 
 ul.UBar {
@@ -237,9 +249,9 @@ li.UBar {
     float: left;
     padding-left: 8px;
     padding-right: 8px;
-    background-color:lightgrey;
-    margin-right:5px;
-       margin-top:20px;
+    background-color: lightgrey;
+    margin-right: 5px;
+    margin-top: 20px;
 }
 
 .border-top {
