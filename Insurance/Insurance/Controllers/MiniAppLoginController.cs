@@ -42,7 +42,7 @@ namespace Insurance.Controllers
             UserInfoModel user = new UserInfoModel();
             if (uim is null)
             {
-                return new JsonResult("用户名或密码不正确");
+                return StatusCode(401,"用户名或密码不正确");
             }
             else
             {

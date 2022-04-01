@@ -249,16 +249,16 @@ namespace Insurance.Services
             double result = 0;
 
             //性能优化,todo: 解除注释：
-            //var displayMonthPriceAcc = VC_ControllerBase.AccountTreeRoot.Children.Where(x => x.Descendant.Any(y => y.Instance.CompanyName == CompanyName && y.Instance._Plan == Plan)).FirstOrDefault();
-            //if (displayMonthPriceAcc == null)
-            //{
-            //    displayMonthPriceAcc = VC_ControllerBase.AccountTreeRoot.Children.Where(y => y.Instance.CompanyName == CompanyName && y.Instance._Plan == Plan).FirstOrDefault();
-            //}
-            var displayMonthPriceAcc = currUser.ChildAccounts.Where(x => x.SpringAccounts.Any(y => y.CompanyName == CompanyName && y._Plan == Plan)).FirstOrDefault();
+            var displayMonthPriceAcc = VC_ControllerBase.AccountTreeRoot.Children.Where(x => x.Descendant.Any(y => y.Data.CompanyName == CompanyName && y.Data._Plan == Plan)).FirstOrDefault();
             if (displayMonthPriceAcc == null)
             {
-                displayMonthPriceAcc = currUser.ChildAccounts.Where(y => y.CompanyName == CompanyName && y._Plan == Plan).FirstOrDefault();
+                displayMonthPriceAcc = VC_ControllerBase.AccountTreeRoot.Children.Where(y => y.Data.CompanyName == CompanyName && y.Data._Plan == Plan).FirstOrDefault();
             }
+            //var displayMonthPriceAcc = currUser.ChildAccounts.Where(x => x.SpringAccounts.Any(y => y.CompanyName == CompanyName && y._Plan == Plan)).FirstOrDefault();
+            //if (displayMonthPriceAcc == null)
+            //{
+            //    displayMonthPriceAcc = currUser.ChildAccounts.Where(y => y.CompanyName == CompanyName && y._Plan == Plan).FirstOrDefault();
+            //}
             
 
             dirsContainExcel.ForEach(x =>
@@ -289,7 +289,7 @@ namespace Insurance.Services
                         {
                             if (!file.Extension.Contains("xls")) continue;
                             string[] excelinfo = file.Name.Split('@');
-                            result += (Convert.ToDouble(excelinfo[1]) / (actualMonthPrice / daysInMonth)) * (displayMonthPriceAcc.UnitPrice / daysInMonth);
+                            result += (Convert.ToDouble(excelinfo[1]) / (actualMonthPrice / daysInMonth)) * (displayMonthPriceAcc.Data.UnitPrice / daysInMonth);
                         }
                     }
                 }

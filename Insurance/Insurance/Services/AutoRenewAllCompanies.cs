@@ -55,7 +55,7 @@ namespace Insurance.Services
                 {
                     continue;
                 }
-                
+
                 DataTable tbl_summary = et.ExcelToDataTable("Sheet1", true);
                 foreach (DataRow row in tbl_summary.Rows)
                 {
@@ -63,7 +63,10 @@ namespace Insurance.Services
                     row["生效日期"] = new DateTime(dt.Year, dt.Month, 1).ToString("yyyy-MM-dd");
                 }
                 et.DatatableToExcel(tbl_summary);
-                GenerateNewExcelForRenewAsync(company, plan, true);
+                if (!GenerateNewExcelForRenewAsync(company, plan, true))
+                {
+                    LogService.Log($"===={company}流转失败====");
+                }
             }
         }
 
@@ -120,7 +123,7 @@ namespace Insurance.Services
             {
                 System.IO.File.Delete(summary_bk);
                 LogService.Log($"{company}自动流转失败");
-                throw new Exception();
+                return false;
             }
         }
 
@@ -139,6 +142,7 @@ namespace Insurance.Services
                     //nextEndDate = new DateTime(2020, 10, 30, 23, 59, 59);
                 }
                 DateTime monthLastDay = new DateTime(nextEndDate.Year, nextEndDate.Month, DateTime.DaysInMonth(nextEndDate.Year, nextEndDate.Month));
+                //DateTime monthLastDay = new DateTime(2022, 3, 31);
                 string monthlastsecond = monthLastDay.ToString("yyyy-MM-dd 23:59:59");
                 nextEndDate = DateTime.Parse(monthlastsecond);
                 if (DateTime.Now > nextEndDate)
@@ -147,7 +151,7 @@ namespace Insurance.Services
                     Thread.Sleep(2000);
                 }
                 if (shouldRenew)
-                {               
+                {
                     foreach (var locker in Utility.LockerList)
                     {
                         locker.RWLocker.EnterWriteLock();

@@ -7,10 +7,9 @@ Page({
   data: {
     m_UseName: "",
     m_Password: "",
-    //m_UseName: "jxyb666",
-    //m_Password: "jxyb666",
     btnLoginDisabled: false,
-    loginText:"登录"
+    loginText:"登录",
+    errMsg:""
   },
 
   handleUseNameInput: function (e) {
@@ -28,6 +27,7 @@ Page({
   },
 
   handleLogin: function (e) {
+    var that2 = this
     var that = this.data
     this.setData({
       btnLoginDisabled: true,
@@ -49,11 +49,19 @@ Page({
             dataType: 'json',
             responseType: 'text',
             success: (result) => {
-              if (result.data.openId != "") {
+              console.log(result)
+              if(result.statusCode==401){
+                console.log(result.data)
+                that2.setData({
+                  errMsg:result.data
+                })
+              }else if (result.data.openId != "") {
                 getApp().globalData.openId = result.data.openId
                 wx.redirectTo({
                   url: '/pages/home/home',
                 })
+              }else{
+                console.log("wrong")
               }
             },
             fail: (f) => {
@@ -64,7 +72,10 @@ Page({
               })
             },
             complete: () => {
-
+                that2.setData({
+                  btnLoginDisabled:false,
+                  loginText:"登录"
+                })
             }
           });
         } else {

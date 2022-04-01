@@ -65,7 +65,7 @@ namespace VirtualCredit
         {
             UserInfoModel admin = DatabaseService.SelectUser("oliver");
             AccountTreeRoot = new TreeNode<UserInfoModel>();
-            AccountTreeRoot.Instance = admin;
+            AccountTreeRoot.Data = admin;
             AccountTreeRoot.Parent = null;
             foreach (var item in admin.ChildAccounts)
             {
@@ -76,7 +76,7 @@ namespace VirtualCredit
         void AddNode(TreeNode<UserInfoModel> parent, UserInfoModel account)
         {
             TreeNode<UserInfoModel> treeNode = new TreeNode<UserInfoModel>();
-            treeNode.Instance = account;
+            treeNode.Data = account;
             treeNode.Parent = parent;
 
             if (account.ChildAccounts.Count <= 0)

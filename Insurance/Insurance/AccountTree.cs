@@ -41,7 +41,7 @@ namespace Insurance
                 return descendant;
             }
         }
-        public T Instance { get; set; }
+        public T Data { get; set; }
 
         private TreeNode<T> parent;
         public TreeNode<T> Parent
