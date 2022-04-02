@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LogServices", "LogService\L
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Insurance", "Insurance\Insurance.csproj", "{50FD0E3A-E32C-4762-AB45-48D160FEA902}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataMigration", "DataMigration\DataMigration.csproj", "{BC7AC03C-FDA0-4C2F-BA41-97126F88FC3D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "查看哪些流转失败", "DataMigration\查看哪些流转失败.csproj", "{BC7AC03C-FDA0-4C2F-BA41-97126F88FC3D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

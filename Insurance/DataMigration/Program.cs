@@ -11,33 +11,50 @@ namespace DataMigration
     {
         static void Main(string[] args)
         {
+            string dir = @"E:\VisualStudioProduct-Self Use\InsuranceRelease\Git\Insurance\Insurance\wwwroot\Excel\管理员";
+            var dirs = Directory.GetDirectories(dir, "*", SearchOption.AllDirectories);
+            foreach (var d in dirs)
+            {
+                bool success = false;
+                if ((d.EndsWith("万A") || d.EndsWith("万B")))
+                {
+                    var subDirs = Directory.GetDirectories(d, "*", SearchOption.AllDirectories);
+                    if (subDirs.Any(x => x.Contains("2022-04")))
+                    {
+                        success = true;
+                    }
 
+                    if (!success && subDirs.Any(x => x.Contains("2022-03")))
+                        Console.WriteLine(d);
+                }
 
-            string dir = @"C:\Insurance1\wwwroot\Excel\历年归档";
-            foreach (string d in Directory.GetDirectories(dir,"60万", SearchOption.AllDirectories))
-            {
-                DirectoryInfo di = new DirectoryInfo(d);
-                if (di.Name == "60万")
-                {
-                    Directory.Move(di.FullName, di.FullName.Replace("60万","60万A"));
-                }
             }
-            foreach (string d in Directory.GetDirectories(dir,"30万", SearchOption.AllDirectories))
-            {
-                DirectoryInfo di = new DirectoryInfo(d);
-                if (di.Name == "30万")
-                {
-                    Directory.Move(di.FullName, di.FullName.Replace("30万","80万A"));
-                }
-            }
-            foreach (string d in Directory.GetDirectories(dir,"80万", SearchOption.AllDirectories))
-            {
-                DirectoryInfo di = new DirectoryInfo(d);
-                if (di.Name == "80万")
-                {
-                    Directory.Move(di.FullName, di.FullName.Replace("80万","80万B"));
-                }
-            }
+            Console.ReadLine();
+            //string dir = @"C:\Insurance1\wwwroot\Excel\历年归档";
+            //foreach (string d in Directory.GetDirectories(dir,"60万", SearchOption.AllDirectories))
+            //{
+            //    DirectoryInfo di = new DirectoryInfo(d);
+            //    if (di.Name == "60万")
+            //    {
+            //        Directory.Move(di.FullName, di.FullName.Replace("60万","60万A"));
+            //    }
+            //}
+            //foreach (string d in Directory.GetDirectories(dir,"30万", SearchOption.AllDirectories))
+            //{
+            //    DirectoryInfo di = new DirectoryInfo(d);
+            //    if (di.Name == "30万")
+            //    {
+            //        Directory.Move(di.FullName, di.FullName.Replace("30万","80万A"));
+            //    }
+            //}
+            //foreach (string d in Directory.GetDirectories(dir,"80万", SearchOption.AllDirectories))
+            //{
+            //    DirectoryInfo di = new DirectoryInfo(d);
+            //    if (di.Name == "80万")
+            //    {
+            //        Directory.Move(di.FullName, di.FullName.Replace("80万","80万B"));
+            //    }
+            //}
 
             //foreach (var d in Directory.GetDirectories(dir, "*"))
             //{

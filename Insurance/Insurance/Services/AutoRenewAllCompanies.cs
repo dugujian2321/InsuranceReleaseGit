@@ -31,11 +31,17 @@ namespace Insurance.Services
                 string companyName = di.Parent.Name;
                 string summary = Path.Combine(company, companyName + ".xls");
                 string summary_bk_file = Path.Combine(company, companyName + "_" + DateTime.Now.AddMonths(-1).ToString("yyyy-MM") + "_bk.xls");
-                if (File.Exists(summary_bk_file))
+                string newDir = Path.Combine(company, DateTime.Now.ToString("yyyy-MM"));
+                if (Directory.Exists(newDir) && File.Exists(summary_bk_file))
                 {
                     continue;
                 }
-                File.Copy(summary, summary_bk_file, true);
+                if (!File.Exists(summary_bk_file))
+                    File.Copy(summary, summary_bk_file, true);
+                else if (File.Exists(summary_bk_file))
+                {
+                    File.Copy(summary_bk_file, summary, true);
+                }
                 ExcelTool et = new ExcelTool(summary, "Sheet1");
                 DateTime currDate;
 
@@ -141,8 +147,8 @@ namespace Insurance.Services
                     nextEndDate = DateTime.Now;
                     //nextEndDate = new DateTime(2020, 10, 30, 23, 59, 59);
                 }
-                DateTime monthLastDay = new DateTime(nextEndDate.Year, nextEndDate.Month, DateTime.DaysInMonth(nextEndDate.Year, nextEndDate.Month));
-                //DateTime monthLastDay = new DateTime(2022, 3, 31);
+                //DateTime monthLastDay = new DateTime(nextEndDate.Year, nextEndDate.Month, DateTime.DaysInMonth(nextEndDate.Year, nextEndDate.Month));
+                DateTime monthLastDay = new DateTime(2022, 3, 31);
                 string monthlastsecond = monthLastDay.ToString("yyyy-MM-dd 23:59:59");
                 nextEndDate = DateTime.Parse(monthlastsecond);
                 if (DateTime.Now > nextEndDate)
