@@ -34,7 +34,7 @@ namespace VirtualCredit.Services
             myOwn.WebRootFolder = environment.WebRootPath;
             myOwn.ExcelRoot = Path.Combine(myOwn.WebRootFolder, "Excel");
             CachedCompanyDirPath = new List<string>();
-
+            //CachedCompanyDirPath =Directory.GetDirectories(VC_ControllerBase.AdminDir, "*", SearchOption.AllDirectories).ToList();
             _instance = myOwn;
             LockerList = new List<ReaderWriterLockerWithName>();
         }

@@ -77,7 +77,7 @@
                                 <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.TotalCost)</strong></td>
                                 <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.FirstOrDefault().StartDate.ToString("yyyy/M/d")</strong></td>
                                 <td class="td_middle" style="color:blue"><strong>@Model.CompanyList.Sum(headcount => headcount.PaidCost)</strong></td>
-                                @if (currentUser.ChildAccounts.Count > 0)
+                                @if (currentUser.AllowCreateAccount == "1")
                                 {
                                     <td><a class="btn btn-primary" href="/Home/SummaryByYear">历年详细</a></td>
                                 }
@@ -87,6 +87,10 @@
                         {
                             @foreach (Company item in Model.CompanyList)
                             {
+                                if (item.EmployeeNumber == 0)
+                                {
+                                    continue;
+                                }
                                 <tr style="text-align:center">
                                     @if (ViewBag.IsHistory == null || !ViewBag.IsHistory)
                                     {

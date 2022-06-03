@@ -79,54 +79,66 @@
                 </tr>
             </thead>
             <tbody>
-                <tr style="text-align:center">
-                    <td class="td_middle">60万A</td>
-                    <td class="td_middle">@Model.PlanList[0].HeadCount</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[0].TotalCost, 2)</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[0].TotalPaid, 2)</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[0].Unpaid, 2)</td>
-                    <td>
-                        <button @disable60A class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=60万A&year=@selectedYear'">
-                            查看详情
-                        </button>
-                    </td>
-                </tr>
-                <tr style="text-align:center">
-                    <td class="td_middle">60万B</td>
-                    <td class="td_middle">@Model.PlanList[1].HeadCount</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[1].TotalCost, 2)</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[1].TotalPaid, 2)</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[1].Unpaid, 2)</td>
-                    <td>
-                        <button @disable60B class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=60万B&year=@selectedYear'">
-                            查看详情
-                        </button>
-                    </td>
-                </tr>
-                <tr style="text-align:center">
-                    <td class="td_middle">80万A</td>
-                    <td class="td_middle">@Model.PlanList[2].HeadCount</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[2].TotalCost, 2)</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[2].TotalPaid, 2)</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[2].Unpaid, 2)</td>
-                    <td class="td_middle">
-                        <button @disable80A class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=80万A&year=@selectedYear'">
-                            查看详情
-                        </button>
-                    </td>
-                </tr>
-                <tr style="text-align:center">
-                    <td class="td_middle">80万B</td>
-                    <td class="td_middle">@Model.PlanList[3].HeadCount</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[3].TotalCost, 2)</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[3].TotalPaid, 2)</td>
-                    <td class="td_middle">@Math.Round(Model.PlanList[3].Unpaid, 2)</td>
-                    <td class="td_middle">
-                        <button @disable80B class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=80万B&year=@selectedYear'">
-                            查看详情
-                        </button>
-                    </td>
-                </tr>
+                @if (@Model.PlanList[0].HeadCount > 0)
+                {
+                    <tr style="text-align:center">
+                        <td class="td_middle">60万A</td>
+                        <td class="td_middle">@Model.PlanList[0].HeadCount</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[0].TotalCost, 2)</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[0].TotalPaid, 2)</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[0].Unpaid, 2)</td>
+                        <td>
+                            <button @disable60A class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=60万A&year=@selectedYear'">
+                                查看详情
+                            </button>
+                        </td>
+                    </tr>
+                }
+                @if (@Model.PlanList[1].HeadCount > 0)
+                {
+                    <tr style="text-align:center">
+                        <td class="td_middle">60万B</td>
+                        <td class="td_middle">@Model.PlanList[1].HeadCount</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[1].TotalCost, 2)</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[1].TotalPaid, 2)</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[1].Unpaid, 2)</td>
+                        <td>
+                            <button @disable60B class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=60万B&year=@selectedYear'">
+                                查看详情
+                            </button>
+                        </td>
+                    </tr>
+                }
+                @if (@Model.PlanList[2].HeadCount > 0)
+                {
+                    <tr style="text-align:center">
+                        <td class="td_middle">80万A</td>
+                        <td class="td_middle">@Model.PlanList[2].HeadCount</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[2].TotalCost, 2)</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[2].TotalPaid, 2)</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[2].Unpaid, 2)</td>
+                        <td class="td_middle">
+                            <button @disable80A class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=80万A&year=@selectedYear'">
+                                查看详情
+                            </button>
+                        </td>
+                    </tr>
+                }
+                @if (@Model.PlanList[3].HeadCount > 0)
+                {
+                    <tr style="text-align:center">
+                        <td class="td_middle">80万B</td>
+                        <td class="td_middle">@Model.PlanList[3].HeadCount</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[3].TotalCost, 2)</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[3].TotalPaid, 2)</td>
+                        <td class="td_middle">@Math.Round(Model.PlanList[3].Unpaid, 2)</td>
+                        <td class="td_middle">
+                            <button @disable80B class="btn btn-lg btn-block btn-primary" onclick="location.href='/Home/GetTargetPlanData?plan=80万B&year=@selectedYear'">
+                                查看详情
+                            </button>
+                        </td>
+                    </tr>
+                }
                 <tr style="text-align:center">
                     <td class="td_middle">合计</td>
                     <td class="td_middle">@Model.PlanList.Sum(x => x.HeadCount)</td>

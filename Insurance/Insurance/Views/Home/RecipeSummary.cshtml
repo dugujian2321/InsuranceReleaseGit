@@ -28,6 +28,10 @@
                     {
                         @foreach (Company item in Model.CompanyList)
                         {
+                            if (item.TotalCost <= 0)
+                            {
+                                continue;
+                            }
                             double unpaid = @item.TotalCost - @item.CustomerAlreadyPaid;
                             <tr>
                                 <td class="td_middle">@item.Name</td>

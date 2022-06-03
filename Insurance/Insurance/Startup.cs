@@ -30,6 +30,10 @@ namespace VirtualCredit
             Task.Factory.StartNew(() =>
             {
                 Utility.DailyUpdate();
+            }, TaskCreationOptions.LongRunning); DirectoryService ds = new DirectoryService();
+            Task.Factory.StartNew(() =>
+            {
+                ds.UpdateDirs();
             }, TaskCreationOptions.LongRunning);
         }
 

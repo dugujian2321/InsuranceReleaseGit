@@ -25,6 +25,7 @@ namespace VirtualCredit
         public static List<string> Plans = new List<string> { "60万A", "60万B", "80万A", "80万B" };
         public static long CustomersCount = 0;
         public static string ExcelRoot = Utility.Instance.ExcelRoot;
+        public static string AdminDir = Path.Combine(ExcelRoot, "管理员");
         protected ImageTool _imageTool;
         public UserInfoModel currUser_temp;
         public ISession CurrentSession;
@@ -349,7 +350,13 @@ namespace VirtualCredit
                     return null;
                 }
                 string plan = account._Plan;
-                string companyDir = Directory.GetDirectories(Path.Combine(ExcelRoot, "管理员"), company, SearchOption.AllDirectories).FirstOrDefault();
+                string companyDir = "";
+                companyDir = Utility.CachedCompanyDirPath.Where(x => new DirectoryInfo(x).Name.Equals(company)).FirstOrDefault();
+                if (string.IsNullOrEmpty(companyDir))
+                {
+                    companyDir = Directory.GetDirectories(AdminDir, company, SearchOption.AllDirectories).FirstOrDefault();
+                    Utility.CachedCompanyDirPath.Add(companyDir);
+                }
                 string accountDir = Directory.GetDirectories(companyDir, plan, SearchOption.AllDirectories).FirstOrDefault();
                 string accountSummaryFile = Path.Combine(accountDir, company + ".xls");
                 if (!System.IO.File.Exists(accountSummaryFile)) return ad;
@@ -567,7 +574,7 @@ namespace VirtualCredit
         //}
         protected void AdaptModel(ViewModelBase model)
         {
-            UserInfoModel uim = CurrentSession.Get<UserInfoModel>("CurrentUser");
+            UserInfoModel uim = GetCurrentUser();
             if (uim is null)
             {
                 return;
@@ -602,6 +609,7 @@ namespace VirtualCredit
             if (currUser_temp != null) return currUser_temp;
             IUser user = new UserInfoModel();
             var currUser = CurrentSession.Get<UserInfoModel>("CurrentUser");
+            currUser_temp = currUser;
             user.UserName = currUser.UserName;
             user.userPassword = currUser.userPassword;
 
