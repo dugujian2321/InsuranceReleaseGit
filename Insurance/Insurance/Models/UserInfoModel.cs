@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using VirtualCredit.Services;
 
 namespace VirtualCredit.Models
@@ -44,6 +47,40 @@ namespace VirtualCredit.Models
         [DatabaseProp]
         public double UnitPrice { get; set; }
 
+        static readonly object locker = new object();
+        static volatile bool initialized = false;
+        public UserInfoModel()
+        {
+            if (!initialized)
+            {
+                lock (locker)
+                {
+                    if (!initialized)
+                    {
+                        Task.Factory.StartNew(() =>
+                        {
+                            UpdateUserinfo();
+                            Task.Delay(10000);
+                        });
+                        initialized = true;
+                    }
+                }
+            }
+        }
+
+        static readonly object infoLocker = new object();
+        void UpdateUserinfo()
+        {
+            var temp = DatabaseService.Select("UserInfo").Select().ToList();
+            lock (infoLocker)
+            {
+                AllUsers = temp;
+            }
+        }
+
+        public static List<DataRow> AllUsers { get; set; } = new List<DataRow>();
+
+
         /// <summary>
         /// 1 - 允许创建子账户
         /// 0 - 不允许创建子账户
@@ -64,7 +101,12 @@ namespace VirtualCredit.Models
             get
             {
                 if (childAccounts != null && childAccounts.Count > 0) return childAccounts;
-                var children = DatabaseService.Select("UserInfo").Select().Where(_ => _[nameof(Father)].ToString() == UserName);
+                if (AllUsers.Count == 0)
+                {
+                    lock (infoLocker)
+                        AllUsers = DatabaseService.Select("UserInfo").Select().ToList();
+                }
+                var children = AllUsers.Where(_ => _[nameof(Father)].ToString() == UserName);
                 childAccounts = new List<UserInfoModel>();
                 foreach (var item in children)
                 {

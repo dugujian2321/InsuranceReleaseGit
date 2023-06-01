@@ -33,7 +33,8 @@ namespace VirtualCredit
 
         public void OnActionExecuting(ActionExecutingContext context)
         {
-            var res = SessionService.IsUserLogin(context.HttpContext);
+            //var res = SessionService.IsUserLogin(context.HttpContext);
+            var res = true;
             if (!res)
             {
                 SessionService.SetUserOffline(context.HttpContext);

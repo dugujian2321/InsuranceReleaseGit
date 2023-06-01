@@ -147,8 +147,8 @@ namespace Insurance.Services
                     nextEndDate = DateTime.Now;
                     //nextEndDate = new DateTime(2020, 10, 30, 23, 59, 59);
                 }
-                //DateTime monthLastDay = new DateTime(nextEndDate.Year, nextEndDate.Month, DateTime.DaysInMonth(nextEndDate.Year, nextEndDate.Month));
-                DateTime monthLastDay = new DateTime(2022, 3, 31);
+                DateTime monthLastDay = new DateTime(nextEndDate.Year, nextEndDate.Month, DateTime.DaysInMonth(nextEndDate.Year, nextEndDate.Month));
+                //DateTime monthLastDay = new DateTime(2022, 3, 31);
                 string monthlastsecond = monthLastDay.ToString("yyyy-MM-dd 23:59:59");
                 nextEndDate = DateTime.Parse(monthlastsecond);
                 if (DateTime.Now > nextEndDate)

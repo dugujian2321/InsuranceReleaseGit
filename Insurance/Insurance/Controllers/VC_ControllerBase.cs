@@ -65,6 +65,7 @@ namespace VirtualCredit
         public void UpdateAccountTree()
         {
             UserInfoModel admin = DatabaseService.SelectUser("oliver");
+            admin.ChildAccounts.RemoveAll(x => x is null);
             AccountTreeRoot = new TreeNode<UserInfoModel>();
             AccountTreeRoot.Data = admin;
             AccountTreeRoot.Parent = null;
@@ -420,6 +421,7 @@ namespace VirtualCredit
                     company.AbbrName = companyAccount[0].CompanyNameAbb;
                     foreach (var account in companyAccount)
                     {
+                        Console.WriteLine(account.CompanyName);
                         ExcelDataReader edr = new ExcelDataReader(account.CompanyName, From.Year, account._Plan);
                         company.EmployeeNumber += edr.GetCurrentEmployeeNumber();
                         company.StartDate = From;

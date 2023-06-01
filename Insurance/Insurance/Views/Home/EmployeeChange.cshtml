@@ -25,6 +25,10 @@
                 }
             }
         </div>
+        @*<div class="input-group mb-3">
+            <span class="input-group-text">搜索</span>
+            <input onchange="UpdateCompanyList()" />
+        </div>*@
         <div class="input-group mb-3">
             <span class="input-group-text">公司名称</span>
             <select class="custom-select" id="companyGroup" onchange="UpdateAllowedStartDate()">
@@ -117,6 +121,7 @@
     }
     var currentdate = date.getFullYear() + seperator1 + month + seperator1 + strDate;
     v.setAttribute('min', currentdate);*@
+
 
     function Add() {
         var input_add = document.getElementById('add');
