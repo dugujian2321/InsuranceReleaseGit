@@ -385,7 +385,8 @@ namespace VirtualCredit
         {
             string companiesDirectory = GetCurrentUserRootDir(currUser);
             if (currUser.CompanyName == companyName) return companiesDirectory;
-            if (Utility.CachedCompanyDirPath.Any(x => new DirectoryInfo(x).Name == companyName))
+            if (Utility.CachedCompanyDirPath.Any(x =>
+            new DirectoryInfo(x).Name == companyName))
             {
                 return Utility.CachedCompanyDirPath.Where(x => new DirectoryInfo(x).Name == companyName).FirstOrDefault();
             }
@@ -456,7 +457,7 @@ namespace VirtualCredit
                     //self.TotalCost = et.GetTotalCost();
                     //result.Add(self);
                 }
-                return result;
+                return result.Where(x => x != null).ToList();
             }
             catch (Exception e)
             {

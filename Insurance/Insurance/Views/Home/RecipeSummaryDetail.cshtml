@@ -32,9 +32,9 @@
                             <tr>
                                 <td class="td_middle">@item.UploadDate</td>
                                 <td class="td_middle">@item.HeadCount</td>
-                                <td class="td_middle">@item.Cost</td>
-                                <td class="td_middle">@item.Paid</td>
-                                <td class="td_middle">@item.Unpaid</td>
+                                <td class="td_middle">@Math.Round(item.Cost,2)</td>
+                                <td class="td_middle">@Math.Round(@item.Paid,2)</td>
+                                <td class="td_middle">@Math.Round(@item.Unpaid,2)</td>
                                 <td><a href="/Home/RecipeSummary?date=@item.StartDate&name=@item.Company" class="btn btn-primary">详细</a></td>
                             </tr>
                         }
@@ -43,9 +43,9 @@
                     <tr>
                         <td class="td_middle">合计</td>
                         <td></td>
-                        <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Cost)</td>
-                        <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Paid)</td>
-                        <td class="td_middle">@Model.MonthlyExcel.Sum(x => x.Unpaid)</td>
+                        <td class="td_middle">@Math.Round(Model.MonthlyExcel.Sum(x => x.Cost),2)</td>
+                        <td class="td_middle">@Math.Round(Model.MonthlyExcel.Sum(x => x.Paid),2)</td>
+                        <td class="td_middle">@Math.Round(Model.MonthlyExcel.Sum(x => x.Unpaid),2)</td>
                         @if (currentUser.AccessLevel == 0)
                         {
                             <td><a href="/Home/BanlanceAccount?companyName=@Model.Company&dataYear=@ViewBag.DataYear" class="btn btn-primary">结算</a></td>

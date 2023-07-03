@@ -1699,7 +1699,7 @@ namespace VirtualCredit.Controllers
         {
             string monthDir = DateTime.Parse(date).ToString("yyyy-MM");
             string template = "";
-            template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", $"Insurance_recipet_{plan.Replace("万", "") }.docx");
+            template = Path.Combine(_hostingEnvironment.WebRootPath, "templates", $"Insurance_recipet_{plan.Replace("万", "")}.docx");
             string newdoc = Path.Combine(_hostingEnvironment.WebRootPath, "Word", company + "_" + plan + "_" + DateTime.Now.ToString("yyyy-MM-dd-HH-hh-ss-mm") + ".docx");
             XWPFDocument document = null;
 
@@ -2050,16 +2050,16 @@ namespace VirtualCredit.Controllers
                     displayMonthPriceAcc = currUser;
                 }
             }
-            double actualMonthPrice = 0;
+            decimal actualMonthPrice = 0;
             if (currUser.CompanyName == compName && currUser._Plan == plan)
             {
-                actualMonthPrice = currUser.UnitPrice;
+                actualMonthPrice = decimal.Parse(currUser.UnitPrice.ToString());
             }
             else
-                actualMonthPrice = currUser.SpringAccounts.Where(xx => xx.CompanyName == compName && xx._Plan == plan).FirstOrDefault().UnitPrice;
+                actualMonthPrice = decimal.Parse(currUser.SpringAccounts.Where(xx => xx.CompanyName == compName && xx._Plan == plan).FirstOrDefault().UnitPrice.ToString());
 
             string[] excelinfo = fileInfo.Name.Split('@');
-            var r = double.Parse(excelinfo[1]) / (actualMonthPrice / daysInMonth) * (displayMonthPriceAcc.UnitPrice / daysInMonth);
+            var r = decimal.Parse(excelinfo[1].ToString()) / (actualMonthPrice / decimal.Parse(daysInMonth.ToString())) * (decimal.Parse(displayMonthPriceAcc.UnitPrice.ToString()) / decimal.Parse(daysInMonth.ToString()));
             return Convert.ToDecimal(r);
         }
 

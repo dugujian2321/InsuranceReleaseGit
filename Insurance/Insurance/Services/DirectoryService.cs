@@ -15,12 +15,15 @@ namespace Insurance.Services
         string adminDir = Path.Combine(Utility.Instance.ExcelRoot, "管理员");
         public void UpdateDirs()
         {
-            var list = Directory.GetDirectories(adminDir, "*", SearchOption.AllDirectories);
-            lock (locker)
+            while(true)
             {
-                Utility.CachedCompanyDirPath = list.ToList();
+                var list = Directory.GetDirectories(adminDir, "*", SearchOption.AllDirectories);
+                lock (locker)
+                {
+                    Utility.CachedCompanyDirPath = list.ToList();
+                }
+                Task.Delay(30000);
             }
-            Task.Delay(30000);
         }
     }
 }
